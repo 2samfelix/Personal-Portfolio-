@@ -12,7 +12,7 @@ export default function Projects() {
       </h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
         A selection of financial models built to practice the core toolkit of
-        equity research and investment banking analysts.
+        FP&amp;A and financial analysts.
       </p>
       <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
         {projects.map((project) => (

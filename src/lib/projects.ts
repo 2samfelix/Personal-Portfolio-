@@ -9,39 +9,30 @@ export type Project = {
 
 export const projects: Project[] = [
   {
-    slug: "dcf-valuation",
-    title: "DCF Valuation Model",
-    category: "Valuation",
+    slug: "three-statement-model",
+    title: "3-Statement Financial Model",
+    category: "Valuation/Modeling",
     summary:
-      "Discounted cash flow model projecting five years of free cash flow, a WACC-derived discount rate, and a sensitivity table to estimate intrinsic equity value.",
-    tools: ["Excel", "WACC", "Sensitivity Analysis"],
+      "Built a driver-based 3-statement model and 3-year forecast for a public company, with revenue and opex assumptions built from unit economics rather than flat growth rates, and bull/base/bear scenario analysis to identify a break-even revenue threshold.",
+    tools: ["Excel", "Forecasting", "Scenario Analysis"],
     year: "2026",
   },
   {
-    slug: "lbo-model",
-    title: "LBO Model",
-    category: "Private Equity",
+    slug: "budget-vs-actual-variance",
+    title: "Budget vs. Actual Variance Analysis",
+    category: "FP&A",
     summary:
-      "Leveraged buyout model with a full debt schedule, returns waterfall, and IRR / MOIC analysis across entry and exit multiple scenarios.",
-    tools: ["Excel", "Debt Schedules", "IRR / MOIC"],
+      "Built a 12-month departmental budget and variance report, diagnosing the two largest drivers of a variance and recommending corrective actions in a memo format for department leadership.",
+    tools: ["Excel", "Budgeting", "Variance Analysis"],
     year: "2026",
   },
   {
-    slug: "comps-analysis",
-    title: "Comparable Company Analysis",
-    category: "Valuation",
+    slug: "sales-performance-dashboard",
+    title: "Sales Performance Dashboard",
+    category: "Data Analysis",
     summary:
-      "Trading comps benchmarking a target company against public peers using EV/EBITDA, EV/Revenue, and P/E multiples.",
-    tools: ["Excel", "Trading Multiples"],
-    year: "2025",
-  },
-  {
-    slug: "merger-model",
-    title: "M&A Merger Model",
-    category: "M&A",
-    summary:
-      "Accretion / dilution model for a hypothetical acquisition, including pro forma EPS impact and purchase price allocation.",
-    tools: ["Excel", "Accretion / Dilution", "Pro Forma EPS"],
+      "Analyzed a regional sales dataset to isolate a pricing/discounting issue from a true demand issue, building an interactive dashboard to summarize findings for a non-technical audience.",
+    tools: ["Excel", "Dashboarding", "Data Analysis"],
     year: "2025",
   },
 ];

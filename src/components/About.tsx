@@ -1,10 +1,10 @@
 const skills = [
   "Financial Modeling",
-  "DCF Valuation",
-  "LBO Analysis",
-  "Comparable Company Analysis",
+  "3-Statement Modeling",
+  "Budgeting & Forecasting",
+  "Variance Analysis",
   "Excel (Advanced)",
-  "PowerPoint",
+  "Data Analysis",
 ];
 
 export default function About() {
@@ -19,19 +19,19 @@ export default function About() {
       <div className="mt-8 grid grid-cols-1 gap-12 sm:grid-cols-3">
         <div className="sm:col-span-2">
           <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">
-            I&apos;m a finance student focused on equity valuation and
-            corporate finance, currently building out a portfolio of
-            financial models to prepare for a junior financial analyst role.
-            Each project on this site was built independently in Excel to
-            practice the modeling standards used in investment banking and
-            equity research.
+            I&apos;m a finance student focused on financial planning and
+            analysis, currently building out a portfolio of financial models
+            to prepare for a junior financial analyst role. Each project on
+            this site was built independently in Excel to practice the
+            modeling standards used in FP&amp;A and business analysis.
           </p>
           <div className="mt-8">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
               Education
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-              B.S. in Finance, [Your University] — Expected [Month Year]
+              B.S. in Finance &amp; Management, [Your University] — Expected
+              [Month Year]
             </p>
           </div>
         </div>

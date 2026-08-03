@@ -11,9 +11,9 @@ export default function Hero() {
         Sam Felix
       </h1>
       <p className="max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-400">
-        Building financial models and valuation work as I break into a junior
-        financial analyst role — DCFs, LBOs, comps, and merger models built
-        from scratch in Excel.
+        Building financial models and analysis to break into a junior
+        financial analyst role — 3-statement modeling, budgeting &amp;
+        forecasting, and business analysis built from scratch in Excel.
       </p>
       <div className="flex flex-wrap gap-4 pt-2">
         <a
