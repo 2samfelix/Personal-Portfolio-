@@ -8,22 +8,21 @@ const links = [
 
 export default function Contact() {
   return (
-    <section id="contact" className="bg-slate-950 text-white">
+    <section id="contact" className="bg-forest text-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-28">
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 sm:p-12">
+        <div className="rounded-3xl border border-cream/15 bg-forest-dark p-8 sm:p-12">
           <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 sm:items-center">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-blue-500">
+              <p className="text-sm font-semibold uppercase tracking-widest text-brass-light">
                 Let&apos;s Connect
               </p>
               <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
                 Open to analytics and finance roles.
               </h2>
-              <p className="mt-4 max-w-md text-sm leading-6 text-slate-400">
+              <p className="mt-4 max-w-md text-sm leading-6 text-cream/70">
                 I&apos;m looking for opportunities in financial analysis,
                 FP&amp;A, or data analytics where I can put payroll,
-                accounting, and modeling experience to work — with a
-                growing focus on AI-driven finance tools.
+                accounting, and modeling experience to work.
               </p>
             </div>
             <div className="flex flex-col gap-3">
@@ -37,7 +36,7 @@ export default function Contact() {
                       ? "noopener noreferrer"
                       : undefined
                   }
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-5 py-3 text-sm font-medium text-slate-200 transition-colors hover:border-slate-500 hover:text-white"
+                  className="rounded-xl border border-cream/20 bg-forest px-5 py-3 text-sm font-medium text-cream/90 transition-colors hover:border-cream/40 hover:text-cream"
                 >
                   {link.label}
                 </a>

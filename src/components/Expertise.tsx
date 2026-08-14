@@ -33,36 +33,36 @@ const columns = [
 
 export default function Expertise() {
   return (
-    <section id="expertise" className="bg-white">
+    <section id="expertise" className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-28">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-widest text-blue-600">
+            <p className="text-sm font-semibold uppercase tracking-widest text-brass">
               Core Expertise
             </p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
               Where finance meets data.
             </h2>
           </div>
-          <p className="max-w-md text-sm leading-6 text-slate-600">
+          <p className="max-w-md text-sm leading-6 text-charcoal-soft">
             A combination of hands-on payroll and accounting experience and
-            a growing toolkit in modeling, analytics, and AI.
+            a growing toolkit in modeling and analytics.
           </p>
         </div>
         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
           {columns.map((column) => (
             <div
               key={column.title}
-              className="rounded-2xl border border-slate-200 bg-white p-6"
+              className="rounded-2xl border border-forest/15 bg-white p-6"
             >
-              <h3 className="text-base font-semibold text-slate-900">
+              <h3 className="text-base font-semibold text-charcoal">
                 {column.title}
               </h3>
               <ul className="mt-4 flex flex-col gap-2">
                 {column.items.map((item) => (
                   <li
                     key={item}
-                    className="text-sm leading-6 text-slate-600"
+                    className="text-sm leading-6 text-charcoal-soft"
                   >
                     {item}
                   </li>
