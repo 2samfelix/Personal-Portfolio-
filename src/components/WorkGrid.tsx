@@ -66,9 +66,50 @@ function CaseStudyModal({
           </button>
         </div>
 
-        <p className="mt-6 text-base leading-7 text-charcoal-soft">
-          {project.summary}
-        </p>
+        {project.headlineStat && (
+          <p className="mt-4 text-4xl font-black tracking-tight text-brass">
+            {project.headlineStat}
+          </p>
+        )}
+
+        <div className="mt-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-charcoal-soft">
+            Thesis
+          </p>
+          <p className="mt-2 text-base leading-7 text-charcoal-soft">
+            {project.summary}
+          </p>
+        </div>
+
+        {!project.headlineStat && !project.keyNumbers && (
+          <p className="mt-6 rounded-xl border border-dashed border-forest/25 bg-white/50 px-4 py-3 text-sm text-charcoal-soft">
+            Full write-up (headline numbers and links) coming soon.
+          </p>
+        )}
+
+        {project.keyNumbers && (
+          <div className="mt-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-charcoal-soft">
+              Key Numbers
+            </p>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {project.keyNumbers.map((item) => (
+                <li
+                  key={item}
+                  className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {project.verdict && (
+          <p className="mt-6 rounded-xl border border-forest/15 bg-forest/5 px-4 py-3 text-sm italic leading-6 text-charcoal">
+            &ldquo;{project.verdict}&rdquo;
+          </p>
+        )}
 
         <ul className="mt-6 flex flex-wrap gap-2">
           {project.tools.map((tool) => (
@@ -81,43 +122,34 @@ function CaseStudyModal({
           ))}
         </ul>
 
-        {project.thesis ? (
+        {project.deliverables && (
           <div className="mt-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-charcoal-soft">
-              Thesis
+              Deliverables
             </p>
-            <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-              {project.thesis}
-            </p>
+            <ul className="mt-2 flex flex-col gap-1">
+              {project.deliverables.map((file) => (
+                <li
+                  key={file}
+                  className="font-mono text-xs text-charcoal-soft"
+                >
+                  {file}
+                </li>
+              ))}
+            </ul>
           </div>
-        ) : (
-          <p className="mt-6 rounded-xl border border-dashed border-forest/25 bg-white/50 px-4 py-3 text-sm text-charcoal-soft">
-            Full write-up (thesis, headline numbers, and links) coming soon.
-          </p>
         )}
 
-        {(project.githubUrl || project.deliverableUrl) && (
-          <div className="mt-6 flex flex-wrap gap-3">
-            {project.githubUrl && (
-              <a
-                href={project.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full border border-forest/30 px-4 py-2 text-sm font-semibold text-charcoal hover:border-forest"
-              >
-                View on GitHub
-              </a>
-            )}
-            {project.deliverableUrl && (
-              <a
-                href={project.deliverableUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full bg-forest px-4 py-2 text-sm font-semibold text-cream hover:bg-forest-dark"
-              >
-                View Deliverable
-              </a>
-            )}
+        {project.githubUrl && (
+          <div className="mt-6">
+            <a
+              href={project.githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block rounded-full border border-forest/30 px-4 py-2 text-sm font-semibold text-charcoal hover:border-forest"
+            >
+              View Repo &rarr;
+            </a>
           </div>
         )}
       </div>
@@ -167,6 +199,11 @@ export default function WorkGrid() {
                 <h3 className="text-2xl font-black tracking-tight text-charcoal">
                   {project.title}
                 </h3>
+                {project.headlineStat && (
+                  <p className="text-xl font-black tracking-tight text-brass">
+                    {project.headlineStat}
+                  </p>
+                )}
                 <p className="text-sm leading-6 text-charcoal-soft">
                   {project.summary}
                 </p>
