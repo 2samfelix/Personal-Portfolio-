@@ -62,12 +62,13 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="flex min-h-[420px] w-full items-center justify-center rounded-3xl border-2 border-dashed border-forest/25 bg-white/50 p-8 text-center text-sm text-charcoal-soft lg:min-h-0">
-          Add a headshot here — drop an image in{" "}
-          <code className="mx-1 rounded bg-forest/10 px-1.5 py-0.5 text-xs text-forest">
-            public/headshot.jpg
-          </code>{" "}
-          and swap it in.
+        <div className="min-h-[420px] w-full overflow-hidden rounded-3xl border border-forest/15 lg:min-h-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/headshot.png"
+            alt="Sam Felix"
+            className="h-full w-full object-cover"
+          />
         </div>
       </div>
     </section>
