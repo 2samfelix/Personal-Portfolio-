@@ -1,8 +1,6 @@
-import { projects } from "@/lib/projects";
+import { builds } from "@/lib/projects";
 
 export default function Builds() {
-  const builds = projects.filter((project) => project.status === "in-development");
-
   if (builds.length === 0) return null;
 
   return (

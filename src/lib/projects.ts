@@ -10,42 +10,50 @@ export type Project = {
   status: ProjectStatus;
   icon: string;
   link?: string;
+  // Optional deeper case-study content — fill in once available.
+  thesis?: string;
+  headlineStat?: string;
+  githubUrl?: string;
+  deliverableUrl?: string;
 };
 
-export const projects: Project[] = [
+export const flagshipProjects: Project[] = [
   {
-    slug: "three-statement-model",
-    title: "3-Statement Financial Model",
-    category: "Valuation / Modeling",
+    slug: "nike",
+    title: "Nike, Inc.",
+    category: "Three-Statement Model & Scenario Analysis",
     summary:
-      "Built a driver-based 3-statement model and 3-year forecast for a public company, with revenue and opex assumptions built from unit economics rather than flat growth rates, and bull/base/bear scenario analysis to identify a break-even revenue threshold.",
-    tools: ["Excel", "Forecasting", "Scenario Analysis"],
+      "A driver-based three-statement model and forecast for Nike, stress-tested with bull / base / bear scenario analysis.",
+    tools: ["Excel", "3-Statement Modeling", "Scenario Analysis"],
     year: "2026",
     status: "live",
-    icon: "📊",
+    icon: "01",
   },
   {
-    slug: "budget-vs-actual-variance",
-    title: "Budget vs. Actual Variance Analysis",
-    category: "FP&A",
+    slug: "arm-holdings",
+    title: "Arm Holdings",
+    category: "IPO Valuation & Strategy Analysis",
     summary:
-      "Built a 12-month departmental budget and variance report, diagnosing the two largest drivers of a variance and recommending corrective actions in a memo format for department leadership.",
-    tools: ["Excel", "Budgeting", "Variance Analysis"],
+      "An IPO valuation and strategic positioning analysis built around Arm Holdings' public listing.",
+    tools: ["Excel", "Valuation", "IPO Analysis"],
     year: "2026",
     status: "live",
-    icon: "📉",
+    icon: "02",
   },
   {
-    slug: "sales-performance-dashboard",
-    title: "Sales Performance Dashboard",
-    category: "Data Analysis",
+    slug: "microsoft-activision",
+    title: "Microsoft × Activision Blizzard",
+    category: "M&A Accretion/Dilution & Strategic Analysis",
     summary:
-      "Analyzed a regional sales dataset to isolate a pricing/discounting issue from a true demand issue, building an interactive dashboard to summarize findings for a non-technical audience.",
-    tools: ["Excel", "Dashboarding", "Data Analysis"],
-    year: "2025",
+      "An accretion/dilution model and strategic rationale for Microsoft's acquisition of Activision Blizzard.",
+    tools: ["Excel", "M&A", "Accretion / Dilution"],
+    year: "2026",
     status: "live",
-    icon: "📈",
+    icon: "03",
   },
+];
+
+export const builds: Project[] = [
   {
     slug: "ai-finance-calculator",
     title: "AI-Assisted Finance Calculator",
