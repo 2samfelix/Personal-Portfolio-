@@ -4,11 +4,13 @@ export type Project = {
   slug: string;
   title: string;
   category: string;
+  description?: string;
   summary: string;
   tools: string[];
   year: string;
   status: ProjectStatus;
   icon: string;
+  visual?: string;
   link?: string;
   headlineStat?: string;
   keyNumbers?: string[];
@@ -22,12 +24,15 @@ export const flagshipProjects: Project[] = [
     slug: "nike",
     title: "Nike, Inc.",
     category: "Three-Statement Model & Scenario Analysis",
+    description:
+      "A driver-based three-statement model and forecast for Nike, stress-tested across bull, base, and bear scenarios.",
     summary:
       "North America needs 3.2% growth to offset Greater China's decline by FY2028 — the base case delivers 4.25%, a $439M cushion.",
-    tools: ["Excel", "3-Statement Modeling", "Scenario Analysis"],
+    tools: ["Excel", "FP&A", "Forecasting", "Scenario Analysis"],
     year: "2026",
     status: "live",
     icon: "01",
+    visual: "/project-visuals/nike.png",
     headlineStat: "$439M cushion",
     githubUrl: "https://github.com/2samfelix/nike-three-statement-model",
     deliverables: [
@@ -40,12 +45,15 @@ export const flagshipProjects: Project[] = [
     slug: "arm-holdings",
     title: "Arm Holdings",
     category: "IPO Valuation & Strategy Analysis",
+    description:
+      "An IPO valuation for Arm Holdings combining comparable company analysis, a DCF, and strategic positioning research.",
     summary:
       "Three independent valuation methods converge on ~$51 fair value for Arm — the market prices it at $272.",
-    tools: ["Excel", "Valuation", "IPO Analysis"],
+    tools: ["Excel", "Valuation", "DCF", "CCA", "Strategy"],
     year: "2026",
     status: "live",
     icon: "02",
+    visual: "/project-visuals/arm.png",
     headlineStat: "5.34× total return",
     keyNumbers: [
       "$43–45 comp-implied value (2023)",
@@ -66,12 +74,15 @@ export const flagshipProjects: Project[] = [
     slug: "microsoft-activision",
     title: "Microsoft × Activision Blizzard",
     category: "M&A Accretion/Dilution & Strategic Analysis",
+    description:
+      "An accretion/dilution model and strategic analysis of Microsoft's acquisition of Activision Blizzard.",
     summary:
       "Was Microsoft's $75.4B acquisition financially justified, and what synergy level was required for EPS accretion?",
-    tools: ["Excel", "M&A", "Accretion / Dilution"],
+    tools: ["Excel", "M&A", "Purchase Accounting", "Strategy"],
     year: "2026",
     status: "live",
     icon: "03",
+    visual: "/project-visuals/msft.png",
     headlineStat: "-4.07% EPS dilution",
     keyNumbers: [
       "-4.07% no-synergy EPS dilution",

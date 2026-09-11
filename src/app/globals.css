@@ -18,10 +18,68 @@
   --color-forest-dark: #152a1f;
   --color-brass: #96703e;
   --color-brass-light: #d8b888;
+  --color-brass-pale: #ecdfc2;
+  --color-mist: #e6ebea;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes reel-scroll-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.reel-track {
+  animation: reel-scroll-up 55s linear infinite;
+}
+
+.reel:hover .reel-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reel-track {
+    animation: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .reel-track {
+    animation: none;
+  }
+}
+
+.reel-mask {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
+}
+
+.bg-dot-grid {
+  background-color: #ffffff;
+  background-image: radial-gradient(
+    circle,
+    rgba(30, 58, 43, 0.28) 1.75px,
+    transparent 1.75px
+  );
+  background-size: 22px 22px;
 }

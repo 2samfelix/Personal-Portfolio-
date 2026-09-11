@@ -4,8 +4,8 @@ export default function Builds() {
   if (builds.length === 0) return null;
 
   return (
-    <section id="builds" className="bg-cream">
-      <div className="mx-auto w-full max-w-6xl px-6 pb-20 sm:pb-28">
+    <section id="builds" className="border-t border-forest/10 bg-cream">
+      <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-40">
         <div className="rounded-2xl border border-dashed border-forest/20 bg-white/40 p-6 sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-charcoal-soft">
             Early-Stage Builds

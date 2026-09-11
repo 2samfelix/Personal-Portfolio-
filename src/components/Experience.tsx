@@ -1,7 +1,7 @@
 export default function Experience() {
   return (
     <section id="experience" className="bg-forest text-cream">
-      <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-28">
+      <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-40">
         <div className="flex flex-col justify-between gap-4 border-b border-cream/15 pb-10 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-widest text-brass-light">

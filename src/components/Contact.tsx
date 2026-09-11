@@ -9,7 +9,7 @@ const links = [
 export default function Contact() {
   return (
     <section id="contact" className="bg-forest text-cream">
-      <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:py-28">
+      <div className="mx-auto w-full max-w-6xl px-6 pb-28 pt-0 sm:pb-40 sm:pt-0">
         <div className="rounded-3xl border border-cream/15 bg-forest-dark p-8 sm:p-12">
           <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 sm:items-center">
             <div>
