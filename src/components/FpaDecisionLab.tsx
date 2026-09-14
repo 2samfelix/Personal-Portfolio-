@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   AVG_FULLY_LOADED_COST_PER_EMPLOYEE,
@@ -25,6 +26,7 @@ import {
   type RunwayStatus,
   type SaaSAssumptions,
   type SaaSForecastResult,
+  type SaaSMonthResult,
   type ScenarioKey,
   type SensitivityDriverKey,
 } from "@/lib/models/saas";
@@ -71,9 +73,61 @@ function SliderField({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest"
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest sm:h-1.5"
       />
     </label>
+  );
+}
+
+function AccordionSection({
+  title,
+  defaultOpen = false,
+  badge,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  badge?: ReactNode;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const panelId = useId();
+
+  return (
+    <div className="border-b border-forest/10 py-3 last:border-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
+          {title}
+          {badge}
+        </span>
+        <svg
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          className={`h-4 w-4 shrink-0 text-charcoal-soft transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden
+        >
+          <path d="M5 7.5l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <div
+        id={panelId}
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+          open ? "mt-3 grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">{children}</div>
+      </div>
+    </div>
   );
 }
 
@@ -119,7 +173,7 @@ function KpiCard({
   tone: BadgeTone;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-xl border border-forest/15 bg-white p-4">
+    <div className="flex flex-col gap-1 rounded-xl border border-forest/15 bg-white p-3">
       <span className="text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
         {label}
       </span>
@@ -176,21 +230,54 @@ function valueY(value: number, minValue: number, maxValue: number) {
 
 type ChartMetric = "mrr" | "cash";
 
+type ChartSeries = {
+  key: string;
+  label: string;
+  stroke: string;
+  dash?: string;
+  swatchClass: string;
+  months: SaaSMonthResult[];
+  emphasize?: boolean;
+};
+
+const CURRENT_SERIES_STYLE = {
+  label: "Current",
+  stroke: "#2a2820",
+  swatchClass: "bg-charcoal",
+};
+
 function ForecastChart({
   seriesByScenario,
+  currentMonths,
   metric,
   ariaLabel,
 }: {
   seriesByScenario: Record<ScenarioKey, SaaSForecastResult>;
+  currentMonths?: SaaSMonthResult[];
   metric: ChartMetric;
   ariaLabel: string;
 }) {
   const [hoverMonth, setHoverMonth] = useState<number | null>(null);
 
+  // The three canonical scenarios always render; "Current" is appended only
+  // once the live assumptions diverge from Base, and always uses the same
+  // engine output (`currentMonths`) the KPI cards and banner already use —
+  // never a separate calculation.
+  const series: ChartSeries[] = useMemo(() => {
+    const fixed = SCENARIO_KEYS.map((key) => ({
+      key,
+      months: seriesByScenario[key].months,
+      ...SERIES_STYLE[key],
+    }));
+    if (!currentMonths) return fixed;
+    return [
+      ...fixed,
+      { key: "current", months: currentMonths, ...CURRENT_SERIES_STYLE, emphasize: true },
+    ];
+  }, [seriesByScenario, currentMonths]);
+
   const { minValue, maxValue } = useMemo(() => {
-    const all = SCENARIO_KEYS.flatMap((key) =>
-      seriesByScenario[key].months.map((m) => m[metric])
-    );
+    const all = series.flatMap((s) => s.months.map((m) => m[metric]));
     const rawMin = Math.min(0, ...all);
     const rawMax = Math.max(...all);
     const pad = (rawMax - rawMin) * 0.12 || Math.abs(rawMax) * 0.12 || 1;
@@ -198,7 +285,7 @@ function ForecastChart({
       minValue: rawMin < 0 ? rawMin - pad : 0,
       maxValue: rawMax + pad,
     };
-  }, [seriesByScenario, metric]);
+  }, [series, metric]);
 
   const showZeroLine = minValue < 0 && maxValue > 0;
   const gridFracs = [0, 0.25, 0.5, 0.75, 1];
@@ -207,11 +294,12 @@ function ForecastChart({
   // Direct end-labels can collide when two series end at similar values —
   // nudge them apart vertically, closest-first, so text never overlaps.
   const endLabelY = useMemo(() => {
-    const raw = SCENARIO_KEYS.map((key) => {
-      const months = seriesByScenario[key].months;
-      const last = months[months.length - 1];
-      return { key, y: valueY(last[metric], minValue, maxValue) };
-    }).sort((a, b) => a.y - b.y);
+    const raw = series
+      .map((s) => {
+        const last = s.months[s.months.length - 1];
+        return { key: s.key, y: valueY(last[metric], minValue, maxValue) };
+      })
+      .sort((a, b) => a.y - b.y);
 
     const minGap = 12;
     for (let i = 1; i < raw.length; i++) {
@@ -219,8 +307,8 @@ function ForecastChart({
         raw[i].y = raw[i - 1].y + minGap;
       }
     }
-    return Object.fromEntries(raw.map((r) => [r.key, r.y])) as Record<ScenarioKey, number>;
-  }, [seriesByScenario, metric, minValue, maxValue]);
+    return Object.fromEntries(raw.map((r) => [r.key, r.y])) as Record<string, number>;
+  }, [series, metric, minValue, maxValue]);
 
   return (
     <div className="mt-2">
@@ -283,46 +371,58 @@ function ForecastChart({
         ))}
 
         {/* Lines */}
-        {SCENARIO_KEYS.map((key) => {
-          const style = SERIES_STYLE[key];
-          const points = seriesByScenario[key].months
+        {series.map((s) => {
+          const points = s.months
             .map((m) => `${monthX(m.month)},${valueY(m[metric], minValue, maxValue)}`)
             .join(" ");
           return (
             <polyline
-              key={key}
+              key={s.key}
               points={points}
               fill="none"
-              stroke={style.stroke}
-              strokeWidth={2}
-              strokeDasharray={style.dash}
+              stroke={s.stroke}
+              strokeWidth={s.emphasize ? 3 : 2}
+              strokeDasharray={s.dash}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           );
         })}
 
+        {/* "Current" gets a small marker at each month so it reads as the
+            live, point-in-time case rather than another fixed scenario. */}
+        {series
+          .filter((s) => s.emphasize)
+          .flatMap((s) =>
+            s.months.map((m) => (
+              <circle
+                key={`${s.key}-${m.month}`}
+                cx={monthX(m.month)}
+                cy={valueY(m[metric], minValue, maxValue)}
+                r={2.5}
+                fill={s.stroke}
+              />
+            ))
+          )}
+
         {/* Direct end labels — a cream halo (paintOrder stroke) keeps the
             label legible where a line's own dashes pass close behind it. */}
-        {SCENARIO_KEYS.map((key) => {
-          const style = SERIES_STYLE[key];
-          return (
-            <text
-              key={key}
-              x={CHART_WIDTH - PAD_RIGHT - 4}
-              y={endLabelY[key] - 6}
-              textAnchor="end"
-              fontSize={10}
-              fontWeight={700}
-              fill={style.stroke}
-              stroke="#f5f1e6"
-              strokeWidth={4}
-              paintOrder="stroke"
-            >
-              {style.label}
-            </text>
-          );
-        })}
+        {series.map((s) => (
+          <text
+            key={s.key}
+            x={CHART_WIDTH - PAD_RIGHT - 4}
+            y={endLabelY[s.key] - 6}
+            textAnchor="end"
+            fontSize={10}
+            fontWeight={700}
+            fill={s.stroke}
+            stroke="#f5f1e6"
+            strokeWidth={4}
+            paintOrder="stroke"
+          >
+            {s.label}
+          </text>
+        ))}
 
         {/* Hover hit zones */}
         {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
@@ -352,7 +452,7 @@ function ForecastChart({
             />
             {(() => {
               const boxWidth = 132;
-              const boxHeight = 62;
+              const boxHeight = 36 + series.length * 13;
               const rawX = monthX(hoverMonth) + 10;
               const x =
                 rawX + boxWidth > CHART_WIDTH - PAD_RIGHT
@@ -372,18 +472,9 @@ function ForecastChart({
                   <text x={10} y={16} fontSize={10} fontWeight={700} fill="#2a2820">
                     Month {hoverMonth}
                   </text>
-                  {SCENARIO_KEYS.map((key, i) => (
-                    <text
-                      key={key}
-                      x={10}
-                      y={32 + i * 13}
-                      fontSize={10}
-                      fill={SERIES_STYLE[key].stroke}
-                    >
-                      {SERIES_STYLE[key].label}:{" "}
-                      {formatCurrencyCompact(
-                        seriesByScenario[key].months[hoverMonth - 1][metric]
-                      )}
+                  {series.map((s, i) => (
+                    <text key={s.key} x={10} y={32 + i * 13} fontSize={10} fill={s.stroke}>
+                      {s.label}: {formatCurrencyCompact(s.months[hoverMonth - 1][metric])}
                     </text>
                   ))}
                 </g>
@@ -395,10 +486,10 @@ function ForecastChart({
 
       {/* Legend */}
       <div className="mt-3 flex flex-wrap gap-4">
-        {SCENARIO_KEYS.map((key) => (
-          <span key={key} className="flex items-center gap-1.5 text-xs text-charcoal-soft">
-            <span className={`h-2.5 w-2.5 rounded-full ${SERIES_STYLE[key].swatchClass}`} />
-            {SERIES_STYLE[key].label}
+        {series.map((s) => (
+          <span key={s.key} className="flex items-center gap-1.5 text-xs text-charcoal-soft">
+            <span className={`h-2.5 w-2.5 rounded-full ${s.swatchClass}`} />
+            {s.label}
           </span>
         ))}
       </div>
@@ -492,8 +583,15 @@ function ScenarioComparisonTable({
   );
 }
 
+function SampleBadge() {
+  return (
+    <span className="rounded-full bg-forest/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-forest">
+      Sample
+    </span>
+  );
+}
+
 export default function FpaDecisionLab() {
-  const [selectedPreset, setSelectedPreset] = useState<ScenarioKey>("base");
   const [assumptions, setAssumptions] = useState<SaaSAssumptions>(
     scenarioPresets.base.assumptions
   );
@@ -503,7 +601,6 @@ export default function FpaDecisionLab() {
     setAssumptions((prev) => ({ ...prev, [key]: value }));
 
   const applyPreset = (key: ScenarioKey) => {
-    setSelectedPreset(key);
     setAssumptions(scenarioPresets[key].assumptions);
   };
 
@@ -532,13 +629,23 @@ export default function FpaDecisionLab() {
     [activeResult, decision]
   );
 
-  const isCustomized =
-    JSON.stringify(assumptions) !==
-    JSON.stringify(scenarioPresets[selectedPreset].assumptions);
-  const activeColumn: ScenarioKey | "custom" = isCustomized ? "custom" : selectedPreset;
+  // Matched purely by value against the current assumptions — not by click
+  // history — so dragging a slider back to a preset's exact values is
+  // recognized automatically, per spec.
+  const matchedPresetKey = useMemo(
+    () =>
+      SCENARIO_KEYS.find(
+        (key) => JSON.stringify(assumptions) === JSON.stringify(scenarioPresets[key].assumptions)
+      ) ?? null,
+    [assumptions]
+  );
+  const isCustomized = matchedPresetKey === null;
+  const activeColumn: ScenarioKey | "custom" = matchedPresetKey ?? "custom";
+  const scenarioStatusLabel = matchedPresetKey
+    ? scenarioPresets[matchedPresetKey].label
+    : "Custom";
 
-  const isBaseCase =
-    JSON.stringify(assumptions) === JSON.stringify(scenarioPresets.base.assumptions);
+  const isBaseCase = matchedPresetKey === "base";
   const baseChanges = useMemo(
     () => (isBaseCase ? [] : diffFromBase(assumptions)),
     [assumptions, isBaseCase]
@@ -560,7 +667,7 @@ export default function FpaDecisionLab() {
 
   return (
     <main className="bg-cream">
-      <div className="mx-auto w-full max-w-4xl px-6 py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
         <Link
           href="/#builds"
           className="text-sm font-semibold text-forest hover:text-forest-dark"
@@ -569,7 +676,7 @@ export default function FpaDecisionLab() {
         </Link>
 
         {/* Hero */}
-        <div className="mt-8">
+        <div className="mt-8 max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-widest text-brass">
             Interactive Demo
           </p>
@@ -591,384 +698,398 @@ export default function FpaDecisionLab() {
         <p className="mt-8 max-w-2xl text-base leading-7 text-charcoal-soft">
           A small SaaS financial-planning simulator built around a fictional
           company, {northstarBaseline.name}. Pick a scenario or tune the
-          assumptions yourself — a 12-month engine recomputes MRR, EBITDA,
+          assumptions on the left — a 12-month engine recomputes MRR, EBITDA,
           cash, and a rules-based recommendation live.
         </p>
 
-        {/* Scenario selector */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            Scenario
-          </h2>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {SCENARIO_KEYS.map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => applyPreset(key)}
-                className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
-                  selectedPreset === key && !isCustomized
-                    ? "bg-forest text-cream"
-                    : "bg-white text-charcoal border border-forest/20 hover:border-forest/40"
+        {/* App workspace: sticky sidebar + live analysis canvas */}
+        <div className="mt-12 border-t border-forest/10 pt-8 lg:grid lg:grid-cols-[280px_1fr] lg:items-start lg:gap-8">
+          {/* Sidebar */}
+          <aside className="mb-8 rounded-2xl border border-forest/15 bg-white p-4 lg:sticky lg:top-24 lg:mb-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+            <div className="mb-1 flex items-center justify-between px-1 pb-3">
+              <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
+              <span
+                className={`text-xs font-semibold ${
+                  isCustomized ? "text-brass" : "text-forest"
                 }`}
               >
-                {scenarioPresets[key].label}
-              </button>
-            ))}
-          </div>
-          {isCustomized && (
-            <p className="mt-2 text-xs text-charcoal-soft">
-              Assumptions customized from the {scenarioPresets[selectedPreset].label} preset below.
-            </p>
-          )}
-        </section>
+                {scenarioStatusLabel}
+              </span>
+            </div>
 
-        {/* Inputs */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-              Assumptions
-            </h2>
-            <span className="rounded-full bg-forest/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
-              Illustrative sample data
-            </span>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-            <SliderField
-              label="Monthly Customer Growth Rate"
-              value={assumptions.monthlyGrowthRate * 100}
-              onChange={(v) => set("monthlyGrowthRate")(v / 100)}
-              min={0}
-              max={15}
-              step={0.5}
-              display={formatPercent(assumptions.monthlyGrowthRate)}
-            />
-            <SliderField
-              label="Monthly Churn Rate"
-              value={assumptions.monthlyChurnRate * 100}
-              onChange={(v) => set("monthlyChurnRate")(v / 100)}
-              min={0}
-              max={6}
-              step={0.1}
-              display={formatPercent(assumptions.monthlyChurnRate)}
-            />
-            <SliderField
-              label="Pricing Change"
-              value={assumptions.pricingChangePct * 100}
-              onChange={(v) => set("pricingChangePct")(v / 100)}
-              min={-5}
-              max={10}
-              step={0.5}
-              display={`${assumptions.pricingChangePct >= 0 ? "+" : ""}${formatPercent(
-                assumptions.pricingChangePct
-              )}`}
-            />
-            <SliderField
-              label="Gross Margin"
-              value={assumptions.grossMarginPct * 100}
-              onChange={(v) => set("grossMarginPct")(v / 100)}
-              min={50}
-              max={95}
-              step={1}
-              display={formatPercent(assumptions.grossMarginPct, 0)}
-            />
-            <SliderField
-              label="Headcount"
-              value={assumptions.headcount}
-              onChange={set("headcount")}
-              min={15}
-              max={50}
-              step={1}
-              display={`${assumptions.headcount} heads`}
-            />
-            <SliderField
-              label="Annual Sales & Marketing Spend"
-              value={assumptions.annualSalesMarketing}
-              onChange={set("annualSalesMarketing")}
-              min={300_000}
-              max={1_500_000}
-              step={25_000}
-              display={formatCurrencyCompact(assumptions.annualSalesMarketing)}
-            />
-          </div>
-          <p className="mt-5 text-xs leading-5 text-charcoal-soft">
-            Modeling assumptions disclosed for transparency: avg. fully-loaded
-            cost per employee ~{formatCurrencyCompact(AVG_FULLY_LOADED_COST_PER_EMPLOYEE)}
-            /yr, fixed G&amp;A ~{formatCurrencyCompact(FIXED_GA_MONTHLY)}/mo.
-          </p>
-        </section>
+            <AccordionSection title="Scenario" defaultOpen>
+              <div className="flex flex-col gap-2">
+                {SCENARIO_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => applyPreset(key)}
+                    className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                      matchedPresetKey === key
+                        ? "bg-forest text-cream"
+                        : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
+                    }`}
+                  >
+                    {scenarioPresets[key].label}
+                  </button>
+                ))}
+              </div>
+            </AccordionSection>
 
-        {/* KPI cards */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            12-Month Outlook
-          </h2>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <KpiCard
-              label="Ending ARR"
-              value={formatCurrencyCompact(activeResult.endingARR)}
-              badge={arrTrend}
-              tone={ARR_TONE[arrTrend]}
-            />
-            <KpiCard
-              label="EBITDA Margin"
-              value={formatPercent(activeResult.endingEBITDAMargin)}
-              badge={marginStatus}
-              tone={MARGIN_TONE[marginStatus]}
-            />
-            <KpiCard
-              label="Ending Cash"
-              value={formatCurrencyCompact(activeResult.endingCash)}
-              badge={cashStatus}
-              tone={CASH_TONE[cashStatus]}
-            />
-            <KpiCard
-              label="Runway"
-              value={runwayLabel(activeResult.runwayMonths)}
-              badge={runwayStatus}
-              tone={RUNWAY_TONE[runwayStatus]}
-            />
-          </div>
-          <p className="mt-3 text-[11px] leading-5 text-charcoal-soft">
-            Status thresholds: ARR uses the change from month 1 to month 12
-            (&gt;+5% Growing, ±5% Flat, &lt;-5% Contracting). Margin: &gt;0%
-            Healthy, -40–0% Watch, &lt;-40% Negative. Cash: &ge;90% of
-            starting cash Strong, 50–90% Adequate, &lt;50% Low. Runway:
-            &gt;18mo Safe, 12–18mo Watch, &lt;12mo Critical, cash-flow
-            positive Self-funded.
-          </p>
-        </section>
+            <AccordionSection title="Drivers" badge={<SampleBadge />}>
+              <div className="flex flex-col gap-5">
+                <SliderField
+                  label="Monthly Customer Growth Rate"
+                  value={assumptions.monthlyGrowthRate * 100}
+                  onChange={(v) => set("monthlyGrowthRate")(v / 100)}
+                  min={0}
+                  max={15}
+                  step={0.5}
+                  display={formatPercent(assumptions.monthlyGrowthRate)}
+                />
+                <SliderField
+                  label="Monthly Churn Rate"
+                  value={assumptions.monthlyChurnRate * 100}
+                  onChange={(v) => set("monthlyChurnRate")(v / 100)}
+                  min={0}
+                  max={6}
+                  step={0.1}
+                  display={formatPercent(assumptions.monthlyChurnRate)}
+                />
+                <SliderField
+                  label="Pricing Change"
+                  value={assumptions.pricingChangePct * 100}
+                  onChange={(v) => set("pricingChangePct")(v / 100)}
+                  min={-5}
+                  max={10}
+                  step={0.5}
+                  display={`${assumptions.pricingChangePct >= 0 ? "+" : ""}${formatPercent(
+                    assumptions.pricingChangePct
+                  )}`}
+                />
+                <SliderField
+                  label="Gross Margin"
+                  value={assumptions.grossMarginPct * 100}
+                  onChange={(v) => set("grossMarginPct")(v / 100)}
+                  min={50}
+                  max={95}
+                  step={1}
+                  display={formatPercent(assumptions.grossMarginPct, 0)}
+                />
+                <SliderField
+                  label="Headcount"
+                  value={assumptions.headcount}
+                  onChange={set("headcount")}
+                  min={15}
+                  max={50}
+                  step={1}
+                  display={`${assumptions.headcount} heads`}
+                />
+                <SliderField
+                  label="Annual Sales & Marketing Spend"
+                  value={assumptions.annualSalesMarketing}
+                  onChange={set("annualSalesMarketing")}
+                  min={300_000}
+                  max={1_500_000}
+                  step={25_000}
+                  display={formatCurrencyCompact(assumptions.annualSalesMarketing)}
+                />
+              </div>
+            </AccordionSection>
 
-        {/* Scenario comparison table */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            Scenario Comparison
-          </h2>
-          <div className="mt-4">
-            <ScenarioComparisonTable
-              scenarioResults={scenarioResults}
-              activeResult={activeResult}
-              activeColumn={activeColumn}
-            />
-          </div>
-        </section>
+            <AccordionSection title="Model Assumptions">
+              <dl className="flex flex-col gap-2 text-xs">
+                {[
+                  ["Starting ARR", formatCurrencyCompact(northstarBaseline.startingARR)],
+                  ["Starting Customers", northstarBaseline.startingCustomers.toLocaleString()],
+                  ["Starting Cash", formatCurrencyCompact(northstarBaseline.startingCash)],
+                  ["Starting ARPU", `${formatCurrency(northstarBaseline.annualArpu)}/yr`],
+                  [
+                    "Avg. Employee Cost",
+                    `${formatCurrencyCompact(AVG_FULLY_LOADED_COST_PER_EMPLOYEE)}/yr`,
+                  ],
+                  ["Fixed G&A", `${formatCurrencyCompact(FIXED_GA_MONTHLY)}/mo`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-2">
+                    <dt className="text-charcoal-soft">{label}</dt>
+                    <dd className="font-semibold text-charcoal">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
+                Fixed for this demo — not editable.
+              </p>
+            </AccordionSection>
+          </aside>
 
-        {/* Decision banner */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            Recommendation
-          </h2>
-          <div className={`mt-4 rounded-xl px-5 py-4 ${DECISION_STYLE[decision]}`}>
-            <p className="text-lg font-bold">{decision}</p>
-            <ul className="mt-2 flex flex-col gap-1">
-              {decisionReasons.map((reason) => (
-                <li
-                  key={reason}
-                  className="text-sm leading-6 before:mr-2 before:content-['—']"
-                >
-                  {reason}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <p className="mt-3 text-sm leading-6 text-charcoal-soft">
-            Deterministic rule, not a model guess: runway &gt; 18 months and a
-            positive EBITDA margin call for &ldquo;Invest for growth,&rdquo;
-            12–18 months of runway calls for &ldquo;Run cautiously,&rdquo; and
-            under 12 months calls for &ldquo;Preserve cash.&rdquo;
-          </p>
-          <p className="mt-4 text-base leading-7 text-charcoal">
-            Under these assumptions, {northstarBaseline.name} ends the year at{" "}
-            {formatCurrency(activeResult.endingARR)} ARR with a{" "}
-            {formatPercent(activeResult.endingEBITDAMargin)} EBITDA margin and{" "}
-            {runwayPhrase(activeResult.runwayMonths)}{" "}
-            — the model&apos;s read is to &ldquo;{decision.toLowerCase()}.&rdquo;
-          </p>
-        </section>
+          {/* Live analysis canvas */}
+          <div className="flex flex-col gap-4">
+            {/* Decision banner */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                Recommendation
+              </h2>
+              <div className={`mt-1.5 rounded-xl px-4 py-2.5 ${DECISION_STYLE[decision]}`}>
+                <p className="text-lg font-bold">{decision}</p>
+                <ul className="mt-1 flex flex-col gap-0.5">
+                  {decisionReasons.map((reason) => (
+                    <li
+                      key={reason}
+                      className="text-sm leading-6 before:mr-2 before:content-['—']"
+                    >
+                      {reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <p className="mt-1.5 text-sm leading-5 text-charcoal">
+                Under these assumptions, {northstarBaseline.name} ends the
+                year at {formatCurrency(activeResult.endingARR)} ARR with a{" "}
+                {formatPercent(activeResult.endingEBITDAMargin)} EBITDA margin
+                and {runwayPhrase(activeResult.runwayMonths)}{" "}
+                — the model&apos;s read is to &ldquo;{decision.toLowerCase()}.&rdquo;
+              </p>
+              <p className="mt-1 text-xs leading-4 text-charcoal-soft">
+                Deterministic thresholds: runway &gt;18mo + positive margin
+                &rarr; Invest for growth; 12–18mo &rarr; Run cautiously;
+                &lt;12mo &rarr; Preserve cash.
+              </p>
+            </section>
 
-        {/* What changed vs Base? */}
-        {!isBaseCase && baseChanges.length > 0 && (
-          <section className="mt-12 border-t border-forest/10 pt-12">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-              What Changed vs Base?
-            </h2>
-            <div className="mt-4 rounded-xl border border-forest/15 bg-white p-4">
-              <ul className="flex flex-col gap-1.5">
-                {baseChanges.map((change) => (
+            {/* KPI cards */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                12-Month Outlook
+              </h2>
+              <div className="mt-1.5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <KpiCard
+                  label="Ending ARR"
+                  value={formatCurrencyCompact(activeResult.endingARR)}
+                  badge={arrTrend}
+                  tone={ARR_TONE[arrTrend]}
+                />
+                <KpiCard
+                  label="EBITDA Margin"
+                  value={formatPercent(activeResult.endingEBITDAMargin)}
+                  badge={marginStatus}
+                  tone={MARGIN_TONE[marginStatus]}
+                />
+                <KpiCard
+                  label="Ending Cash"
+                  value={formatCurrencyCompact(activeResult.endingCash)}
+                  badge={cashStatus}
+                  tone={CASH_TONE[cashStatus]}
+                />
+                <KpiCard
+                  label="Runway"
+                  value={runwayLabel(activeResult.runwayMonths)}
+                  badge={runwayStatus}
+                  tone={RUNWAY_TONE[runwayStatus]}
+                />
+              </div>
+            </section>
+
+            {/* Main chart */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                12-Month MRR Forecast
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+                Base / Upside / Downside stay fixed. A bold{" "}
+                <span className="font-semibold text-charcoal">Current</span>{" "}
+                line appears once you move a driver.
+              </p>
+              <ForecastChart
+                seriesByScenario={scenarioResults}
+                currentMonths={isBaseCase ? undefined : activeResult.months}
+                metric="mrr"
+                ariaLabel="12-month MRR forecast under Base, Upside, and Downside scenarios, plus your current custom case"
+              />
+            </section>
+
+            {/* Cash chart */}
+            <section className="border-t border-forest/10 pt-8">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                12-Month Cash Balance Forecast
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+                Same scenarios, tracking ending cash instead of revenue —
+                watch how a scenario that turns cash-flow positive levels off
+                rather than continuing to decline.
+              </p>
+              <ForecastChart
+                seriesByScenario={scenarioResults}
+                currentMonths={isBaseCase ? undefined : activeResult.months}
+                metric="cash"
+                ariaLabel="12-month cash balance forecast under Base, Upside, and Downside scenarios, plus your current custom case"
+              />
+            </section>
+
+            {/* Scenario comparison table */}
+            <section className="border-t border-forest/10 pt-8">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                Scenario Comparison
+              </h2>
+              <div className="mt-3">
+                <ScenarioComparisonTable
+                  scenarioResults={scenarioResults}
+                  activeResult={activeResult}
+                  activeColumn={activeColumn}
+                />
+              </div>
+            </section>
+
+            {/* What changed vs Base? */}
+            {!isBaseCase && baseChanges.length > 0 && (
+              <section className="border-t border-forest/10 pt-8">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  What Changed vs Base?
+                </h2>
+                <div className="mt-3 rounded-xl border border-forest/15 bg-white p-4">
+                  <ul className="flex flex-col gap-1.5">
+                    {baseChanges.map((change) => (
+                      <li
+                        key={change.key}
+                        className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
+                      >
+                        <span className="font-semibold text-charcoal">{change.label}</span>:{" "}
+                        {formatAssumptionValue(change.key, change.fromValue)} &rarr;{" "}
+                        {formatAssumptionValue(change.key, change.toValue)}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-4 grid grid-cols-1 gap-2 border-t border-forest/10 pt-4 sm:grid-cols-3">
+                    <div className="text-sm">
+                      <span className="text-charcoal-soft">Ending ARR: </span>
+                      <span className="font-semibold text-charcoal">
+                        {formatSignedCompact(baseImpact.arrDelta)}
+                      </span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-charcoal-soft">EBITDA Margin: </span>
+                      <span className="font-semibold text-charcoal">
+                        {baseImpact.marginDeltaPts >= 0 ? "+" : ""}
+                        {baseImpact.marginDeltaPts.toFixed(1)} pts
+                      </span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-charcoal-soft">Ending Cash: </span>
+                      <span className="font-semibold text-charcoal">
+                        {formatSignedCompact(baseImpact.cashDelta)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Sensitivity panel */}
+            <section className="border-t border-forest/10 pt-8">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                What Moves EBITDA Most (±10%)
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+                Click a driver to see its current value and the impact of
+                ±10% on cumulative 12-month EBITDA.
+              </p>
+              <ul className="mt-4 flex flex-col gap-2">
+                {sensitivity.map((row, i) => {
+                  const isExpanded = expandedDriver === row.key;
+                  return (
+                    <li key={row.key} className="rounded-lg border border-forest/15 bg-white">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedDriver(isExpanded ? null : row.key)}
+                        className="flex w-full items-center justify-between px-4 py-3 text-left"
+                      >
+                        <span className="flex items-center gap-3">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-forest/10 text-xs font-bold text-forest">
+                            {i + 1}
+                          </span>
+                          <span className="text-sm font-semibold text-charcoal">
+                            {row.label}
+                          </span>
+                        </span>
+                        <span className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-brass">
+                            {formatCurrency(row.range)} swing
+                          </span>
+                          <span className="text-charcoal-soft">
+                            {isExpanded ? "−" : "+"}
+                          </span>
+                        </span>
+                      </button>
+                      {isExpanded && sensitivityDetail && sensitivityDetail.key === row.key && (
+                        <div className="grid grid-cols-1 gap-3 border-t border-forest/10 px-4 py-3 text-xs sm:grid-cols-3">
+                          <div>
+                            <span className="block text-charcoal-soft">Current value</span>
+                            <span className="font-semibold text-charcoal">
+                              {formatAssumptionValue(row.key, sensitivityDetail.baseValue)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-charcoal-soft">
+                              -10% ({formatAssumptionValue(row.key, sensitivityDetail.downValue)})
+                              cumulative EBITDA
+                            </span>
+                            <span className="font-semibold text-rust">
+                              {formatCurrency(sensitivityDetail.downCumulativeEBITDA)}{" "}
+                              (
+                              {formatSignedCompact(
+                                sensitivityDetail.downCumulativeEBITDA -
+                                  sensitivityDetail.baseCumulativeEBITDA
+                              )}
+                              )
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-charcoal-soft">
+                              +10% ({formatAssumptionValue(row.key, sensitivityDetail.upValue)})
+                              cumulative EBITDA
+                            </span>
+                            <span className="font-semibold text-forest">
+                              {formatCurrency(sensitivityDetail.upCumulativeEBITDA)}{" "}
+                              (
+                              {formatSignedCompact(
+                                sensitivityDetail.upCumulativeEBITDA -
+                                  sensitivityDetail.baseCumulativeEBITDA
+                              )}
+                              )
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
+            {/* Planned, not built */}
+            <section className="border-t border-forest/10 pt-8">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                Planned — Not In This Version
+              </h2>
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {[
+                  "Additional industry models beyond SaaS",
+                  "CSV upload of real company data",
+                  "AI-generated commentary",
+                  "Save / share a scenario",
+                  "NRR and LTV:CAC metrics",
+                  "Random-data / Monte Carlo mode",
+                ].map((item) => (
                   <li
-                    key={change.key}
+                    key={item}
                     className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
                   >
-                    <span className="font-semibold text-charcoal">{change.label}</span>:{" "}
-                    {formatAssumptionValue(change.key, change.fromValue)} &rarr;{" "}
-                    {formatAssumptionValue(change.key, change.toValue)}
+                    {item}
                   </li>
                 ))}
               </ul>
-              <div className="mt-4 grid grid-cols-1 gap-2 border-t border-forest/10 pt-4 sm:grid-cols-3">
-                <div className="text-sm">
-                  <span className="text-charcoal-soft">Ending ARR: </span>
-                  <span className="font-semibold text-charcoal">
-                    {formatSignedCompact(baseImpact.arrDelta)}
-                  </span>
-                </div>
-                <div className="text-sm">
-                  <span className="text-charcoal-soft">EBITDA Margin: </span>
-                  <span className="font-semibold text-charcoal">
-                    {baseImpact.marginDeltaPts >= 0 ? "+" : ""}
-                    {baseImpact.marginDeltaPts.toFixed(1)} pts
-                  </span>
-                </div>
-                <div className="text-sm">
-                  <span className="text-charcoal-soft">Ending Cash: </span>
-                  <span className="font-semibold text-charcoal">
-                    {formatSignedCompact(baseImpact.cashDelta)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Main chart */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            12-Month MRR Forecast
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-            The three scenario lines always reflect their own fixed
-            assumptions, independent of the sliders above — a stable
-            comparison while you tune your own case.
-          </p>
-          <ForecastChart
-            seriesByScenario={scenarioResults}
-            metric="mrr"
-            ariaLabel="12-month MRR forecast under Base, Upside, and Downside scenarios"
-          />
-        </section>
-
-        {/* Cash chart */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            12-Month Cash Balance Forecast
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-            Same three scenarios, tracking ending cash instead of revenue —
-            watch how a scenario that turns cash-flow positive levels off
-            rather than continuing to decline.
-          </p>
-          <ForecastChart
-            seriesByScenario={scenarioResults}
-            metric="cash"
-            ariaLabel="12-month cash balance forecast under Base, Upside, and Downside scenarios"
-          />
-        </section>
-
-        {/* Sensitivity panel */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            What Moves EBITDA Most (±10%)
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-            Click a driver to see its current value and the impact of ±10% on
-            cumulative 12-month EBITDA.
-          </p>
-          <ul className="mt-4 flex flex-col gap-2">
-            {sensitivity.map((row, i) => {
-              const isExpanded = expandedDriver === row.key;
-              return (
-                <li key={row.key} className="rounded-lg border border-forest/15 bg-white">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedDriver(isExpanded ? null : row.key)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left"
-                  >
-                    <span className="flex items-center gap-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-forest/10 text-xs font-bold text-forest">
-                        {i + 1}
-                      </span>
-                      <span className="text-sm font-semibold text-charcoal">
-                        {row.label}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-brass">
-                        {formatCurrency(row.range)} swing
-                      </span>
-                      <span className="text-charcoal-soft">
-                        {isExpanded ? "−" : "+"}
-                      </span>
-                    </span>
-                  </button>
-                  {isExpanded && sensitivityDetail && sensitivityDetail.key === row.key && (
-                    <div className="grid grid-cols-1 gap-3 border-t border-forest/10 px-4 py-3 text-xs sm:grid-cols-3">
-                      <div>
-                        <span className="block text-charcoal-soft">Current value</span>
-                        <span className="font-semibold text-charcoal">
-                          {formatAssumptionValue(row.key, sensitivityDetail.baseValue)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-charcoal-soft">
-                          -10% ({formatAssumptionValue(row.key, sensitivityDetail.downValue)})
-                          cumulative EBITDA
-                        </span>
-                        <span className="font-semibold text-rust">
-                          {formatCurrency(sensitivityDetail.downCumulativeEBITDA)}{" "}
-                          (
-                          {formatSignedCompact(
-                            sensitivityDetail.downCumulativeEBITDA -
-                              sensitivityDetail.baseCumulativeEBITDA
-                          )}
-                          )
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-charcoal-soft">
-                          +10% ({formatAssumptionValue(row.key, sensitivityDetail.upValue)})
-                          cumulative EBITDA
-                        </span>
-                        <span className="font-semibold text-forest">
-                          {formatCurrency(sensitivityDetail.upCumulativeEBITDA)}{" "}
-                          (
-                          {formatSignedCompact(
-                            sensitivityDetail.upCumulativeEBITDA -
-                              sensitivityDetail.baseCumulativeEBITDA
-                          )}
-                          )
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        {/* Planned, not built */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            Planned — Not In This Version
-          </h2>
-          <ul className="mt-3 flex flex-col gap-1.5">
-            {[
-              "Additional industry models beyond SaaS",
-              "CSV upload of real company data",
-              "AI-generated commentary",
-              "Save / share a scenario",
-              "NRR and LTV:CAC metrics",
-              "Random-data / Monte Carlo mode",
-            ].map((item) => (
-              <li
-                key={item}
-                className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
-        </section>
+            </section>
+          </div>
+        </div>
       </div>
     </main>
   );
