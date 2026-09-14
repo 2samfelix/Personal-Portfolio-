@@ -255,6 +255,55 @@ export function explainConsultingDecision(
   return reasons;
 }
 
+/**
+ * Key Risk / Next Action for the CFO Commentary panel — same fixed
+ * priority order as the SaaS engine's equivalent (cash first, then
+ * profitability, then this industry's own operating-health signal, then
+ * top-line direction), tied to the same decideStance thresholds so the
+ * commentary and the Recommendation banner can never disagree.
+ */
+export function buildConsultingRiskAndAction(
+  result: ConsultingForecastResult
+): { keyRiskPhrase: string; nextActionPhrase: string } {
+  const runwayStatus = classifyRunway(result.runwayMonths);
+  const marginStatus = classifyMargin(result.endingEBITDAMargin);
+  const cashStatus = classifyConsultingCash(result.endingCash);
+  const utilizationStatus = classifyUtilization(result.endingUtilization);
+  const trendStatus = classifyConsultingTrend(result);
+
+  let keyRiskPhrase: string;
+  if (runwayStatus === "Critical") {
+    keyRiskPhrase =
+      "Runway has fallen below 12 months — cash exhaustion is the dominant risk if burn doesn't change.";
+  } else if (cashStatus === "Low") {
+    keyRiskPhrase =
+      "Ending cash is tight relative to the starting balance, leaving little cushion for a downside surprise.";
+  } else if (marginStatus === "Negative") {
+    keyRiskPhrase =
+      "EBITDA margin remains materially negative — delivery cost and SG&A aren't yet supported by billed revenue at this scale.";
+  } else if (utilizationStatus === "Weak") {
+    keyRiskPhrase =
+      "Achieved utilization is weak — insufficient pipeline conversion is leaving significant bench time, the firm's main lever on profitability.";
+  } else if (trendStatus === "Contracting") {
+    keyRiskPhrase = "Net revenue is contracting over the window.";
+  } else {
+    keyRiskPhrase =
+      "No metric is outside a healthy band at these assumptions — the main risk is an unmodeled external shock.";
+  }
+
+  const decision = decideStance(result.runwayMonths, result.endingEBITDAMargin);
+  const nextActionPhrase: Record<Decision, string> = {
+    "Invest for growth":
+      "Continue investing in growth (headcount, bid rate) while keeping an eye on the risk above so it doesn't become the binding constraint.",
+    "Run cautiously":
+      "Hold headcount and spend roughly flat and revisit in a quarter — there's room to operate, but not enough margin of safety to accelerate.",
+    "Preserve cash":
+      "Tighten delivery cost and SG&A now, and prioritize pipeline conversion to rebuild utilization before adding headcount.",
+  };
+
+  return { keyRiskPhrase, nextActionPhrase: nextActionPhrase[decision] };
+}
+
 export function classifyConsultingCash(
   endingCash: number,
   baseline: ConsultingCompanyBaseline = meridianBaseline

@@ -252,6 +252,58 @@ export function explainRealEstateDecision(
   return reasons;
 }
 
+/**
+ * Key Risk / Next Action for the CFO Commentary panel — same fixed
+ * priority order as the SaaS and Consulting engines' equivalents (cash
+ * first, then profitability, then this industry's own operating-health
+ * signal, then top-line direction), tied to the same decideStance
+ * thresholds so the commentary and the Recommendation banner can never
+ * disagree.
+ */
+export function buildRealEstateRiskAndAction(
+  result: RealEstateForecastResult,
+  assumptions: RealEstateAssumptions
+): { keyRiskPhrase: string; nextActionPhrase: string } {
+  const runwayStatus = classifyRunway(result.runwayMonths);
+  const marginStatus = classifyMargin(result.endingFreeCashFlowMargin);
+  const cashStatus = classifyRealEstateCash(result.endingCash);
+  const dscr = debtServiceCoverageRatio(result, assumptions);
+  const dscrStatus = classifyDebtCoverage(dscr);
+  const trendStatus = classifyRealEstateTrend(result);
+
+  let keyRiskPhrase: string;
+  if (runwayStatus === "Critical") {
+    keyRiskPhrase =
+      "Runway has fallen below 12 months — cash exhaustion is the dominant risk if free cash flow doesn't improve.";
+  } else if (cashStatus === "Low") {
+    keyRiskPhrase =
+      "Ending cash is tight relative to the starting balance, leaving little cushion for a downside surprise.";
+  } else if (marginStatus === "Negative") {
+    keyRiskPhrase =
+      "Free cash flow margin remains materially negative — operating expenses and debt service aren't yet supported by rental revenue at this occupancy and rent.";
+  } else if (dscrStatus === "Weak") {
+    keyRiskPhrase =
+      `NOI doesn't fully cover debt service (${dscr.toFixed(2)}x) — a lender covenant or refinancing risk even with adequate cash on hand.`;
+  } else if (trendStatus === "Contracting") {
+    keyRiskPhrase = "NOI is contracting over the window.";
+  } else {
+    keyRiskPhrase =
+      "No metric is outside a healthy band at these assumptions — the main risk is an unmodeled external shock (rate reset, major vacancy).";
+  }
+
+  const decision = decideStance(result.runwayMonths, result.endingFreeCashFlowMargin);
+  const nextActionPhrase: Record<Decision, string> = {
+    "Invest for growth":
+      "Continue pursuing occupancy and rent growth while keeping an eye on the risk above so it doesn't become the binding constraint.",
+    "Run cautiously":
+      "Hold the portfolio steady and revisit in a quarter — there's room to operate, but not enough margin of safety to add debt or acquire.",
+    "Preserve cash":
+      "Prioritize occupancy and expense control now, and avoid additional debt service until coverage and free cash flow recover.",
+  };
+
+  return { keyRiskPhrase, nextActionPhrase: nextActionPhrase[decision] };
+}
+
 export function classifyRealEstateCash(
   endingCash: number,
   baseline: RealEstateCompanyBaseline = harborViewBaseline

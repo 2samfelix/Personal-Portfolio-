@@ -659,6 +659,8 @@ export type CfoCommentaryData = {
   ltv: number;
   ltvToCac: number;
   ltvCacPhrase: string;
+  keyRiskPhrase: string;
+  nextActionPhrase: string;
 };
 
 /**
@@ -721,6 +723,42 @@ export function buildCfoCommentaryData(
     growthDriverPhrase = "by a mix of new customer acquisition and expansion within the existing base";
   }
 
+  // Key Risk: a fixed priority order (cash exhaustion first, since it's an
+  // existential constraint; then profitability, retention, unit economics,
+  // and finally top-line direction), not a severity score — picks the
+  // single most pressing issue rather than listing every metric that's off
+  // its healthy band.
+  const runwayStatus = classifyRunway(result.runwayMonths);
+  let keyRiskPhrase: string;
+  if (runwayStatus === "Critical") {
+    keyRiskPhrase =
+      "Runway has fallen below 12 months — cash exhaustion is the dominant risk if burn and spend don't change.";
+  } else if (cashStatus === "Low") {
+    keyRiskPhrase = "Ending cash is tight relative to the starting balance, leaving little cushion for a downside surprise.";
+  } else if (marginStatus === "Negative") {
+    keyRiskPhrase = "EBITDA margin remains materially negative — the cost base isn't yet supported by revenue at this scale.";
+  } else if (nrrStatus === "Weak") {
+    keyRiskPhrase = "Net revenue retention is weak — churn and contraction are eroding the existing base faster than expansion offsets it.";
+  } else if (ltvCacStatus === "Weak") {
+    keyRiskPhrase = "LTV/CAC is weak — customer acquisition cost isn't comfortably supported by lifetime value at current assumptions.";
+  } else if (arrTrend === "Contracting") {
+    keyRiskPhrase = "ARR is contracting over the window — customer losses are outpacing new growth.";
+  } else {
+    keyRiskPhrase = "No metric is outside a healthy band at these assumptions — the main risk is an unmodeled external shock.";
+  }
+
+  // Next Action ties directly to decideStance's own runway/margin
+  // thresholds, so the recommendation and this line can never disagree.
+  const decision = decideStance(result.runwayMonths, result.endingEBITDAMargin);
+  const nextActionPhrase: Record<Decision, string> = {
+    "Invest for growth":
+      "Continue investing in growth while keeping an eye on the risk above so it doesn't become the binding constraint.",
+    "Run cautiously":
+      "Hold spend roughly flat and revisit in a quarter — there's room to operate, but not enough margin of safety to accelerate.",
+    "Preserve cash":
+      "Reduce burn now: cut discretionary spend and revisit growth investment only once runway and margin recover.",
+  };
+
   return {
     endingARR: result.endingARR,
     startingARR: baseline.startingARR,
@@ -741,5 +779,7 @@ export function buildCfoCommentaryData(
     ltv: result.ltv,
     ltvToCac: result.ltvToCac,
     ltvCacPhrase: ltvCacPhrase[ltvCacStatus],
+    keyRiskPhrase,
+    nextActionPhrase: nextActionPhrase[decision],
   };
 }

@@ -41,6 +41,7 @@ import { runMonteCarloSimulation, type MonteCarloResult } from "@/lib/monteCarlo
 import {
   PIPELINE_CONVERSION_BENCHMARK,
   STANDARD_BILLABLE_HOURS_PER_MONTH,
+  buildConsultingRiskAndAction,
   classifyConsultingCash,
   classifyUtilization,
   consultingScenarioPresets,
@@ -55,6 +56,7 @@ import {
   type UtilizationStatus,
 } from "@/lib/models/consulting";
 import {
+  buildRealEstateRiskAndAction,
   classifyDebtCoverage,
   classifyOccupancy,
   classifyRealEstateCash,
@@ -1119,6 +1121,32 @@ function GenericForecastChart({
   );
 }
 
+// AI-generated commentary is only ever wired up if a server-side LLM API
+// key is already configured — none is in this environment, so AI-Assisted
+// stays visibly present but disabled with an explanation, rather than
+// faked or silently hidden. If a key were ever configured, the
+// architecture would be: engine output -> server-side API route -> LLM ->
+// rendered commentary, with the LLM receiving only calculated numbers and
+// never performing financial calculations itself.
+function CommentaryModeToggle() {
+  return (
+    <div
+      className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5"
+      title="AI-Assisted commentary requires a server-side LLM API key, which isn't configured in this environment. Deterministic commentary is the only mode available."
+    >
+      <span className="rounded-full bg-forest px-3 py-1 text-xs font-semibold text-cream">
+        Deterministic
+      </span>
+      <span
+        aria-disabled="true"
+        className="cursor-not-allowed rounded-full px-3 py-1 text-xs font-semibold text-charcoal-soft/50"
+      >
+        AI-Assisted
+      </span>
+    </div>
+  );
+}
+
 function SampleBadge() {
   return (
     <span className="rounded-full bg-forest/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-forest">
@@ -1379,6 +1407,8 @@ export default function FpaDecisionLab() {
     )} vs. CAC ${formatCurrencyCompact(cfoCommentaryData.cac)}), ${
       cfoCommentaryData.ltvCacPhrase
     }.`,
+    keyRisk: cfoCommentaryData.keyRiskPhrase,
+    nextAction: cfoCommentaryData.nextActionPhrase,
   };
 
   // --- Consulting & Services ---
@@ -1442,6 +1472,10 @@ export default function FpaDecisionLab() {
   const consultingMarginStatus = classifyMargin(consultingResult.endingEBITDAMargin);
   const consultingCashStatus = classifyConsultingCash(consultingResult.endingCash, meridianBaseline);
   const consultingRunwayStatus = classifyRunway(consultingResult.runwayMonths);
+  const consultingRiskAndAction = useMemo(
+    () => buildConsultingRiskAndAction(consultingResult),
+    [consultingResult]
+  );
 
   // --- Real Estate ---
   const [realEstateAssumptions, setRealEstateAssumptions] = useState<RealEstateAssumptions>(
@@ -1509,6 +1543,10 @@ export default function FpaDecisionLab() {
   const realEstateDscrStatus = classifyDebtCoverage(realEstateDscr);
   const realEstateCashStatus = classifyRealEstateCash(realEstateResult.endingCash, harborViewBaseline);
   const realEstateRunwayStatus = classifyRunway(realEstateResult.runwayMonths);
+  const realEstateRiskAndAction = useMemo(
+    () => buildRealEstateRiskAndAction(realEstateResult, realEstateAssumptions),
+    [realEstateResult, realEstateAssumptions]
+  );
 
   return (
     <main className="bg-cream">
@@ -2482,9 +2520,12 @@ export default function FpaDecisionLab() {
 
             {/* CFO Commentary */}
             <section className="border-t border-forest/10 pt-8">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                CFO Commentary — {scenarioStatusLabel}
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  CFO Commentary — {scenarioStatusLabel}
+                </h2>
+                <CommentaryModeToggle />
+              </div>
               <div className="mt-3 flex flex-col gap-3 rounded-xl border border-forest/15 bg-white p-4">
                 <p className="text-sm leading-6 text-charcoal">
                   <span className="font-semibold text-brass">Performance: </span>
@@ -2495,12 +2536,20 @@ export default function FpaDecisionLab() {
                   {cfoCommentary.profitability}
                 </p>
                 <p className="text-sm leading-6 text-charcoal">
+                  <span className="font-semibold text-brass">Retention / Unit Economics: </span>
+                  {cfoCommentary.retention}
+                </p>
+                <p className="text-sm leading-6 text-charcoal">
                   <span className="font-semibold text-brass">Cash Position: </span>
                   {cfoCommentary.cashPosition}
                 </p>
                 <p className="text-sm leading-6 text-charcoal">
-                  <span className="font-semibold text-brass">Retention / Unit Economics: </span>
-                  {cfoCommentary.retention}
+                  <span className="font-semibold text-brass">Key Risk: </span>
+                  {cfoCommentary.keyRisk}
+                </p>
+                <p className="text-sm leading-6 text-charcoal">
+                  <span className="font-semibold text-brass">Next Action: </span>
+                  {cfoCommentary.nextAction}
                 </p>
               </div>
               <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
@@ -2891,9 +2940,12 @@ export default function FpaDecisionLab() {
 
                 {/* CFO Commentary */}
                 <section className="border-t border-forest/10 pt-8">
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                    CFO Commentary — {consultingScenarioStatusLabel}
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                      CFO Commentary — {consultingScenarioStatusLabel}
+                    </h2>
+                    <CommentaryModeToggle />
+                  </div>
                   <div className="mt-3 flex flex-col gap-3 rounded-xl border border-forest/15 bg-white p-4">
                     <p className="text-sm leading-6 text-charcoal">
                       <span className="font-semibold text-brass">Performance: </span>
@@ -2925,6 +2977,14 @@ export default function FpaDecisionLab() {
                           ? "pipeline conversion is only partially keeping the bench booked"
                           : "insufficient pipeline conversion is leaving significant bench time"}
                       .
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Key Risk: </span>
+                      {consultingRiskAndAction.keyRiskPhrase}
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Next Action: </span>
+                      {consultingRiskAndAction.nextActionPhrase}
                     </p>
                   </div>
                   <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
@@ -3230,9 +3290,12 @@ export default function FpaDecisionLab() {
 
                 {/* CFO Commentary */}
                 <section className="border-t border-forest/10 pt-8">
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                    CFO Commentary — {realEstateScenarioStatusLabel}
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                      CFO Commentary — {realEstateScenarioStatusLabel}
+                    </h2>
+                    <CommentaryModeToggle />
+                  </div>
                   <div className="mt-3 flex flex-col gap-3 rounded-xl border border-forest/15 bg-white p-4">
                     <p className="text-sm leading-6 text-charcoal">
                       <span className="font-semibold text-brass">Performance: </span>
@@ -3262,6 +3325,14 @@ export default function FpaDecisionLab() {
                           ? "a thin cushion above break-even coverage"
                           : "below break-even, meaning NOI alone doesn't fully cover debt service"}
                       .
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Key Risk: </span>
+                      {realEstateRiskAndAction.keyRiskPhrase}
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Next Action: </span>
+                      {realEstateRiskAndAction.nextActionPhrase}
                     </p>
                   </div>
                   <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
