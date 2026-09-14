@@ -5,6 +5,19 @@
 // (e.g. a subscription-retail or marketplace engine) drop in beside this one
 // without touching any UI component.
 
+import {
+  classifyCashRatio,
+  classifyMargin as sharedClassifyMargin,
+  classifyRunway as sharedClassifyRunway,
+  classifyTrend,
+  decideStance as sharedDecideStance,
+  type CashStatus as SharedCashStatus,
+  type Decision as SharedDecision,
+  type MarginStatus as SharedMarginStatus,
+  type RunwayStatus as SharedRunwayStatus,
+  type TrendStatus,
+} from "./shared";
+
 export type SaaSCompanyBaseline = {
   name: string;
   startingARR: number;
@@ -265,17 +278,12 @@ export function runSaaSForecast(
   };
 }
 
-export type Decision = "Invest for growth" | "Run cautiously" | "Preserve cash";
-
-export function decideStance(
-  runwayMonths: number | null,
-  endingEBITDAMargin: number
-): Decision {
-  const runway = runwayMonths ?? Infinity;
-  if (runway > 18 && endingEBITDAMargin > 0) return "Invest for growth";
-  if (runway >= 12) return "Run cautiously";
-  return "Preserve cash";
-}
+// Decision framework lives in shared.ts — it depends only on runway and
+// EBITDA margin, concepts every industry model produces, not SaaS-specific
+// math. Re-exported here so existing imports from "@/lib/models/saas" don't
+// need to change.
+export type Decision = SharedDecision;
+export const decideStance = sharedDecideStance;
 
 /**
  * Generates 2-3 short, deterministic reasons behind a decision — built from
@@ -334,52 +342,37 @@ export function explainDecision(
   return reasons;
 }
 
-export type ArrTrend = "Growing" | "Flat" | "Contracting";
+// ArrTrend is a SaaS-flavored name for the shared TrendStatus concept — kept
+// as its own type/function pair (rather than exporting TrendStatus directly)
+// so existing imports of "ArrTrend" from this module keep working unchanged.
+export type ArrTrend = TrendStatus;
 
 // Thresholds: ARR change from month 1 to month 12 of the forecast window.
-// >+5% = Growing, -5%..+5% = Flat, <-5% = Contracting.
+// >+5% = Growing, -5%..+5% = Flat, <-5% = Contracting. (See shared.ts.)
 export function classifyArrTrend(result: SaaSForecastResult): ArrTrend {
   const first = result.months[0].arr;
   const last = result.months[result.months.length - 1].arr;
-  const trend = first === 0 ? 0 : (last - first) / first;
-  if (trend > 0.05) return "Growing";
-  if (trend < -0.05) return "Contracting";
-  return "Flat";
+  return classifyTrend(first, last);
 }
 
-export type MarginStatus = "Healthy" | "Watch" | "Negative";
+// Margin/runway classification live in shared.ts — both depend only on
+// numbers every industry model produces.
+export type MarginStatus = SharedMarginStatus;
+export const classifyMargin = sharedClassifyMargin;
 
-// Thresholds: >0% = Healthy, -40%..0% = Watch, <-40% = Negative.
-export function classifyMargin(endingEBITDAMargin: number): MarginStatus {
-  if (endingEBITDAMargin > 0) return "Healthy";
-  if (endingEBITDAMargin >= -0.4) return "Watch";
-  return "Negative";
-}
-
-export type CashStatus = "Strong" | "Adequate" | "Low";
+export type CashStatus = SharedCashStatus;
 
 // Thresholds, ending cash relative to starting cash: >=90% = Strong,
-// 50-90% = Adequate, <50% = Low.
+// 50-90% = Adequate, <50% = Low. (See shared.ts.)
 export function classifyCash(
   endingCash: number,
   baseline: SaaSCompanyBaseline = northstarBaseline
 ): CashStatus {
-  const pctOfStart = endingCash / baseline.startingCash;
-  if (pctOfStart >= 0.9) return "Strong";
-  if (pctOfStart >= 0.5) return "Adequate";
-  return "Low";
+  return classifyCashRatio(endingCash, baseline.startingCash);
 }
 
-export type RunwayStatus = "Safe" | "Watch" | "Critical" | "Self-funded";
-
-// Thresholds: null (cash-flow positive) = Self-funded, >18mo = Safe,
-// 12-18mo = Watch, <12mo = Critical.
-export function classifyRunway(runwayMonths: number | null): RunwayStatus {
-  if (runwayMonths === null) return "Self-funded";
-  if (runwayMonths > 18) return "Safe";
-  if (runwayMonths >= 12) return "Watch";
-  return "Critical";
-}
+export type RunwayStatus = SharedRunwayStatus;
+export const classifyRunway = sharedClassifyRunway;
 
 export type NRRStatus = "Strong" | "Healthy" | "Watch" | "Weak";
 

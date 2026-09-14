@@ -38,7 +38,48 @@ import {
 } from "@/lib/models/saas";
 import { parseCompanyCsv, type CsvRow } from "@/lib/csvImport";
 import { runMonteCarloSimulation, type MonteCarloResult } from "@/lib/monteCarlo";
+import {
+  PIPELINE_CONVERSION_BENCHMARK,
+  STANDARD_BILLABLE_HOURS_PER_MONTH,
+  classifyConsultingCash,
+  classifyUtilization,
+  consultingScenarioPresets,
+  explainConsultingDecision,
+  meridianBaseline,
+  runConsultingForecast,
+  runConsultingSensitivityByMetric,
+  type ConsultingAssumptions,
+  type ConsultingForecastResult,
+  type ConsultingScenarioKey,
+  type ConsultingSensitivityMetric,
+  type UtilizationStatus,
+} from "@/lib/models/consulting";
+import {
+  classifyDebtCoverage,
+  classifyOccupancy,
+  classifyRealEstateCash,
+  debtServiceCoverageRatio,
+  explainRealEstateDecision,
+  harborViewBaseline,
+  realEstateScenarioPresets,
+  runRealEstateForecast,
+  runRealEstateSensitivityByMetric,
+  type DebtCoverageStatus,
+  type OccupancyStatus,
+  type RealEstateAssumptions,
+  type RealEstateForecastResult,
+  type RealEstateScenarioKey,
+  type RealEstateSensitivityMetric,
+} from "@/lib/models/realEstate";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
+
+type Industry = "saas" | "consulting" | "realEstate";
+
+const INDUSTRY_LABELS: Record<Industry, string> = {
+  saas: "SaaS",
+  consulting: "Consulting & Services",
+  realEstate: "Real Estate",
+};
 
 // Same bounds as the Drivers sliders below — a decoded share link or a
 // loaded save is only ever applied if every field is a finite number inside
@@ -937,6 +978,147 @@ function MonteCarloHistogram({
   );
 }
 
+/**
+ * A trimmed-down version of ForecastChart's visual language (same
+ * gridlines, end-label halo, legend) generalized to any industry's monthly
+ * series — Consulting and Real Estate hand it plain number[] arrays instead
+ * of SaaS-shaped month objects, so this one chart can serve every industry
+ * without any industry-specific typing.
+ */
+function GenericForecastChart({
+  seriesByScenario,
+  ariaLabel,
+  valueFormatter = formatCurrencyCompact,
+}: {
+  seriesByScenario: Record<ScenarioKey, number[]>;
+  ariaLabel: string;
+  valueFormatter?: (value: number) => string;
+}) {
+  const series = SCENARIO_KEYS.map((key) => ({
+    key,
+    values: seriesByScenario[key],
+    ...SERIES_STYLE[key],
+  }));
+
+  const all = series.flatMap((s) => s.values);
+  const rawMin = Math.min(0, ...all);
+  const rawMax = Math.max(...all);
+  const pad = (rawMax - rawMin) * 0.12 || Math.abs(rawMax) * 0.12 || 1;
+  const minValue = rawMin < 0 ? rawMin - pad : 0;
+  const maxValue = rawMax + pad;
+  const showZeroLine = minValue < 0 && maxValue > 0;
+  const gridFracs = [0, 0.25, 0.5, 0.75, 1];
+  const gridValues = gridFracs.map((f) => minValue + (maxValue - minValue) * f);
+
+  const endLabelY = (() => {
+    const raw = series
+      .map((s) => ({ key: s.key, y: valueY(s.values[s.values.length - 1], minValue, maxValue) }))
+      .sort((a, b) => a.y - b.y);
+    const minGap = 12;
+    for (let i = 1; i < raw.length; i++) {
+      if (raw[i].y - raw[i - 1].y < minGap) raw[i].y = raw[i - 1].y + minGap;
+    }
+    return Object.fromEntries(raw.map((r) => [r.key, r.y])) as Record<string, number>;
+  })();
+
+  return (
+    <div className="mt-2">
+      <svg
+        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+        className="w-full"
+        role="img"
+        aria-label={ariaLabel}
+      >
+        {gridValues.map((v, i) => (
+          <line
+            key={i}
+            x1={PAD_LEFT}
+            x2={CHART_WIDTH - PAD_RIGHT}
+            y1={valueY(v, minValue, maxValue)}
+            y2={valueY(v, minValue, maxValue)}
+            stroke="#1e3a2b"
+            strokeOpacity={0.08}
+          />
+        ))}
+        {showZeroLine && (
+          <line
+            x1={PAD_LEFT}
+            x2={CHART_WIDTH - PAD_RIGHT}
+            y1={valueY(0, minValue, maxValue)}
+            y2={valueY(0, minValue, maxValue)}
+            stroke="#2a2820"
+            strokeOpacity={0.35}
+            strokeDasharray="3 3"
+          />
+        )}
+        {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
+          <text
+            key={i}
+            x={PAD_LEFT - 8}
+            y={valueY(v, minValue, maxValue) + 4}
+            textAnchor="end"
+            className="fill-charcoal-soft text-[10px]"
+          >
+            {valueFormatter(v)}
+          </text>
+        ))}
+        {[1, 3, 6, 9, 12].map((m) => (
+          <text
+            key={m}
+            x={monthX(m)}
+            y={CHART_HEIGHT - PAD_BOTTOM + 18}
+            textAnchor="middle"
+            className="fill-charcoal-soft text-[10px]"
+          >
+            M{m}
+          </text>
+        ))}
+        {series.map((s) => {
+          const points = s.values
+            .map((v, i) => `${monthX(i + 1)},${valueY(v, minValue, maxValue)}`)
+            .join(" ");
+          return (
+            <polyline
+              key={s.key}
+              points={points}
+              fill="none"
+              stroke={s.stroke}
+              strokeWidth={2}
+              strokeDasharray={s.dash}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          );
+        })}
+        {series.map((s) => (
+          <text
+            key={s.key}
+            x={CHART_WIDTH - PAD_RIGHT - 4}
+            y={endLabelY[s.key] - 6}
+            textAnchor="end"
+            fontSize={10}
+            fontWeight={700}
+            fill={s.stroke}
+            stroke="#f5f1e6"
+            strokeWidth={4}
+            paintOrder="stroke"
+          >
+            {s.label}
+          </text>
+        ))}
+      </svg>
+      <div className="mt-3 flex flex-wrap gap-4">
+        {series.map((s) => (
+          <span key={s.key} className="flex items-center gap-1.5 text-xs text-charcoal-soft">
+            <span className={`h-2.5 w-2.5 rounded-full ${s.swatchClass}`} />
+            {s.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SampleBadge() {
   return (
     <span className="rounded-full bg-forest/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-forest">
@@ -946,6 +1128,13 @@ function SampleBadge() {
 }
 
 export default function FpaDecisionLab() {
+  // Industry selector — swaps drivers/KPIs/charts/sensitivity/decision
+  // rules/commentary while the surrounding shell (hero, sticky sidebar,
+  // analysis canvas) stays the same. Each industry keeps its own
+  // independent assumptions state below, so switching back and forth never
+  // loses what you'd tuned.
+  const [industry, setIndustry] = useState<Industry>("saas");
+
   const [assumptions, setAssumptions] = useState<SaaSAssumptions>(
     scenarioPresets.base.assumptions
   );
@@ -1192,6 +1381,135 @@ export default function FpaDecisionLab() {
     }.`,
   };
 
+  // --- Consulting & Services ---
+  const [consultingAssumptions, setConsultingAssumptions] = useState<ConsultingAssumptions>(
+    consultingScenarioPresets.base.assumptions
+  );
+  const [consultingSensitivityTab, setConsultingSensitivityTab] =
+    useState<ConsultingSensitivityMetric>("ebitda");
+
+  const setConsulting =
+    <K extends keyof ConsultingAssumptions>(key: K) =>
+    (value: number) =>
+      setConsultingAssumptions((prev) => ({ ...prev, [key]: value }));
+
+  const applyConsultingPreset = (key: ConsultingScenarioKey) => {
+    setConsultingAssumptions(consultingScenarioPresets[key].assumptions);
+  };
+
+  const consultingScenarioResults = useMemo(
+    () => ({
+      base: runConsultingForecast(consultingScenarioPresets.base.assumptions, meridianBaseline),
+      upside: runConsultingForecast(
+        consultingScenarioPresets.upside.assumptions,
+        meridianBaseline
+      ),
+      downside: runConsultingForecast(
+        consultingScenarioPresets.downside.assumptions,
+        meridianBaseline
+      ),
+    }),
+    []
+  );
+  const consultingResult = useMemo(
+    () => runConsultingForecast(consultingAssumptions, meridianBaseline),
+    [consultingAssumptions]
+  );
+  const consultingSensitivity = useMemo(
+    () =>
+      runConsultingSensitivityByMetric(
+        consultingAssumptions,
+        meridianBaseline,
+        consultingSensitivityTab
+      ),
+    [consultingAssumptions, consultingSensitivityTab]
+  );
+  const consultingDecision = decideStance(
+    consultingResult.runwayMonths,
+    consultingResult.endingEBITDAMargin
+  );
+  const consultingDecisionReasons = explainConsultingDecision(consultingResult, consultingDecision);
+  const consultingMatchedPresetKey =
+    (["base", "upside", "downside"] as ConsultingScenarioKey[]).find(
+      (key) =>
+        JSON.stringify(consultingAssumptions) ===
+        JSON.stringify(consultingScenarioPresets[key].assumptions)
+    ) ?? null;
+  const consultingScenarioStatusLabel = consultingMatchedPresetKey
+    ? consultingScenarioPresets[consultingMatchedPresetKey].label
+    : "Custom";
+  const consultingUtilizationStatus = classifyUtilization(consultingResult.endingUtilization);
+  const consultingMarginStatus = classifyMargin(consultingResult.endingEBITDAMargin);
+  const consultingCashStatus = classifyConsultingCash(consultingResult.endingCash, meridianBaseline);
+  const consultingRunwayStatus = classifyRunway(consultingResult.runwayMonths);
+
+  // --- Real Estate ---
+  const [realEstateAssumptions, setRealEstateAssumptions] = useState<RealEstateAssumptions>(
+    realEstateScenarioPresets.base.assumptions
+  );
+  const [realEstateSensitivityTab, setRealEstateSensitivityTab] =
+    useState<RealEstateSensitivityMetric>("noi");
+
+  const setRealEstate =
+    <K extends keyof RealEstateAssumptions>(key: K) =>
+    (value: number) =>
+      setRealEstateAssumptions((prev) => ({ ...prev, [key]: value }));
+
+  const applyRealEstatePreset = (key: RealEstateScenarioKey) => {
+    setRealEstateAssumptions(realEstateScenarioPresets[key].assumptions);
+  };
+
+  const realEstateScenarioResults = useMemo(
+    () => ({
+      base: runRealEstateForecast(realEstateScenarioPresets.base.assumptions, harborViewBaseline),
+      upside: runRealEstateForecast(
+        realEstateScenarioPresets.upside.assumptions,
+        harborViewBaseline
+      ),
+      downside: runRealEstateForecast(
+        realEstateScenarioPresets.downside.assumptions,
+        harborViewBaseline
+      ),
+    }),
+    []
+  );
+  const realEstateResult = useMemo(
+    () => runRealEstateForecast(realEstateAssumptions, harborViewBaseline),
+    [realEstateAssumptions]
+  );
+  const realEstateSensitivity = useMemo(
+    () =>
+      runRealEstateSensitivityByMetric(
+        realEstateAssumptions,
+        harborViewBaseline,
+        realEstateSensitivityTab
+      ),
+    [realEstateAssumptions, realEstateSensitivityTab]
+  );
+  const realEstateDecision = decideStance(
+    realEstateResult.runwayMonths,
+    realEstateResult.endingFreeCashFlowMargin
+  );
+  const realEstateDecisionReasons = explainRealEstateDecision(
+    realEstateResult,
+    realEstateAssumptions,
+    realEstateDecision
+  );
+  const realEstateMatchedPresetKey =
+    (["base", "upside", "downside"] as RealEstateScenarioKey[]).find(
+      (key) =>
+        JSON.stringify(realEstateAssumptions) ===
+        JSON.stringify(realEstateScenarioPresets[key].assumptions)
+    ) ?? null;
+  const realEstateScenarioStatusLabel = realEstateMatchedPresetKey
+    ? realEstateScenarioPresets[realEstateMatchedPresetKey].label
+    : "Custom";
+  const realEstateOccupancyStatus = classifyOccupancy(realEstateAssumptions.occupancyPct);
+  const realEstateDscr = debtServiceCoverageRatio(realEstateResult, realEstateAssumptions);
+  const realEstateDscrStatus = classifyDebtCoverage(realEstateDscr);
+  const realEstateCashStatus = classifyRealEstateCash(realEstateResult.endingCash, harborViewBaseline);
+  const realEstateRunwayStatus = classifyRunway(realEstateResult.runwayMonths);
+
   return (
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
@@ -1223,11 +1541,16 @@ export default function FpaDecisionLab() {
         </div>
 
         <p className="mt-8 max-w-2xl text-base leading-7 text-charcoal-soft">
-          {customBaseline
-            ? "Forecasting forward from your uploaded company data."
-            : `A small SaaS financial-planning simulator built around a fictional company, ${northstarBaseline.name}.`}{" "}
-          Pick a scenario or tune the assumptions on the left — a 12-month
-          engine recomputes MRR, EBITDA, cash, and a rules-based
+          {industry === "saas" &&
+            (customBaseline
+              ? "Forecasting forward from your uploaded company data."
+              : `A small SaaS financial-planning simulator built around a fictional company, ${northstarBaseline.name}.`)}
+          {industry === "consulting" &&
+            `A Consulting & Services financial-planning simulator built around a fictional firm, ${meridianBaseline.name}.`}
+          {industry === "realEstate" &&
+            `A Real Estate financial-planning simulator built around a fictional portfolio, ${harborViewBaseline.name}.`}{" "}
+          Pick an industry and scenario, or tune the assumptions on the left
+          — a 12-month engine recomputes the numbers and a rules-based
           recommendation live.
         </p>
 
@@ -1235,6 +1558,31 @@ export default function FpaDecisionLab() {
         <div className="mt-12 border-t border-forest/10 pt-8 lg:grid lg:grid-cols-[280px_1fr] lg:items-start lg:gap-8">
           {/* Sidebar */}
           <aside className="mb-8 rounded-2xl border border-forest/15 bg-white p-4 lg:sticky lg:top-24 lg:mb-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+            <div className="mb-3 pb-3 border-b border-forest/10">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
+                Industry
+              </span>
+              <div className="flex flex-col gap-1.5">
+                {(["saas", "consulting", "realEstate"] as Industry[]).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setIndustry(key)}
+                    aria-pressed={industry === key}
+                    className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                      industry === key
+                        ? "bg-forest text-cream"
+                        : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
+                    }`}
+                  >
+                    {INDUSTRY_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {industry === "saas" && (
+              <>
             <div className="mb-1 flex items-center justify-between px-1 pb-2">
               <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
               <span
@@ -1571,10 +1919,249 @@ export default function FpaDecisionLab() {
                 )}
               </div>
             </AccordionSection>
+              </>
+            )}
+
+            {industry === "consulting" && (
+              <>
+                <div className="mb-1 flex items-center justify-between px-1 pb-2">
+                  <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
+                  <span
+                    className={`text-xs font-semibold ${
+                      consultingMatchedPresetKey === null ? "text-brass" : "text-forest"
+                    }`}
+                  >
+                    {consultingScenarioStatusLabel}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => applyConsultingPreset("base")}
+                  className="mb-3 w-full rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
+                >
+                  Reset to Base
+                </button>
+
+                <AccordionSection title="Scenario" defaultOpen>
+                  <div className="flex flex-col gap-2">
+                    {(["base", "upside", "downside"] as ConsultingScenarioKey[]).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => applyConsultingPreset(key)}
+                        className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                          consultingMatchedPresetKey === key
+                            ? "bg-forest text-cream"
+                            : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
+                        }`}
+                      >
+                        {consultingScenarioPresets[key].label}
+                      </button>
+                    ))}
+                  </div>
+                </AccordionSection>
+
+                <AccordionSection title="Drivers" badge={<SampleBadge />} defaultOpen>
+                  <div className="flex flex-col gap-5">
+                    <SliderField
+                      label="Billable Headcount"
+                      value={consultingAssumptions.billableHeadcount}
+                      onChange={setConsulting("billableHeadcount")}
+                      min={10}
+                      max={80}
+                      step={1}
+                      display={`${consultingAssumptions.billableHeadcount} heads`}
+                    />
+                    <SliderField
+                      label="Utilization"
+                      value={consultingAssumptions.utilizationPct * 100}
+                      onChange={(v) => setConsulting("utilizationPct")(v / 100)}
+                      min={40}
+                      max={95}
+                      step={1}
+                      display={formatPercent(consultingAssumptions.utilizationPct, 0)}
+                    />
+                    <SliderField
+                      label="Average Bill Rate"
+                      value={consultingAssumptions.averageBillRate}
+                      onChange={setConsulting("averageBillRate")}
+                      min={100}
+                      max={350}
+                      step={5}
+                      display={`${formatCurrency(consultingAssumptions.averageBillRate)}/hr`}
+                    />
+                    <SliderField
+                      label="Pipeline Conversion"
+                      value={consultingAssumptions.pipelineConversionPct * 100}
+                      onChange={(v) => setConsulting("pipelineConversionPct")(v / 100)}
+                      min={5}
+                      max={60}
+                      step={1}
+                      display={formatPercent(consultingAssumptions.pipelineConversionPct, 0)}
+                    />
+                    <SliderField
+                      label="Delivery Cost %"
+                      value={consultingAssumptions.deliveryCostPct * 100}
+                      onChange={(v) => setConsulting("deliveryCostPct")(v / 100)}
+                      min={30}
+                      max={75}
+                      step={1}
+                      display={formatPercent(consultingAssumptions.deliveryCostPct, 0)}
+                    />
+                    <SliderField
+                      label="SG&A %"
+                      value={consultingAssumptions.sgaPct * 100}
+                      onChange={(v) => setConsulting("sgaPct")(v / 100)}
+                      min={10}
+                      max={40}
+                      step={1}
+                      display={formatPercent(consultingAssumptions.sgaPct, 0)}
+                    />
+                  </div>
+                </AccordionSection>
+
+                <AccordionSection title="Model Assumptions">
+                  <dl className="flex flex-col gap-2 text-xs">
+                    {[
+                      ["Firm", meridianBaseline.name],
+                      ["Starting Cash", formatCurrencyCompact(meridianBaseline.startingCash)],
+                      [
+                        "Billable Hours / Month",
+                        `${STANDARD_BILLABLE_HOURS_PER_MONTH} hrs/consultant`,
+                      ],
+                      [
+                        "Pipeline Conversion Benchmark",
+                        formatPercent(PIPELINE_CONVERSION_BENCHMARK, 0),
+                      ],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex items-center justify-between gap-2">
+                        <dt className="text-charcoal-soft">{label}</dt>
+                        <dd className="font-semibold text-charcoal">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
+                    Fixed for this demo — not editable.
+                  </p>
+                </AccordionSection>
+              </>
+            )}
+
+            {industry === "realEstate" && (
+              <>
+                <div className="mb-1 flex items-center justify-between px-1 pb-2">
+                  <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
+                  <span
+                    className={`text-xs font-semibold ${
+                      realEstateMatchedPresetKey === null ? "text-brass" : "text-forest"
+                    }`}
+                  >
+                    {realEstateScenarioStatusLabel}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => applyRealEstatePreset("base")}
+                  className="mb-3 w-full rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
+                >
+                  Reset to Base
+                </button>
+
+                <AccordionSection title="Scenario" defaultOpen>
+                  <div className="flex flex-col gap-2">
+                    {(["base", "upside", "downside"] as RealEstateScenarioKey[]).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => applyRealEstatePreset(key)}
+                        className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                          realEstateMatchedPresetKey === key
+                            ? "bg-forest text-cream"
+                            : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
+                        }`}
+                      >
+                        {realEstateScenarioPresets[key].label}
+                      </button>
+                    ))}
+                  </div>
+                </AccordionSection>
+
+                <AccordionSection title="Drivers" badge={<SampleBadge />} defaultOpen>
+                  <div className="flex flex-col gap-5">
+                    <SliderField
+                      label="Occupancy"
+                      value={realEstateAssumptions.occupancyPct * 100}
+                      onChange={(v) => setRealEstate("occupancyPct")(v / 100)}
+                      min={50}
+                      max={100}
+                      step={1}
+                      display={formatPercent(realEstateAssumptions.occupancyPct, 0)}
+                    />
+                    <SliderField
+                      label="Average Rent"
+                      value={realEstateAssumptions.averageMonthlyRent}
+                      onChange={setRealEstate("averageMonthlyRent")}
+                      min={1000}
+                      max={3500}
+                      step={25}
+                      display={`${formatCurrency(realEstateAssumptions.averageMonthlyRent)}/mo`}
+                    />
+                    <SliderField
+                      label="Operating Expense %"
+                      value={realEstateAssumptions.operatingExpensePct * 100}
+                      onChange={(v) => setRealEstate("operatingExpensePct")(v / 100)}
+                      min={25}
+                      max={65}
+                      step={1}
+                      display={formatPercent(realEstateAssumptions.operatingExpensePct, 0)}
+                    />
+                    <SliderField
+                      label="Annual Debt Service"
+                      value={realEstateAssumptions.annualDebtService}
+                      onChange={setRealEstate("annualDebtService")}
+                      min={500_000}
+                      max={4_000_000}
+                      step={50_000}
+                      display={formatCurrencyCompact(realEstateAssumptions.annualDebtService)}
+                    />
+                    <SliderField
+                      label="Cap Rate"
+                      value={realEstateAssumptions.capRatePct * 100}
+                      onChange={(v) => setRealEstate("capRatePct")(v / 100)}
+                      min={3}
+                      max={10}
+                      step={0.1}
+                      display={formatPercent(realEstateAssumptions.capRatePct, 1)}
+                    />
+                  </div>
+                </AccordionSection>
+
+                <AccordionSection title="Model Assumptions">
+                  <dl className="flex flex-col gap-2 text-xs">
+                    {[
+                      ["Portfolio", harborViewBaseline.name],
+                      ["Total Units", harborViewBaseline.totalUnits.toLocaleString()],
+                      ["Starting Cash", formatCurrencyCompact(harborViewBaseline.startingCash)],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex items-center justify-between gap-2">
+                        <dt className="text-charcoal-soft">{label}</dt>
+                        <dd className="font-semibold text-charcoal">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
+                    Fixed for this demo — not editable. Cap rate values the
+                    portfolio; it never enters the cash-flow math.
+                  </p>
+                </AccordionSection>
+              </>
+            )}
           </aside>
 
           {/* Live analysis canvas */}
           <div className="flex flex-col gap-4">
+            {industry === "saas" && (
+              <>
             {/* Decision banner */}
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
@@ -2026,6 +2613,663 @@ export default function FpaDecisionLab() {
                 not a forecast guarantee.
               </p>
             </section>
+              </>
+            )}
+
+            {industry === "consulting" && (
+              <>
+                {/* Decision banner */}
+                <section>
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    Recommendation
+                  </h2>
+                  <div
+                    className={`mt-1.5 rounded-xl px-4 py-2.5 ${DECISION_STYLE[consultingDecision]}`}
+                  >
+                    <p className="text-lg font-bold">{consultingDecision}</p>
+                    <ul className="mt-1 flex flex-col gap-0.5">
+                      {consultingDecisionReasons.map((reason) => (
+                        <li
+                          key={reason}
+                          className="text-sm leading-6 before:mr-2 before:content-['—']"
+                        >
+                          {reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="mt-1.5 text-sm leading-5 text-charcoal">
+                    Under these assumptions, {meridianBaseline.name} runs at{" "}
+                    {formatCurrencyCompact(consultingResult.endingNetRevenueAnnualized)} net
+                    revenue/yr with a {formatPercent(consultingResult.endingEBITDAMargin)} EBITDA
+                    margin and {runwayPhrase(consultingResult.runwayMonths)} — the model&apos;s
+                    read is to &ldquo;{consultingDecision.toLowerCase()}.&rdquo;
+                  </p>
+                  <p className="mt-1 text-xs leading-4 text-charcoal-soft">
+                    Deterministic thresholds: runway &gt;18mo + positive
+                    margin &rarr; Invest for growth; 12–18mo &rarr; Run
+                    cautiously; &lt;12mo &rarr; Preserve cash.
+                  </p>
+                </section>
+
+                {/* KPI cards */}
+                <section>
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    12-Month Outlook
+                  </h2>
+                  <div className="mt-1.5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <KpiCard
+                      label="Net Revenue / yr"
+                      value={formatCurrencyCompact(consultingResult.endingNetRevenueAnnualized)}
+                      badge={consultingScenarioStatusLabel}
+                      tone="neutral"
+                    />
+                    <KpiCard
+                      label="Utilization"
+                      value={formatPercent(consultingResult.endingUtilization, 0)}
+                      badge={consultingUtilizationStatus}
+                      tone={
+                        consultingUtilizationStatus === "Healthy"
+                          ? "good"
+                          : consultingUtilizationStatus === "Watch"
+                            ? "neutral"
+                            : "bad"
+                      }
+                    />
+                    <KpiCard
+                      label="Project Margin"
+                      value={formatPercent(consultingResult.endingProjectMarginPct)}
+                      badge={consultingScenarioStatusLabel}
+                      tone="neutral"
+                    />
+                    <KpiCard
+                      label="EBITDA Margin"
+                      value={formatPercent(consultingResult.endingEBITDAMargin)}
+                      badge={consultingMarginStatus}
+                      tone={
+                        consultingMarginStatus === "Healthy"
+                          ? "good"
+                          : consultingMarginStatus === "Watch"
+                            ? "neutral"
+                            : "bad"
+                      }
+                    />
+                    <KpiCard
+                      label="Ending Cash"
+                      value={formatCurrencyCompact(consultingResult.endingCash)}
+                      badge={consultingCashStatus}
+                      tone={
+                        consultingCashStatus === "Strong"
+                          ? "good"
+                          : consultingCashStatus === "Adequate"
+                            ? "neutral"
+                            : "bad"
+                      }
+                    />
+                    <KpiCard
+                      label="Runway"
+                      value={runwayLabel(consultingResult.runwayMonths)}
+                      badge={consultingRunwayStatus}
+                      tone={RUNWAY_TONE[consultingRunwayStatus]}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                    Achieved utilization = target utilization, capped by
+                    pipeline conversion relative to a{" "}
+                    {formatPercent(PIPELINE_CONVERSION_BENCHMARK, 0)} benchmark
+                    needed to keep the bench fully booked — below that
+                    benchmark, insufficient signed work leaves staff on the
+                    bench even at the target rate.
+                  </p>
+                </section>
+
+                {/* Cash chart */}
+                <section>
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    12-Month Cash Trajectory
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+                    Net revenue and margins are flat under fixed drivers each
+                    month — cash is what actually moves, accumulating (or
+                    draining) monthly EBITDA.
+                  </p>
+                  <GenericForecastChart
+                    seriesByScenario={{
+                      base: consultingScenarioResults.base.months.map((m) => m.cash),
+                      upside: consultingScenarioResults.upside.months.map((m) => m.cash),
+                      downside: consultingScenarioResults.downside.months.map((m) => m.cash),
+                    }}
+                    ariaLabel="12-month cash trajectory under Base, Upside, and Downside scenarios for the consulting firm"
+                  />
+                </section>
+
+                {/* Scenario comparison */}
+                <section className="border-t border-forest/10 pt-8">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    Scenario Comparison
+                  </h2>
+                  <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white">
+                    <table className="w-full min-w-[480px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
+                          <th className="px-4 py-3 font-semibold">Metric</th>
+                          {(["base", "upside", "downside"] as ConsultingScenarioKey[]).map(
+                            (key) => (
+                              <th
+                                key={key}
+                                className={`px-4 py-3 font-semibold ${
+                                  consultingMatchedPresetKey === key ? "bg-forest/10 text-forest" : ""
+                                }`}
+                              >
+                                {consultingScenarioPresets[key].label}
+                              </th>
+                            )
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          {
+                            label: "Net Revenue / yr",
+                            format: (r: ConsultingForecastResult) =>
+                              formatCurrencyCompact(r.endingNetRevenueAnnualized),
+                          },
+                          {
+                            label: "Utilization",
+                            format: (r: ConsultingForecastResult) =>
+                              formatPercent(r.endingUtilization, 0),
+                          },
+                          {
+                            label: "EBITDA Margin",
+                            format: (r: ConsultingForecastResult) =>
+                              formatPercent(r.endingEBITDAMargin),
+                          },
+                          {
+                            label: "Ending Cash",
+                            format: (r: ConsultingForecastResult) =>
+                              formatCurrencyCompact(r.endingCash),
+                          },
+                        ].map((row) => (
+                          <tr key={row.label} className="border-b border-forest/5 last:border-0">
+                            <td className="px-4 py-3 font-semibold text-charcoal">{row.label}</td>
+                            {(["base", "upside", "downside"] as ConsultingScenarioKey[]).map(
+                              (key) => (
+                                <td
+                                  key={key}
+                                  className={`px-4 py-3 text-charcoal-soft ${
+                                    consultingMatchedPresetKey === key
+                                      ? "bg-forest/5 font-semibold text-charcoal"
+                                      : ""
+                                  }`}
+                                >
+                                  {row.format(consultingScenarioResults[key])}
+                                </td>
+                              )
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                {/* Sensitivity */}
+                <section className="border-t border-forest/10 pt-8">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                      Top Drivers Sensitivity
+                    </h2>
+                    <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
+                      {(
+                        [
+                          { key: "ebitda", label: "EBITDA" },
+                          { key: "netRevenue", label: "Net Revenue" },
+                          { key: "cash", label: "Cash" },
+                        ] as { key: ConsultingSensitivityMetric; label: string }[]
+                      ).map((tab) => (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setConsultingSensitivityTab(tab.key)}
+                          aria-pressed={consultingSensitivityTab === tab.key}
+                          className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                            consultingSensitivityTab === tab.key
+                              ? "bg-forest text-cream"
+                              : "text-charcoal-soft hover:text-charcoal"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                    Impact of a +10% change on each driver, on{" "}
+                    {consultingSensitivityTab === "ebitda"
+                      ? "EBITDA"
+                      : consultingSensitivityTab === "netRevenue"
+                        ? "net revenue"
+                        : "ending cash"}
+                    .
+                  </p>
+                  <ul className="mt-3 flex flex-col gap-2.5">
+                    {(() => {
+                      const maxAbsImpact = Math.max(
+                        ...consultingSensitivity.map((r) => Math.abs(r.impact)),
+                        1
+                      );
+                      return consultingSensitivity.map((row, i) => {
+                        const isPositive = row.impact >= 0;
+                        const pct = (Math.abs(row.impact) / maxAbsImpact) * 100;
+                        return (
+                          <li key={row.key} className="flex items-center gap-3">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
+                              {i + 1}
+                            </span>
+                            <span className="w-32 shrink-0 text-xs font-semibold text-charcoal sm:w-40 sm:text-sm">
+                              {row.label}
+                            </span>
+                            <span className="h-2 flex-1 overflow-hidden rounded-full bg-mist">
+                              <span
+                                className={`block h-full rounded-full ${isPositive ? "bg-forest" : "bg-rust"}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </span>
+                            <span
+                              className={`w-20 shrink-0 text-right text-xs font-semibold sm:text-sm ${
+                                isPositive ? "text-forest" : "text-rust"
+                              }`}
+                            >
+                              {formatSignedCompact(row.impact)}
+                            </span>
+                          </li>
+                        );
+                      });
+                    })()}
+                  </ul>
+                </section>
+
+                {/* CFO Commentary */}
+                <section className="border-t border-forest/10 pt-8">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    CFO Commentary — {consultingScenarioStatusLabel}
+                  </h2>
+                  <div className="mt-3 flex flex-col gap-3 rounded-xl border border-forest/15 bg-white p-4">
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Performance: </span>
+                      Net revenue runs at{" "}
+                      {formatCurrencyCompact(consultingResult.endingNetRevenueAnnualized)}/yr on{" "}
+                      {formatPercent(consultingResult.endingUtilization, 0)} achieved utilization
+                      across {consultingAssumptions.billableHeadcount} billable consultants.
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Profitability: </span>
+                      Project margin is {formatPercent(consultingResult.endingProjectMarginPct)}{" "}
+                      before SG&amp;A, landing at{" "}
+                      {formatPercent(consultingResult.endingEBITDAMargin)} EBITDA margin.
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Cash Position: </span>
+                      {consultingResult.runwayMonths === null
+                        ? `Ending cash of ${formatCurrencyCompact(consultingResult.endingCash)} is cash-flow positive, removing near-term runway pressure.`
+                        : `Ending cash of ${formatCurrencyCompact(consultingResult.endingCash)} implies ${consultingResult.runwayMonths.toFixed(1)} months of runway.`}
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Utilization: </span>
+                      Achieved utilization is{" "}
+                      {formatPercent(consultingResult.endingUtilization, 0)} against a{" "}
+                      {formatPercent(consultingAssumptions.utilizationPct, 0)} target —{" "}
+                      {consultingUtilizationStatus === "Healthy"
+                        ? "pipeline conversion is comfortably keeping the bench booked"
+                        : consultingUtilizationStatus === "Watch"
+                          ? "pipeline conversion is only partially keeping the bench booked"
+                          : "insufficient pipeline conversion is leaving significant bench time"}
+                      .
+                    </p>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                    Generated deterministically from live model outputs — not AI-written.
+                  </p>
+                </section>
+              </>
+            )}
+            {industry === "realEstate" && (
+              <>
+                {/* Decision banner */}
+                <section>
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    Recommendation
+                  </h2>
+                  <div
+                    className={`mt-1.5 rounded-xl px-4 py-2.5 ${DECISION_STYLE[realEstateDecision]}`}
+                  >
+                    <p className="text-lg font-bold">{realEstateDecision}</p>
+                    <ul className="mt-1 flex flex-col gap-0.5">
+                      {realEstateDecisionReasons.map((reason) => (
+                        <li
+                          key={reason}
+                          className="text-sm leading-6 before:mr-2 before:content-['—']"
+                        >
+                          {reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="mt-1.5 text-sm leading-5 text-charcoal">
+                    Under these assumptions, {harborViewBaseline.name} runs at{" "}
+                    {formatCurrencyCompact(realEstateResult.endingNOIAnnualized)} NOI/yr with a{" "}
+                    {formatPercent(realEstateResult.endingFreeCashFlowMargin)} free cash flow
+                    margin and {runwayPhrase(realEstateResult.runwayMonths)} — the model&apos;s
+                    read is to &ldquo;{realEstateDecision.toLowerCase()}.&rdquo;
+                  </p>
+                  <p className="mt-1 text-xs leading-4 text-charcoal-soft">
+                    Deterministic thresholds: runway &gt;18mo + positive free
+                    cash flow margin &rarr; Invest for growth; 12–18mo &rarr;
+                    Run cautiously; &lt;12mo &rarr; Preserve cash.
+                  </p>
+                </section>
+
+                {/* KPI cards */}
+                <section>
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    12-Month Outlook
+                  </h2>
+                  <div className="mt-1.5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <KpiCard
+                      label="Rental Revenue / yr"
+                      value={formatCurrencyCompact(realEstateResult.endingRentalRevenueAnnualized)}
+                      badge={realEstateScenarioStatusLabel}
+                      tone="neutral"
+                    />
+                    <KpiCard
+                      label="NOI / yr"
+                      value={formatCurrencyCompact(realEstateResult.endingNOIAnnualized)}
+                      badge={realEstateScenarioStatusLabel}
+                      tone="neutral"
+                    />
+                    <KpiCard
+                      label="NOI Margin"
+                      value={formatPercent(realEstateResult.endingNOIMargin)}
+                      badge={realEstateScenarioStatusLabel}
+                      tone="neutral"
+                    />
+                    <KpiCard
+                      label="Free Cash Flow / yr"
+                      value={formatCurrencyCompact(realEstateResult.endingFreeCashFlowAnnualized)}
+                      badge={realEstateRunwayStatus}
+                      tone={RUNWAY_TONE[realEstateRunwayStatus]}
+                    />
+                    <KpiCard
+                      label="Ending Cash"
+                      value={formatCurrencyCompact(realEstateResult.endingCash)}
+                      badge={realEstateCashStatus}
+                      tone={
+                        realEstateCashStatus === "Strong"
+                          ? "good"
+                          : realEstateCashStatus === "Adequate"
+                            ? "neutral"
+                            : "bad"
+                      }
+                    />
+                    <KpiCard
+                      label="Runway"
+                      value={runwayLabel(realEstateResult.runwayMonths)}
+                      badge={realEstateRunwayStatus}
+                      tone={RUNWAY_TONE[realEstateRunwayStatus]}
+                    />
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <KpiCard
+                      label="Occupancy"
+                      value={formatPercent(realEstateAssumptions.occupancyPct, 0)}
+                      badge={realEstateOccupancyStatus}
+                      tone={
+                        realEstateOccupancyStatus === "Healthy"
+                          ? "good"
+                          : realEstateOccupancyStatus === "Watch"
+                            ? "neutral"
+                            : "bad"
+                      }
+                    />
+                    <KpiCard
+                      label="Debt Service Coverage"
+                      value={`${realEstateDscr.toFixed(2)}x`}
+                      badge={realEstateDscrStatus}
+                      tone={
+                        realEstateDscrStatus === "Healthy"
+                          ? "good"
+                          : realEstateDscrStatus === "Watch"
+                            ? "neutral"
+                            : "bad"
+                      }
+                    />
+                    <KpiCard
+                      label="Implied Valuation"
+                      value={formatCurrencyCompact(realEstateResult.impliedValuation)}
+                      badge="Cap Rate"
+                      tone="neutral"
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                    Implied Valuation = annualized NOI ÷ cap rate — cap rate
+                    values the asset only, it never enters the cash-flow
+                    math. DSCR = annualized NOI ÷ annual debt service.
+                  </p>
+                </section>
+
+                {/* Cash chart */}
+                <section>
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    12-Month Cash Trajectory
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+                    Rental revenue and NOI are flat under fixed drivers each
+                    month — cash is what actually moves, accumulating (or
+                    draining) monthly free cash flow after debt service.
+                  </p>
+                  <GenericForecastChart
+                    seriesByScenario={{
+                      base: realEstateScenarioResults.base.months.map((m) => m.cash),
+                      upside: realEstateScenarioResults.upside.months.map((m) => m.cash),
+                      downside: realEstateScenarioResults.downside.months.map((m) => m.cash),
+                    }}
+                    ariaLabel="12-month cash trajectory under Base, Upside, and Downside scenarios for the real estate portfolio"
+                  />
+                </section>
+
+                {/* Scenario comparison */}
+                <section className="border-t border-forest/10 pt-8">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    Scenario Comparison
+                  </h2>
+                  <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white">
+                    <table className="w-full min-w-[480px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
+                          <th className="px-4 py-3 font-semibold">Metric</th>
+                          {(["base", "upside", "downside"] as RealEstateScenarioKey[]).map(
+                            (key) => (
+                              <th
+                                key={key}
+                                className={`px-4 py-3 font-semibold ${
+                                  realEstateMatchedPresetKey === key
+                                    ? "bg-forest/10 text-forest"
+                                    : ""
+                                }`}
+                              >
+                                {realEstateScenarioPresets[key].label}
+                              </th>
+                            )
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          {
+                            label: "Rental Revenue / yr",
+                            format: (r: RealEstateForecastResult) =>
+                              formatCurrencyCompact(r.endingRentalRevenueAnnualized),
+                          },
+                          {
+                            label: "NOI / yr",
+                            format: (r: RealEstateForecastResult) =>
+                              formatCurrencyCompact(r.endingNOIAnnualized),
+                          },
+                          {
+                            label: "Free Cash Flow / yr",
+                            format: (r: RealEstateForecastResult) =>
+                              formatCurrencyCompact(r.endingFreeCashFlowAnnualized),
+                          },
+                          {
+                            label: "Ending Cash",
+                            format: (r: RealEstateForecastResult) =>
+                              formatCurrencyCompact(r.endingCash),
+                          },
+                        ].map((row) => (
+                          <tr key={row.label} className="border-b border-forest/5 last:border-0">
+                            <td className="px-4 py-3 font-semibold text-charcoal">{row.label}</td>
+                            {(["base", "upside", "downside"] as RealEstateScenarioKey[]).map(
+                              (key) => (
+                                <td
+                                  key={key}
+                                  className={`px-4 py-3 text-charcoal-soft ${
+                                    realEstateMatchedPresetKey === key
+                                      ? "bg-forest/5 font-semibold text-charcoal"
+                                      : ""
+                                  }`}
+                                >
+                                  {row.format(realEstateScenarioResults[key])}
+                                </td>
+                              )
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                {/* Sensitivity */}
+                <section className="border-t border-forest/10 pt-8">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                      Top Drivers Sensitivity
+                    </h2>
+                    <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
+                      {(
+                        [
+                          { key: "noi", label: "NOI" },
+                          { key: "freeCashFlow", label: "Free Cash Flow" },
+                          { key: "cash", label: "Cash" },
+                          { key: "valuation", label: "Valuation" },
+                        ] as { key: RealEstateSensitivityMetric; label: string }[]
+                      ).map((tab) => (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setRealEstateSensitivityTab(tab.key)}
+                          aria-pressed={realEstateSensitivityTab === tab.key}
+                          className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                            realEstateSensitivityTab === tab.key
+                              ? "bg-forest text-cream"
+                              : "text-charcoal-soft hover:text-charcoal"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                    Impact of a +10% change on each driver, on{" "}
+                    {realEstateSensitivityTab === "noi"
+                      ? "NOI"
+                      : realEstateSensitivityTab === "freeCashFlow"
+                        ? "free cash flow"
+                        : realEstateSensitivityTab === "cash"
+                          ? "ending cash"
+                          : "implied valuation"}
+                    .
+                  </p>
+                  <ul className="mt-3 flex flex-col gap-2.5">
+                    {(() => {
+                      const maxAbsImpact = Math.max(
+                        ...realEstateSensitivity.map((r) => Math.abs(r.impact)),
+                        1
+                      );
+                      return realEstateSensitivity.map((row, i) => {
+                        const isPositive = row.impact >= 0;
+                        const pct = (Math.abs(row.impact) / maxAbsImpact) * 100;
+                        return (
+                          <li key={row.key} className="flex items-center gap-3">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
+                              {i + 1}
+                            </span>
+                            <span className="w-32 shrink-0 text-xs font-semibold text-charcoal sm:w-40 sm:text-sm">
+                              {row.label}
+                            </span>
+                            <span className="h-2 flex-1 overflow-hidden rounded-full bg-mist">
+                              <span
+                                className={`block h-full rounded-full ${isPositive ? "bg-forest" : "bg-rust"}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </span>
+                            <span
+                              className={`w-20 shrink-0 text-right text-xs font-semibold sm:text-sm ${
+                                isPositive ? "text-forest" : "text-rust"
+                              }`}
+                            >
+                              {formatSignedCompact(row.impact)}
+                            </span>
+                          </li>
+                        );
+                      });
+                    })()}
+                  </ul>
+                </section>
+
+                {/* CFO Commentary */}
+                <section className="border-t border-forest/10 pt-8">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    CFO Commentary — {realEstateScenarioStatusLabel}
+                  </h2>
+                  <div className="mt-3 flex flex-col gap-3 rounded-xl border border-forest/15 bg-white p-4">
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Performance: </span>
+                      Rental revenue runs at{" "}
+                      {formatCurrencyCompact(realEstateResult.endingRentalRevenueAnnualized)}/yr at{" "}
+                      {formatPercent(realEstateAssumptions.occupancyPct, 0)} occupancy across{" "}
+                      {harborViewBaseline.totalUnits} units.
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Profitability: </span>
+                      NOI margin is {formatPercent(realEstateResult.endingNOIMargin)}, landing at{" "}
+                      {formatPercent(realEstateResult.endingFreeCashFlowMargin)} free cash flow
+                      margin after debt service.
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Cash Position: </span>
+                      {realEstateResult.runwayMonths === null
+                        ? `Ending cash of ${formatCurrencyCompact(realEstateResult.endingCash)} is cash-flow positive, removing near-term runway pressure.`
+                        : `Ending cash of ${formatCurrencyCompact(realEstateResult.endingCash)} implies ${realEstateResult.runwayMonths.toFixed(1)} months of runway.`}
+                    </p>
+                    <p className="text-sm leading-6 text-charcoal">
+                      <span className="font-semibold text-brass">Debt Coverage: </span>
+                      NOI covers debt service at {realEstateDscr.toFixed(2)}x —{" "}
+                      {realEstateDscrStatus === "Healthy"
+                        ? "a comfortable cushion above typical lender covenants"
+                        : realEstateDscrStatus === "Watch"
+                          ? "a thin cushion above break-even coverage"
+                          : "below break-even, meaning NOI alone doesn't fully cover debt service"}
+                      .
+                    </p>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                    Generated deterministically from live model outputs — not AI-written.
+                  </p>
+                </section>
+              </>
+            )}
 
             {/* Planned, not built */}
             <section className="border-t border-forest/10 pt-8">
@@ -2033,7 +3277,7 @@ export default function FpaDecisionLab() {
                 Planned — Not In This Version
               </h2>
               <ul className="mt-3 flex flex-col gap-1.5">
-                {["AI-generated commentary", "Additional industry models beyond SaaS"].map(
+                {["AI-generated commentary"].map(
                   (item) => (
                     <li
                       key={item}
