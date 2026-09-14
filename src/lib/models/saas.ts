@@ -153,6 +153,110 @@ export function decideStance(
   return "Preserve cash";
 }
 
+/**
+ * Generates 2-3 short, deterministic reasons behind a decision — built from
+ * the same thresholds decideStance uses (runway, margin) plus the ARR trend
+ * across the forecast window, never hard-coded per scenario.
+ */
+export function explainDecision(
+  result: SaaSForecastResult,
+  decision: Decision
+): string[] {
+  const runway = result.runwayMonths;
+  const margin = result.endingEBITDAMargin;
+  const first = result.months[0].arr;
+  const last = result.months[result.months.length - 1].arr;
+  const arrTrendPct = first === 0 ? 0 : (last - first) / first;
+
+  const reasons: string[] = [];
+
+  if (runway === null) {
+    reasons.push(
+      "The business is cash-flow positive at the ending run-rate — no runway ceiling applies"
+    );
+  } else if (runway > 18) {
+    reasons.push(`Runway remains above 18 months (${runway.toFixed(1)} months)`);
+  } else if (runway >= 12) {
+    reasons.push(
+      `Runway is in the 12–18 month caution band (${runway.toFixed(1)} months)`
+    );
+  } else {
+    reasons.push(`Runway has fallen below 12 months (${runway.toFixed(1)} months)`);
+  }
+
+  if (margin > 0) {
+    reasons.push(`EBITDA margin is positive (${(margin * 100).toFixed(1)}%)`);
+  } else {
+    reasons.push(`EBITDA margin is still negative (${(margin * 100).toFixed(1)}%)`);
+  }
+
+  if (arrTrendPct > 0.05) {
+    const suffix = decision === "Preserve cash"
+      ? ", but not fast enough to offset the burn"
+      : margin <= 0
+        ? " despite elevated burn"
+        : "";
+    reasons.push(
+      `ARR continues to grow (+${(arrTrendPct * 100).toFixed(1)}% over the window)${suffix}`
+    );
+  } else if (arrTrendPct < -0.05) {
+    reasons.push(
+      `ARR is contracting (${(arrTrendPct * 100).toFixed(1)}% over the window) as churn outpaces new growth`
+    );
+  } else {
+    reasons.push("ARR is roughly flat over the window");
+  }
+
+  return reasons;
+}
+
+export type ArrTrend = "Growing" | "Flat" | "Contracting";
+
+// Thresholds: ARR change from month 1 to month 12 of the forecast window.
+// >+5% = Growing, -5%..+5% = Flat, <-5% = Contracting.
+export function classifyArrTrend(result: SaaSForecastResult): ArrTrend {
+  const first = result.months[0].arr;
+  const last = result.months[result.months.length - 1].arr;
+  const trend = first === 0 ? 0 : (last - first) / first;
+  if (trend > 0.05) return "Growing";
+  if (trend < -0.05) return "Contracting";
+  return "Flat";
+}
+
+export type MarginStatus = "Healthy" | "Watch" | "Negative";
+
+// Thresholds: >0% = Healthy, -40%..0% = Watch, <-40% = Negative.
+export function classifyMargin(endingEBITDAMargin: number): MarginStatus {
+  if (endingEBITDAMargin > 0) return "Healthy";
+  if (endingEBITDAMargin >= -0.4) return "Watch";
+  return "Negative";
+}
+
+export type CashStatus = "Strong" | "Adequate" | "Low";
+
+// Thresholds, ending cash relative to starting cash: >=90% = Strong,
+// 50-90% = Adequate, <50% = Low.
+export function classifyCash(
+  endingCash: number,
+  baseline: SaaSCompanyBaseline = northstarBaseline
+): CashStatus {
+  const pctOfStart = endingCash / baseline.startingCash;
+  if (pctOfStart >= 0.9) return "Strong";
+  if (pctOfStart >= 0.5) return "Adequate";
+  return "Low";
+}
+
+export type RunwayStatus = "Safe" | "Watch" | "Critical" | "Self-funded";
+
+// Thresholds: null (cash-flow positive) = Self-funded, >18mo = Safe,
+// 12-18mo = Watch, <12mo = Critical.
+export function classifyRunway(runwayMonths: number | null): RunwayStatus {
+  if (runwayMonths === null) return "Self-funded";
+  if (runwayMonths > 18) return "Safe";
+  if (runwayMonths >= 12) return "Watch";
+  return "Critical";
+}
+
 export type SensitivityDriverKey =
   | "monthlyGrowthRate"
   | "monthlyChurnRate"
@@ -220,4 +324,114 @@ export function runSaaSSensitivity(
   }).sort((a, b) => b.range - a.range);
 
   return rows.slice(0, limit);
+}
+
+export function cumulativeEBITDA(result: SaaSForecastResult): number {
+  return result.months.reduce((sum, m) => sum + m.ebitda, 0);
+}
+
+export type SensitivityDetail = {
+  key: SensitivityDriverKey;
+  label: string;
+  baseValue: number;
+  downValue: number;
+  upValue: number;
+  baseCumulativeEBITDA: number;
+  downCumulativeEBITDA: number;
+  upCumulativeEBITDA: number;
+};
+
+/**
+ * Detail for a single sensitivity driver, on demand (e.g. an expanded row):
+ * the driver's current value and the cumulative 12-month EBITDA impact of
+ * flexing it +/-10%. Distinct from runSaaSSensitivity's ranking metric
+ * (ending-month EBITDA swing) — this one sums EBITDA across the full year.
+ */
+export function getSensitivityDetail(
+  assumptions: SaaSAssumptions,
+  key: SensitivityDriverKey,
+  baseline: SaaSCompanyBaseline = northstarBaseline,
+  flexPct = 0.1
+): SensitivityDetail {
+  const upAssumptions: SaaSAssumptions = {
+    ...assumptions,
+    [key]: assumptions[key] * (1 + flexPct),
+  };
+  const downAssumptions: SaaSAssumptions = {
+    ...assumptions,
+    [key]: assumptions[key] * (1 - flexPct),
+  };
+
+  return {
+    key,
+    label: sensitivityDriverLabels[key],
+    baseValue: assumptions[key],
+    downValue: downAssumptions[key],
+    upValue: upAssumptions[key],
+    baseCumulativeEBITDA: cumulativeEBITDA(runSaaSForecast(assumptions, baseline)),
+    downCumulativeEBITDA: cumulativeEBITDA(
+      runSaaSForecast(downAssumptions, baseline)
+    ),
+    upCumulativeEBITDA: cumulativeEBITDA(runSaaSForecast(upAssumptions, baseline)),
+  };
+}
+
+export type AssumptionDiff = {
+  key: SensitivityDriverKey;
+  label: string;
+  fromValue: number;
+  toValue: number;
+  impactOnEndingEBITDA: number;
+};
+
+/**
+ * The drivers where `current` differs from `base`, each swapped one-at-a-time
+ * into Base to isolate its own effect on ending-month EBITDA, ranked by the
+ * size of that effect. Returns at most `limit` — used to drive the "What
+ * changed vs Base?" panel without the UI re-deriving any of this itself.
+ */
+export function diffFromBase(
+  current: SaaSAssumptions,
+  base: SaaSAssumptions = scenarioPresets.base.assumptions,
+  baseline: SaaSCompanyBaseline = northstarBaseline,
+  limit = 3
+): AssumptionDiff[] {
+  const baseEbitda =
+    runSaaSForecast(base, baseline).months.at(-1)?.ebitda ?? 0;
+
+  const diffs: AssumptionDiff[] = SENSITIVITY_KEYS.filter(
+    (key) => current[key] !== base[key]
+  ).map((key) => {
+    const swapped: SaaSAssumptions = { ...base, [key]: current[key] };
+    const swappedEbitda =
+      runSaaSForecast(swapped, baseline).months.at(-1)?.ebitda ?? 0;
+    return {
+      key,
+      label: sensitivityDriverLabels[key],
+      fromValue: base[key],
+      toValue: current[key],
+      impactOnEndingEBITDA: swappedEbitda - baseEbitda,
+    };
+  });
+
+  return diffs
+    .sort((a, b) => Math.abs(b.impactOnEndingEBITDA) - Math.abs(a.impactOnEndingEBITDA))
+    .slice(0, limit);
+}
+
+export type BaseComparison = {
+  arrDelta: number;
+  marginDeltaPts: number; // percentage points, e.g. -5.2
+  cashDelta: number;
+};
+
+export function compareToBase(
+  current: SaaSForecastResult,
+  base: SaaSForecastResult
+): BaseComparison {
+  return {
+    arrDelta: current.endingARR - base.endingARR,
+    marginDeltaPts: (current.endingEBITDAMargin - base.endingEBITDAMargin) * 100,
+    cashDelta: current.endingCash - base.endingCash,
+  };
 }

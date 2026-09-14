@@ -5,17 +5,30 @@ import Link from "next/link";
 import {
   AVG_FULLY_LOADED_COST_PER_EMPLOYEE,
   FIXED_GA_MONTHLY,
+  classifyArrTrend,
+  classifyCash,
+  classifyMargin,
+  classifyRunway,
+  compareToBase,
   decideStance,
+  diffFromBase,
+  explainDecision,
+  getSensitivityDetail,
   northstarBaseline,
   runSaaSForecast,
   runSaaSSensitivity,
   scenarioPresets,
+  type ArrTrend,
+  type CashStatus,
   type Decision,
+  type MarginStatus,
+  type RunwayStatus,
   type SaaSAssumptions,
-  type SaaSMonthResult,
+  type SaaSForecastResult,
   type ScenarioKey,
+  type SensitivityDriverKey,
 } from "@/lib/models/saas";
-import { formatCurrency, formatCurrencyCompact, formatPercent } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
 
 const SCENARIO_KEYS: ScenarioKey[] = ["base", "upside", "downside"];
 
@@ -64,18 +77,82 @@ function SliderField({
   );
 }
 
-function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+type BadgeTone = "good" | "neutral" | "bad";
+
+const TONE_CLASS: Record<BadgeTone, string> = {
+  good: "bg-forest/10 text-forest",
+  neutral: "bg-brass/15 text-brass",
+  bad: "bg-rust-pale text-rust",
+};
+
+const ARR_TONE: Record<ArrTrend, BadgeTone> = {
+  Growing: "good",
+  Flat: "neutral",
+  Contracting: "bad",
+};
+const MARGIN_TONE: Record<MarginStatus, BadgeTone> = {
+  Healthy: "good",
+  Watch: "neutral",
+  Negative: "bad",
+};
+const CASH_TONE: Record<CashStatus, BadgeTone> = {
+  Strong: "good",
+  Adequate: "neutral",
+  Low: "bad",
+};
+const RUNWAY_TONE: Record<RunwayStatus, BadgeTone> = {
+  Safe: "good",
+  "Self-funded": "good",
+  Watch: "neutral",
+  Critical: "bad",
+};
+
+function KpiCard({
+  label,
+  value,
+  badge,
+  tone,
+}: {
+  label: string;
+  value: string;
+  badge: string;
+  tone: BadgeTone;
+}) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-forest/15 bg-white p-4">
+    <div className="flex flex-col gap-1.5 rounded-xl border border-forest/15 bg-white p-4">
       <span className="text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
         {label}
       </span>
       <span className="text-2xl font-black tracking-tight text-charcoal">
         {value}
       </span>
-      {sub && <span className="text-xs text-charcoal-soft">{sub}</span>}
+      <span
+        className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}
+      >
+        {badge}
+      </span>
     </div>
   );
+}
+
+// Formats a raw assumption value the way its slider displays it, for reuse
+// in the comparison table's "What changed vs Base?" panel.
+function formatAssumptionValue(key: SensitivityDriverKey, value: number): string {
+  switch (key) {
+    case "monthlyGrowthRate":
+    case "monthlyChurnRate":
+      return formatPercent(value, 1);
+    case "pricingChangePct":
+      return `${value >= 0 ? "+" : ""}${formatPercent(value, 1)}`;
+    case "grossMarginPct":
+      return formatPercent(value, 0);
+    case "headcount":
+      return `${Math.round(value)}`;
+    case "annualSalesMarketing":
+      return formatCurrencyCompact(value);
+    default:
+      return `${value}`;
+  }
 }
 
 const CHART_WIDTH = 640;
@@ -90,27 +167,60 @@ function monthX(month: number) {
   return PAD_LEFT + ((month - 1) / 11) * innerWidth;
 }
 
-function valueY(value: number, maxValue: number) {
+function valueY(value: number, minValue: number, maxValue: number) {
   const innerHeight = CHART_HEIGHT - PAD_TOP - PAD_BOTTOM;
-  const ratio = maxValue === 0 ? 0 : value / maxValue;
+  const range = maxValue - minValue;
+  const ratio = range === 0 ? 0 : (value - minValue) / range;
   return PAD_TOP + innerHeight * (1 - ratio);
 }
 
-function MrrChart({
+type ChartMetric = "mrr" | "cash";
+
+function ForecastChart({
   seriesByScenario,
+  metric,
+  ariaLabel,
 }: {
-  seriesByScenario: Record<ScenarioKey, SaaSMonthResult[]>;
+  seriesByScenario: Record<ScenarioKey, SaaSForecastResult>;
+  metric: ChartMetric;
+  ariaLabel: string;
 }) {
   const [hoverMonth, setHoverMonth] = useState<number | null>(null);
 
-  const maxMrr = useMemo(() => {
+  const { minValue, maxValue } = useMemo(() => {
     const all = SCENARIO_KEYS.flatMap((key) =>
-      seriesByScenario[key].map((m) => m.mrr)
+      seriesByScenario[key].months.map((m) => m[metric])
     );
-    return Math.max(...all) * 1.12;
-  }, [seriesByScenario]);
+    const rawMin = Math.min(0, ...all);
+    const rawMax = Math.max(...all);
+    const pad = (rawMax - rawMin) * 0.12 || Math.abs(rawMax) * 0.12 || 1;
+    return {
+      minValue: rawMin < 0 ? rawMin - pad : 0,
+      maxValue: rawMax + pad,
+    };
+  }, [seriesByScenario, metric]);
 
-  const gridLines = [0.25, 0.5, 0.75, 1].map((f) => valueY(maxMrr * f, maxMrr));
+  const showZeroLine = minValue < 0 && maxValue > 0;
+  const gridFracs = [0, 0.25, 0.5, 0.75, 1];
+  const gridValues = gridFracs.map((f) => minValue + (maxValue - minValue) * f);
+
+  // Direct end-labels can collide when two series end at similar values —
+  // nudge them apart vertically, closest-first, so text never overlaps.
+  const endLabelY = useMemo(() => {
+    const raw = SCENARIO_KEYS.map((key) => {
+      const months = seriesByScenario[key].months;
+      const last = months[months.length - 1];
+      return { key, y: valueY(last[metric], minValue, maxValue) };
+    }).sort((a, b) => a.y - b.y);
+
+    const minGap = 12;
+    for (let i = 1; i < raw.length; i++) {
+      if (raw[i].y - raw[i - 1].y < minGap) {
+        raw[i].y = raw[i - 1].y + minGap;
+      }
+    }
+    return Object.fromEntries(raw.map((r) => [r.key, r.y])) as Record<ScenarioKey, number>;
+  }, [seriesByScenario, metric, minValue, maxValue]);
 
   return (
     <div className="mt-2">
@@ -118,31 +228,44 @@ function MrrChart({
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         className="w-full"
         role="img"
-        aria-label="12-month MRR forecast under Base, Upside, and Downside scenarios"
+        aria-label={ariaLabel}
       >
         {/* Gridlines */}
-        {gridLines.map((y, i) => (
+        {gridValues.map((v, i) => (
           <line
             key={i}
             x1={PAD_LEFT}
             x2={CHART_WIDTH - PAD_RIGHT}
-            y1={y}
-            y2={y}
+            y1={valueY(v, minValue, maxValue)}
+            y2={valueY(v, minValue, maxValue)}
             stroke="#1e3a2b"
             strokeOpacity={0.08}
           />
         ))}
 
+        {/* Zero baseline, only shown when the range actually crosses zero */}
+        {showZeroLine && (
+          <line
+            x1={PAD_LEFT}
+            x2={CHART_WIDTH - PAD_RIGHT}
+            y1={valueY(0, minValue, maxValue)}
+            y2={valueY(0, minValue, maxValue)}
+            stroke="#2a2820"
+            strokeOpacity={0.35}
+            strokeDasharray="3 3"
+          />
+        )}
+
         {/* Y axis labels */}
-        {[0.5, 1].map((f) => (
+        {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
           <text
-            key={f}
+            key={i}
             x={PAD_LEFT - 8}
-            y={valueY(maxMrr * f, maxMrr) + 4}
+            y={valueY(v, minValue, maxValue) + 4}
             textAnchor="end"
             className="fill-charcoal-soft text-[10px]"
           >
-            {formatCurrencyCompact(maxMrr * f)}
+            {formatCurrencyCompact(v)}
           </text>
         ))}
 
@@ -162,8 +285,8 @@ function MrrChart({
         {/* Lines */}
         {SCENARIO_KEYS.map((key) => {
           const style = SERIES_STYLE[key];
-          const points = seriesByScenario[key]
-            .map((m) => `${monthX(m.month)},${valueY(m.mrr, maxMrr)}`)
+          const points = seriesByScenario[key].months
+            .map((m) => `${monthX(m.month)},${valueY(m[metric], minValue, maxValue)}`)
             .join(" ");
           return (
             <polyline
@@ -179,19 +302,22 @@ function MrrChart({
           );
         })}
 
-        {/* Direct end labels */}
+        {/* Direct end labels — a cream halo (paintOrder stroke) keeps the
+            label legible where a line's own dashes pass close behind it. */}
         {SCENARIO_KEYS.map((key) => {
           const style = SERIES_STYLE[key];
-          const last = seriesByScenario[key][seriesByScenario[key].length - 1];
           return (
             <text
               key={key}
-              x={monthX(last.month) - 4}
-              y={valueY(last.mrr, maxMrr) - 6}
+              x={CHART_WIDTH - PAD_RIGHT - 4}
+              y={endLabelY[key] - 6}
               textAnchor="end"
               fontSize={10}
               fontWeight={700}
               fill={style.stroke}
+              stroke="#f5f1e6"
+              strokeWidth={4}
+              paintOrder="stroke"
             >
               {style.label}
             </text>
@@ -256,7 +382,7 @@ function MrrChart({
                     >
                       {SERIES_STYLE[key].label}:{" "}
                       {formatCurrencyCompact(
-                        seriesByScenario[key][hoverMonth - 1].mrr
+                        seriesByScenario[key].months[hoverMonth - 1][metric]
                       )}
                     </text>
                   ))}
@@ -296,11 +422,82 @@ function runwayPhrase(runwayMonths: number | null): string {
     : `has ${runwayMonths.toFixed(1)} months of runway`;
 }
 
+const COMPARISON_COLUMN_LABEL: Record<ScenarioKey | "custom", string> = {
+  base: "Base",
+  upside: "Upside",
+  downside: "Downside",
+  custom: "Custom",
+};
+
+function ScenarioComparisonTable({
+  scenarioResults,
+  activeResult,
+  activeColumn,
+}: {
+  scenarioResults: Record<ScenarioKey, SaaSForecastResult>;
+  activeResult: SaaSForecastResult;
+  activeColumn: ScenarioKey | "custom";
+}) {
+  const columns: { key: ScenarioKey | "custom"; result: SaaSForecastResult }[] = [
+    { key: "base", result: scenarioResults.base },
+    { key: "upside", result: scenarioResults.upside },
+    { key: "downside", result: scenarioResults.downside },
+    ...(activeColumn === "custom" ? [{ key: "custom" as const, result: activeResult }] : []),
+  ];
+
+  const rows: { label: string; format: (r: SaaSForecastResult) => string }[] = [
+    { label: "Ending ARR", format: (r) => formatCurrencyCompact(r.endingARR) },
+    { label: "EBITDA Margin", format: (r) => formatPercent(r.endingEBITDAMargin) },
+    { label: "Ending Cash", format: (r) => formatCurrencyCompact(r.endingCash) },
+    { label: "Runway", format: (r) => runwayLabel(r.runwayMonths) },
+  ];
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-forest/15 bg-white">
+      <table className="w-full min-w-[480px] text-left text-sm">
+        <thead>
+          <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
+            <th className="px-4 py-3 font-semibold">Metric</th>
+            {columns.map((col) => (
+              <th
+                key={col.key}
+                className={`px-4 py-3 font-semibold ${
+                  col.key === activeColumn ? "bg-forest/10 text-forest" : ""
+                }`}
+              >
+                {COMPARISON_COLUMN_LABEL[col.key]}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label} className="border-b border-forest/5 last:border-0">
+              <td className="px-4 py-3 font-semibold text-charcoal">{row.label}</td>
+              {columns.map((col) => (
+                <td
+                  key={col.key}
+                  className={`px-4 py-3 text-charcoal-soft ${
+                    col.key === activeColumn ? "bg-forest/5 font-semibold text-charcoal" : ""
+                  }`}
+                >
+                  {row.format(col.result)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function FpaDecisionLab() {
   const [selectedPreset, setSelectedPreset] = useState<ScenarioKey>("base");
   const [assumptions, setAssumptions] = useState<SaaSAssumptions>(
     scenarioPresets.base.assumptions
   );
+  const [expandedDriver, setExpandedDriver] = useState<SensitivityDriverKey | null>(null);
 
   const set = <K extends keyof SaaSAssumptions>(key: K) => (value: number) =>
     setAssumptions((prev) => ({ ...prev, [key]: value }));
@@ -310,13 +507,14 @@ export default function FpaDecisionLab() {
     setAssumptions(scenarioPresets[key].assumptions);
   };
 
-  // The three canonical scenario forecasts always drive the chart, so it
-  // stays a stable comparison reference regardless of slider tweaks below.
-  const scenarioForecasts = useMemo(
+  // The three canonical scenario forecasts always drive both charts and the
+  // comparison table, so they stay a stable reference regardless of slider
+  // tweaks below.
+  const scenarioResults = useMemo(
     () => ({
-      base: runSaaSForecast(scenarioPresets.base.assumptions).months,
-      upside: runSaaSForecast(scenarioPresets.upside.assumptions).months,
-      downside: runSaaSForecast(scenarioPresets.downside.assumptions).months,
+      base: runSaaSForecast(scenarioPresets.base.assumptions),
+      upside: runSaaSForecast(scenarioPresets.upside.assumptions),
+      downside: runSaaSForecast(scenarioPresets.downside.assumptions),
     }),
     []
   );
@@ -329,10 +527,36 @@ export default function FpaDecisionLab() {
     activeResult.runwayMonths,
     activeResult.endingEBITDAMargin
   );
+  const decisionReasons = useMemo(
+    () => explainDecision(activeResult, decision),
+    [activeResult, decision]
+  );
 
   const isCustomized =
     JSON.stringify(assumptions) !==
     JSON.stringify(scenarioPresets[selectedPreset].assumptions);
+  const activeColumn: ScenarioKey | "custom" = isCustomized ? "custom" : selectedPreset;
+
+  const isBaseCase =
+    JSON.stringify(assumptions) === JSON.stringify(scenarioPresets.base.assumptions);
+  const baseChanges = useMemo(
+    () => (isBaseCase ? [] : diffFromBase(assumptions)),
+    [assumptions, isBaseCase]
+  );
+  const baseImpact = useMemo(
+    () => compareToBase(activeResult, scenarioResults.base),
+    [activeResult, scenarioResults]
+  );
+
+  const sensitivityDetail = useMemo(
+    () => (expandedDriver ? getSensitivityDetail(assumptions, expandedDriver) : null),
+    [assumptions, expandedDriver]
+  );
+
+  const arrTrend = classifyArrTrend(activeResult);
+  const marginStatus = classifyMargin(activeResult.endingEBITDAMargin);
+  const cashStatus = classifyCash(activeResult.endingCash);
+  const runwayStatus = classifyRunway(activeResult.runwayMonths);
 
   return (
     <main className="bg-cream">
@@ -480,13 +704,52 @@ export default function FpaDecisionLab() {
             12-Month Outlook
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <KpiCard label="Ending ARR" value={formatCurrencyCompact(activeResult.endingARR)} />
+            <KpiCard
+              label="Ending ARR"
+              value={formatCurrencyCompact(activeResult.endingARR)}
+              badge={arrTrend}
+              tone={ARR_TONE[arrTrend]}
+            />
             <KpiCard
               label="EBITDA Margin"
               value={formatPercent(activeResult.endingEBITDAMargin)}
+              badge={marginStatus}
+              tone={MARGIN_TONE[marginStatus]}
             />
-            <KpiCard label="Ending Cash" value={formatCurrencyCompact(activeResult.endingCash)} />
-            <KpiCard label="Runway" value={runwayLabel(activeResult.runwayMonths)} />
+            <KpiCard
+              label="Ending Cash"
+              value={formatCurrencyCompact(activeResult.endingCash)}
+              badge={cashStatus}
+              tone={CASH_TONE[cashStatus]}
+            />
+            <KpiCard
+              label="Runway"
+              value={runwayLabel(activeResult.runwayMonths)}
+              badge={runwayStatus}
+              tone={RUNWAY_TONE[runwayStatus]}
+            />
+          </div>
+          <p className="mt-3 text-[11px] leading-5 text-charcoal-soft">
+            Status thresholds: ARR uses the change from month 1 to month 12
+            (&gt;+5% Growing, ±5% Flat, &lt;-5% Contracting). Margin: &gt;0%
+            Healthy, -40–0% Watch, &lt;-40% Negative. Cash: &ge;90% of
+            starting cash Strong, 50–90% Adequate, &lt;50% Low. Runway:
+            &gt;18mo Safe, 12–18mo Watch, &lt;12mo Critical, cash-flow
+            positive Self-funded.
+          </p>
+        </section>
+
+        {/* Scenario comparison table */}
+        <section className="mt-12 border-t border-forest/10 pt-12">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+            Scenario Comparison
+          </h2>
+          <div className="mt-4">
+            <ScenarioComparisonTable
+              scenarioResults={scenarioResults}
+              activeResult={activeResult}
+              activeColumn={activeColumn}
+            />
           </div>
         </section>
 
@@ -495,8 +758,18 @@ export default function FpaDecisionLab() {
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
             Recommendation
           </h2>
-          <div className={`mt-4 rounded-xl px-5 py-4 text-lg font-bold ${DECISION_STYLE[decision]}`}>
-            {decision}
+          <div className={`mt-4 rounded-xl px-5 py-4 ${DECISION_STYLE[decision]}`}>
+            <p className="text-lg font-bold">{decision}</p>
+            <ul className="mt-2 flex flex-col gap-1">
+              {decisionReasons.map((reason) => (
+                <li
+                  key={reason}
+                  className="text-sm leading-6 before:mr-2 before:content-['—']"
+                >
+                  {reason}
+                </li>
+              ))}
+            </ul>
           </div>
           <p className="mt-3 text-sm leading-6 text-charcoal-soft">
             Deterministic rule, not a model guess: runway &gt; 18 months and a
@@ -513,6 +786,50 @@ export default function FpaDecisionLab() {
           </p>
         </section>
 
+        {/* What changed vs Base? */}
+        {!isBaseCase && baseChanges.length > 0 && (
+          <section className="mt-12 border-t border-forest/10 pt-12">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              What Changed vs Base?
+            </h2>
+            <div className="mt-4 rounded-xl border border-forest/15 bg-white p-4">
+              <ul className="flex flex-col gap-1.5">
+                {baseChanges.map((change) => (
+                  <li
+                    key={change.key}
+                    className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
+                  >
+                    <span className="font-semibold text-charcoal">{change.label}</span>:{" "}
+                    {formatAssumptionValue(change.key, change.fromValue)} &rarr;{" "}
+                    {formatAssumptionValue(change.key, change.toValue)}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 grid grid-cols-1 gap-2 border-t border-forest/10 pt-4 sm:grid-cols-3">
+                <div className="text-sm">
+                  <span className="text-charcoal-soft">Ending ARR: </span>
+                  <span className="font-semibold text-charcoal">
+                    {formatSignedCompact(baseImpact.arrDelta)}
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-charcoal-soft">EBITDA Margin: </span>
+                  <span className="font-semibold text-charcoal">
+                    {baseImpact.marginDeltaPts >= 0 ? "+" : ""}
+                    {baseImpact.marginDeltaPts.toFixed(1)} pts
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-charcoal-soft">Ending Cash: </span>
+                  <span className="font-semibold text-charcoal">
+                    {formatSignedCompact(baseImpact.cashDelta)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Main chart */}
         <section className="mt-12 border-t border-forest/10 pt-12">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
@@ -523,7 +840,28 @@ export default function FpaDecisionLab() {
             assumptions, independent of the sliders above — a stable
             comparison while you tune your own case.
           </p>
-          <MrrChart seriesByScenario={scenarioForecasts} />
+          <ForecastChart
+            seriesByScenario={scenarioResults}
+            metric="mrr"
+            ariaLabel="12-month MRR forecast under Base, Upside, and Downside scenarios"
+          />
+        </section>
+
+        {/* Cash chart */}
+        <section className="mt-12 border-t border-forest/10 pt-12">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+            12-Month Cash Balance Forecast
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+            Same three scenarios, tracking ending cash instead of revenue —
+            watch how a scenario that turns cash-flow positive levels off
+            rather than continuing to decline.
+          </p>
+          <ForecastChart
+            seriesByScenario={scenarioResults}
+            metric="cash"
+            ariaLabel="12-month cash balance forecast under Base, Upside, and Downside scenarios"
+          />
         </section>
 
         {/* Sensitivity panel */}
@@ -531,25 +869,80 @@ export default function FpaDecisionLab() {
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
             What Moves EBITDA Most (±10%)
           </h2>
+          <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+            Click a driver to see its current value and the impact of ±10% on
+            cumulative 12-month EBITDA.
+          </p>
           <ul className="mt-4 flex flex-col gap-2">
-            {sensitivity.map((row, i) => (
-              <li
-                key={row.key}
-                className="flex items-center justify-between rounded-lg border border-forest/15 bg-white px-4 py-3"
-              >
-                <span className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-forest/10 text-xs font-bold text-forest">
-                    {i + 1}
-                  </span>
-                  <span className="text-sm font-semibold text-charcoal">
-                    {row.label}
-                  </span>
-                </span>
-                <span className="text-sm font-semibold text-brass">
-                  {formatCurrency(row.range)} swing
-                </span>
-              </li>
-            ))}
+            {sensitivity.map((row, i) => {
+              const isExpanded = expandedDriver === row.key;
+              return (
+                <li key={row.key} className="rounded-lg border border-forest/15 bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedDriver(isExpanded ? null : row.key)}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-forest/10 text-xs font-bold text-forest">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm font-semibold text-charcoal">
+                        {row.label}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-brass">
+                        {formatCurrency(row.range)} swing
+                      </span>
+                      <span className="text-charcoal-soft">
+                        {isExpanded ? "−" : "+"}
+                      </span>
+                    </span>
+                  </button>
+                  {isExpanded && sensitivityDetail && sensitivityDetail.key === row.key && (
+                    <div className="grid grid-cols-1 gap-3 border-t border-forest/10 px-4 py-3 text-xs sm:grid-cols-3">
+                      <div>
+                        <span className="block text-charcoal-soft">Current value</span>
+                        <span className="font-semibold text-charcoal">
+                          {formatAssumptionValue(row.key, sensitivityDetail.baseValue)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-charcoal-soft">
+                          -10% ({formatAssumptionValue(row.key, sensitivityDetail.downValue)})
+                          cumulative EBITDA
+                        </span>
+                        <span className="font-semibold text-rust">
+                          {formatCurrency(sensitivityDetail.downCumulativeEBITDA)}{" "}
+                          (
+                          {formatSignedCompact(
+                            sensitivityDetail.downCumulativeEBITDA -
+                              sensitivityDetail.baseCumulativeEBITDA
+                          )}
+                          )
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-charcoal-soft">
+                          +10% ({formatAssumptionValue(row.key, sensitivityDetail.upValue)})
+                          cumulative EBITDA
+                        </span>
+                        <span className="font-semibold text-forest">
+                          {formatCurrency(sensitivityDetail.upCumulativeEBITDA)}{" "}
+                          (
+                          {formatSignedCompact(
+                            sensitivityDetail.upCumulativeEBITDA -
+                              sensitivityDetail.baseCumulativeEBITDA
+                          )}
+                          )
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
 
@@ -562,6 +955,7 @@ export default function FpaDecisionLab() {
             {[
               "Additional industry models beyond SaaS",
               "CSV upload of real company data",
+              "AI-generated commentary",
               "Save / share a scenario",
               "NRR and LTV:CAC metrics",
               "Random-data / Monte Carlo mode",
