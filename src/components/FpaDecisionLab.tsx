@@ -37,6 +37,7 @@ import {
   type SensitivityMetric,
 } from "@/lib/models/saas";
 import { parseCompanyCsv, type CsvRow } from "@/lib/csvImport";
+import { runMonteCarloSimulation, type MonteCarloResult } from "@/lib/monteCarlo";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
 
 // Same bounds as the Drivers sliders below — a decoded share link or a
@@ -831,6 +832,111 @@ function ScenarioComparisonTable({
   );
 }
 
+const MC_CHART_WIDTH = 640;
+const MC_CHART_HEIGHT = 160;
+const MC_PAD_LEFT = 4;
+const MC_PAD_RIGHT = 4;
+const MC_PAD_TOP = 10;
+const MC_PAD_BOTTOM = 26;
+const MC_BIN_COUNT = 16;
+
+/**
+ * Compact histogram of simulated Ending ARR outcomes, with dashed markers
+ * for P10 / median / P90 — the one distribution visualization the Monte
+ * Carlo brief asks for. Bins and markers are computed from the same sample
+ * array the KPI cards above already summarize; nothing is recalculated.
+ */
+function MonteCarloHistogram({
+  samples,
+  p10,
+  median,
+  p90,
+}: {
+  samples: number[];
+  p10: number;
+  median: number;
+  p90: number;
+}) {
+  const min = Math.min(...samples);
+  const max = Math.max(...samples);
+  const range = max - min || 1;
+  const binWidth = range / MC_BIN_COUNT;
+  const bins = Array.from({ length: MC_BIN_COUNT }, () => 0);
+  samples.forEach((v) => {
+    const idx = Math.min(MC_BIN_COUNT - 1, Math.floor((v - min) / binWidth));
+    bins[idx]++;
+  });
+  const maxCount = Math.max(...bins, 1);
+  const innerWidth = MC_CHART_WIDTH - MC_PAD_LEFT - MC_PAD_RIGHT;
+  const innerHeight = MC_CHART_HEIGHT - MC_PAD_TOP - MC_PAD_BOTTOM;
+  const barGap = 2;
+  const barWidth = innerWidth / MC_BIN_COUNT - barGap;
+
+  const xFor = (value: number) => MC_PAD_LEFT + ((value - min) / range) * innerWidth;
+
+  const markers: { value: number; label: string; color: string }[] = [
+    { value: p10, label: "P10", color: "#a1462f" },
+    { value: median, label: "P50", color: "#2a2820" },
+    { value: p90, label: "P90", color: "#96703e" },
+  ];
+
+  return (
+    <div className="mt-2">
+      <svg
+        viewBox={`0 0 ${MC_CHART_WIDTH} ${MC_CHART_HEIGHT}`}
+        className="w-full"
+        role="img"
+        aria-label={`Distribution of simulated ending ARR across ${samples.length} runs, ranging from ${formatCurrencyCompact(
+          min
+        )} to ${formatCurrencyCompact(max)}, with P10 ${formatCurrencyCompact(
+          p10
+        )}, median ${formatCurrencyCompact(median)}, and P90 ${formatCurrencyCompact(p90)}`}
+      >
+        {bins.map((count, i) => {
+          const x = MC_PAD_LEFT + i * (innerWidth / MC_BIN_COUNT) + barGap / 2;
+          const height = (count / maxCount) * innerHeight;
+          const y = MC_PAD_TOP + innerHeight - height;
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={y}
+              width={Math.max(barWidth, 0.5)}
+              height={Math.max(height, 0.5)}
+              fill="#1e3a2b"
+              fillOpacity={0.55}
+              rx={1}
+            />
+          );
+        })}
+        {markers.map((marker) => (
+          <g key={marker.label}>
+            <line
+              x1={xFor(marker.value)}
+              x2={xFor(marker.value)}
+              y1={MC_PAD_TOP}
+              y2={MC_PAD_TOP + innerHeight}
+              stroke={marker.color}
+              strokeWidth={1.5}
+              strokeDasharray="3 2"
+            />
+            <text
+              x={xFor(marker.value)}
+              y={MC_CHART_HEIGHT - MC_PAD_BOTTOM + 14}
+              textAnchor="middle"
+              fontSize={9}
+              fontWeight={700}
+              fill={marker.color}
+            >
+              {marker.label}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 function SampleBadge() {
   return (
     <span className="rounded-full bg-forest/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-forest">
@@ -957,6 +1063,33 @@ export default function FpaDecisionLab() {
       // Clipboard permission denied — the URL is still shown in the box
       // below for the user to copy manually.
     });
+  };
+
+  // Monte Carlo — an optional, explicitly-labeled complement to the
+  // deterministic scenarios above, never a replacement for them. Runs only
+  // on demand (never on every slider tick) since each run is hundreds of
+  // forecasts.
+  const [mcSimCount, setMcSimCount] = useState<500 | 1000>(500);
+  const [mcResult, setMcResult] = useState<MonteCarloResult | null>(null);
+  const [mcRunning, setMcRunning] = useState(false);
+  const [mcProgress, setMcProgress] = useState(0);
+  const [mcRanForKey, setMcRanForKey] = useState<string | null>(null);
+  const mcAssumptionsKey = useMemo(
+    () => JSON.stringify({ assumptions, activeBaseline }),
+    [assumptions, activeBaseline]
+  );
+  const mcStale = mcResult !== null && mcRanForKey !== mcAssumptionsKey;
+
+  const runMonteCarlo = async () => {
+    setMcRunning(true);
+    setMcProgress(0);
+    const key = mcAssumptionsKey;
+    const result = await runMonteCarloSimulation(assumptions, activeBaseline, mcSimCount, (done, total) =>
+      setMcProgress(done / total)
+    );
+    setMcResult(result);
+    setMcRanForKey(key);
+    setMcRunning(false);
   };
 
   // The three canonical scenario forecasts always drive both charts and the
@@ -1788,24 +1921,128 @@ export default function FpaDecisionLab() {
               </p>
             </section>
 
+            {/* Monte Carlo simulation */}
+            <section className="border-t border-forest/10 pt-8">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  Monte Carlo Simulation
+                </h2>
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
+                    {([500, 1000] as const).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setMcSimCount(n)}
+                        aria-pressed={mcSimCount === n}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                          mcSimCount === n
+                            ? "bg-forest text-cream"
+                            : "text-charcoal-soft hover:text-charcoal"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={runMonteCarlo}
+                    disabled={mcRunning}
+                    className="rounded-full bg-forest px-4 py-1.5 text-xs font-semibold text-cream transition-opacity hover:bg-forest-dark disabled:opacity-50"
+                  >
+                    {mcRunning ? `Running… ${Math.round(mcProgress * 100)}%` : "Run Simulation"}
+                  </button>
+                </div>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                Reruns the 12-month engine {mcSimCount} times, randomly
+                perturbing Customer Growth, Churn, Expansion, Contraction,
+                Pricing, and Gross Margin around your current assumptions
+                (normal distributions, clamped to each driver&apos;s slider
+                range), holding Headcount and S&amp;M spend fixed.
+              </p>
+
+              {mcResult && (
+                <>
+                  {mcStale && (
+                    <p className="mt-3 text-[11px] font-semibold text-brass">
+                      Assumptions changed since this run — click Run
+                      Simulation to refresh.
+                    </p>
+                  )}
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <KpiCard
+                      label="P10 Ending ARR"
+                      value={formatCurrencyCompact(mcResult.p10EndingARR)}
+                      badge={`n=${mcResult.simulations}`}
+                      tone="neutral"
+                    />
+                    <KpiCard
+                      label="Median Ending ARR"
+                      value={formatCurrencyCompact(mcResult.medianEndingARR)}
+                      badge="P50"
+                      tone="good"
+                    />
+                    <KpiCard
+                      label="P90 Ending ARR"
+                      value={formatCurrencyCompact(mcResult.p90EndingARR)}
+                      badge={`n=${mcResult.simulations}`}
+                      tone="neutral"
+                    />
+                    <KpiCard
+                      label="Median Ending Cash"
+                      value={formatCurrencyCompact(mcResult.medianEndingCash)}
+                      badge="P50"
+                      tone="good"
+                    />
+                    <KpiCard
+                      label="P(EBITDA > 0)"
+                      value={formatPercent(mcResult.probabilityPositiveEBITDA, 0)}
+                      badge={mcResult.probabilityPositiveEBITDA >= 0.5 ? "Likely" : "Unlikely"}
+                      tone={mcResult.probabilityPositiveEBITDA >= 0.5 ? "good" : "bad"}
+                    />
+                    <KpiCard
+                      label="P(Runway < 12mo)"
+                      value={formatPercent(mcResult.probabilityRunwayBelow12Months, 0)}
+                      badge={mcResult.probabilityRunwayBelow12Months <= 0.25 ? "Low risk" : "Elevated"}
+                      tone={mcResult.probabilityRunwayBelow12Months <= 0.25 ? "good" : "bad"}
+                    />
+                  </div>
+                  <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
+                    Ending ARR Distribution ({mcResult.simulations} runs)
+                  </h3>
+                  <MonteCarloHistogram
+                    samples={mcResult.samples.map((s) => s.endingARR)}
+                    p10={mcResult.p10EndingARR}
+                    median={mcResult.medianEndingARR}
+                    p90={mcResult.p90EndingARR}
+                  />
+                </>
+              )}
+
+              <p className="mt-3 rounded-lg bg-brass-pale px-3 py-2 text-[11px] leading-4 text-brass">
+                Illustrative simulation based on user-defined assumptions,
+                not a forecast guarantee.
+              </p>
+            </section>
+
             {/* Planned, not built */}
             <section className="border-t border-forest/10 pt-8">
               <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
                 Planned — Not In This Version
               </h2>
               <ul className="mt-3 flex flex-col gap-1.5">
-                {[
-                  "AI-generated commentary",
-                  "Additional industry models beyond SaaS",
-                  "Random-data / Monte Carlo mode",
-                ].map((item) => (
-                  <li
-                    key={item}
-                    className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
-                  >
-                    {item}
-                  </li>
-                ))}
+                {["AI-generated commentary", "Additional industry models beyond SaaS"].map(
+                  (item) => (
+                    <li
+                      key={item}
+                      className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
+                    >
+                      {item}
+                    </li>
+                  )
+                )}
               </ul>
             </section>
           </div>
