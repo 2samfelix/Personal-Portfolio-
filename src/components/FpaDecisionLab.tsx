@@ -1,7 +1,7 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import Link from "next/link";
 import {
   AVG_FULLY_LOADED_COST_PER_EMPLOYEE,
@@ -29,13 +29,76 @@ import {
   type NRRStatus,
   type RunwayStatus,
   type SaaSAssumptions,
+  type SaaSCompanyBaseline,
   type SaaSForecastResult,
   type SaaSMonthResult,
   type ScenarioKey,
   type SensitivityDriverKey,
   type SensitivityMetric,
 } from "@/lib/models/saas";
+import { parseCompanyCsv, type CsvRow } from "@/lib/csvImport";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
+
+// Same bounds as the Drivers sliders below — a decoded share link or a
+// loaded save is only ever applied if every field is a finite number inside
+// its slider's own range, so a malformed/tampered URL can't feed the engine
+// something the UI itself could never produce.
+const ASSUMPTIONS_VALIDATION_BOUNDS: Record<keyof SaaSAssumptions, readonly [number, number]> = {
+  monthlyGrowthRate: [0, 0.15],
+  monthlyChurnRate: [0, 0.06],
+  pricingChangePct: [-0.05, 0.1],
+  grossMarginPct: [0.5, 0.95],
+  headcount: [15, 50],
+  annualSalesMarketing: [300_000, 1_500_000],
+  monthlyExpansionRate: [0, 0.05],
+  monthlyContractionRate: [0, 0.05],
+};
+
+function isValidAssumptions(value: unknown): value is SaaSAssumptions {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return (Object.keys(ASSUMPTIONS_VALIDATION_BOUNDS) as (keyof SaaSAssumptions)[]).every((key) => {
+    const v = record[key];
+    if (typeof v !== "number" || !Number.isFinite(v)) return false;
+    const [min, max] = ASSUMPTIONS_VALIDATION_BOUNDS[key];
+    return v >= min && v <= max;
+  });
+}
+
+function encodeAssumptions(a: SaaSAssumptions): string {
+  return encodeURIComponent(btoa(JSON.stringify(a)));
+}
+
+function decodeAssumptions(raw: string): SaaSAssumptions | null {
+  try {
+    const parsed: unknown = JSON.parse(atob(raw));
+    return isValidAssumptions(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+type SavedScenario = { name: string; assumptions: SaaSAssumptions; savedAt: number };
+
+const SAVED_SCENARIOS_KEY = "fpa-decision-lab:saved-scenarios";
+
+function loadSavedScenarios(): SavedScenario[] {
+  try {
+    const raw = window.localStorage.getItem(SAVED_SCENARIOS_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (s): s is SavedScenario =>
+        typeof s === "object" &&
+        s !== null &&
+        typeof (s as SavedScenario).name === "string" &&
+        isValidAssumptions((s as SavedScenario).assumptions)
+    );
+  } catch {
+    return [];
+  }
+}
 
 const SCENARIO_KEYS: ScenarioKey[] = ["base", "upside", "downside"];
 
@@ -782,6 +845,37 @@ export default function FpaDecisionLab() {
   );
   const [sensitivityTab, setSensitivityTab] = useState<SensitivityMetric>("ebitda");
 
+  // CSV import — a custom baseline threaded through the same
+  // runSaaSForecast() path the sample company uses; never a parallel model.
+  const [customBaseline, setCustomBaseline] = useState<SaaSCompanyBaseline | null>(null);
+  const [csvFileName, setCsvFileName] = useState<string | null>(null);
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const [csvWarnings, setCsvWarnings] = useState<string[]>([]);
+  const [csvPreviewRows, setCsvPreviewRows] = useState<CsvRow[] | null>(null);
+  const activeBaseline = customBaseline ?? northstarBaseline;
+
+  // Save / Load / Share — saved scenarios are user-named assumption sets,
+  // kept structurally separate from the fixed Base/Upside/Downside presets.
+  const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([]);
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [saveNameDraft, setSaveNameDraft] = useState("");
+  const [showLoadList, setShowLoadList] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSavedScenarios(loadSavedScenarios());
+
+    const params = new URLSearchParams(window.location.search);
+    const shared = params.get("s");
+    if (shared) {
+      const decoded = decodeAssumptions(shared);
+      // A malformed or tampered share link is ignored silently rather than
+      // fed to the engine or shown as an error — the app just falls back
+      // to the default Base scenario.
+      if (decoded) setAssumptions(decoded);
+    }
+  }, []);
+
   const set = <K extends keyof SaaSAssumptions>(key: K) => (value: number) =>
     setAssumptions((prev) => ({ ...prev, [key]: value }));
 
@@ -789,21 +883,101 @@ export default function FpaDecisionLab() {
     setAssumptions(scenarioPresets[key].assumptions);
   };
 
+  const handleCsvUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = parseCompanyCsv(String(reader.result ?? ""));
+      if (!result.ok) {
+        setCsvError(result.error);
+        setCsvWarnings([]);
+        setCsvPreviewRows(null);
+        return;
+      }
+      setCsvError(null);
+      setCsvWarnings(result.warnings);
+      setCsvPreviewRows(result.rows);
+      setCsvFileName(file.name);
+      setCustomBaseline(result.derivedBaseline);
+      setAssumptions((prev) => ({ ...prev, ...result.derivedAssumptions }));
+    };
+    reader.onerror = () => {
+      setCsvError("Could not read that file. Please try again.");
+      setCsvWarnings([]);
+      setCsvPreviewRows(null);
+    };
+    reader.readAsText(file);
+  };
+
+  const resetToSampleData = () => {
+    setCustomBaseline(null);
+    setCsvFileName(null);
+    setCsvError(null);
+    setCsvWarnings([]);
+    setCsvPreviewRows(null);
+    setAssumptions(scenarioPresets.base.assumptions);
+  };
+
+  const saveScenario = () => {
+    const name = saveNameDraft.trim();
+    if (!name) return;
+    const updated = [
+      ...savedScenarios.filter((s) => s.name !== name),
+      { name, assumptions, savedAt: Date.now() },
+    ];
+    setSavedScenarios(updated);
+    try {
+      window.localStorage.setItem(SAVED_SCENARIOS_KEY, JSON.stringify(updated));
+    } catch {
+      // localStorage unavailable (private browsing, quota) — the scenario
+      // still applies for this session, it just won't persist.
+    }
+    setSaveNameDraft("");
+    setShowSaveInput(false);
+  };
+
+  const deleteScenario = (name: string) => {
+    const updated = savedScenarios.filter((s) => s.name !== name);
+    setSavedScenarios(updated);
+    try {
+      window.localStorage.setItem(SAVED_SCENARIOS_KEY, JSON.stringify(updated));
+    } catch {
+      // Nothing to do if storage isn't available — state is already updated.
+    }
+  };
+
+  const shareScenario = () => {
+    const url = `${window.location.origin}${window.location.pathname}?s=${encodeAssumptions(
+      assumptions
+    )}`;
+    setShareUrl(url);
+    navigator.clipboard?.writeText(url).catch(() => {
+      // Clipboard permission denied — the URL is still shown in the box
+      // below for the user to copy manually.
+    });
+  };
+
   // The three canonical scenario forecasts always drive both charts and the
   // comparison table, so they stay a stable reference regardless of slider
-  // tweaks below.
+  // tweaks below. They forecast forward from whichever baseline is active —
+  // the sample company, or an uploaded one.
   const scenarioResults = useMemo(
     () => ({
-      base: runSaaSForecast(scenarioPresets.base.assumptions),
-      upside: runSaaSForecast(scenarioPresets.upside.assumptions),
-      downside: runSaaSForecast(scenarioPresets.downside.assumptions),
+      base: runSaaSForecast(scenarioPresets.base.assumptions, activeBaseline),
+      upside: runSaaSForecast(scenarioPresets.upside.assumptions, activeBaseline),
+      downside: runSaaSForecast(scenarioPresets.downside.assumptions, activeBaseline),
     }),
-    []
+    [activeBaseline]
   );
 
   // The currently tunable assumptions drive the KPI cards, banner,
   // commentary, and sensitivity panel.
-  const activeResult = useMemo(() => runSaaSForecast(assumptions), [assumptions]);
+  const activeResult = useMemo(
+    () => runSaaSForecast(assumptions, activeBaseline),
+    [assumptions, activeBaseline]
+  );
   const activeMonth12 = activeResult.months[activeResult.months.length - 1];
   const sensitivity = useMemo(
     () => runSaaSSensitivityByMetric(assumptions, sensitivityTab),
@@ -916,10 +1090,12 @@ export default function FpaDecisionLab() {
         </div>
 
         <p className="mt-8 max-w-2xl text-base leading-7 text-charcoal-soft">
-          A small SaaS financial-planning simulator built around a fictional
-          company, {northstarBaseline.name}. Pick a scenario or tune the
-          assumptions on the left — a 12-month engine recomputes MRR, EBITDA,
-          cash, and a rules-based recommendation live.
+          {customBaseline
+            ? "Forecasting forward from your uploaded company data."
+            : `A small SaaS financial-planning simulator built around a fictional company, ${northstarBaseline.name}.`}{" "}
+          Pick a scenario or tune the assumptions on the left — a 12-month
+          engine recomputes MRR, EBITDA, cash, and a rules-based
+          recommendation live.
         </p>
 
         {/* App workspace: sticky sidebar + live analysis canvas */}
@@ -943,6 +1119,109 @@ export default function FpaDecisionLab() {
             >
               Reset to Base
             </button>
+
+            <div className="mb-3 grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSaveInput((v) => !v);
+                  setShowLoadList(false);
+                  setShareUrl(null);
+                }}
+                className="rounded-lg border border-forest/20 px-2 py-1.5 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLoadList((v) => !v);
+                  setShowSaveInput(false);
+                  setShareUrl(null);
+                }}
+                className="rounded-lg border border-forest/20 px-2 py-1.5 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+              >
+                Load
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  shareScenario();
+                  setShowSaveInput(false);
+                  setShowLoadList(false);
+                }}
+                className="rounded-lg border border-forest/20 px-2 py-1.5 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+              >
+                Share
+              </button>
+            </div>
+
+            {showSaveInput && (
+              <div className="mb-3 flex flex-col gap-1.5 rounded-lg border border-forest/15 bg-forest/5 p-2">
+                <input
+                  type="text"
+                  value={saveNameDraft}
+                  onChange={(e) => setSaveNameDraft(e.target.value)}
+                  placeholder="Scenario name"
+                  className="rounded-md border border-forest/20 bg-white px-2 py-1 text-xs text-charcoal"
+                />
+                <button
+                  type="button"
+                  onClick={saveScenario}
+                  disabled={!saveNameDraft.trim()}
+                  className="rounded-md bg-forest px-2 py-1 text-[11px] font-semibold text-cream transition-opacity disabled:opacity-40"
+                >
+                  Save Current Assumptions
+                </button>
+              </div>
+            )}
+
+            {showLoadList && (
+              <div className="mb-3 flex flex-col gap-1 rounded-lg border border-forest/15 bg-forest/5 p-2">
+                {savedScenarios.length === 0 ? (
+                  <p className="text-[11px] text-charcoal-soft">No saved scenarios yet.</p>
+                ) : (
+                  savedScenarios.map((s) => (
+                    <div key={s.name} className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAssumptions(s.assumptions);
+                          setShowLoadList(false);
+                        }}
+                        className="flex-1 truncate text-left text-xs font-semibold text-forest hover:underline"
+                      >
+                        {s.name}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteScenario(s.name)}
+                        aria-label={`Delete ${s.name}`}
+                        className="text-[11px] text-rust hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {shareUrl && (
+              <div className="mb-3 flex flex-col gap-1.5 rounded-lg border border-forest/15 bg-forest/5 p-2">
+                <p className="text-[10px] leading-4 text-charcoal-soft">
+                  Link copied (if permitted) — opening it recreates this
+                  exact scenario:
+                </p>
+                <input
+                  type="text"
+                  readOnly
+                  value={shareUrl}
+                  onFocus={(e) => e.target.select()}
+                  className="rounded-md border border-forest/20 bg-white px-2 py-1 text-[10px] text-charcoal"
+                />
+              </div>
+            )}
 
             <AccordionSection title="Scenario" defaultOpen>
               <div className="flex flex-col gap-2">
@@ -1045,10 +1324,10 @@ export default function FpaDecisionLab() {
             <AccordionSection title="Model Assumptions">
               <dl className="flex flex-col gap-2 text-xs">
                 {[
-                  ["Starting ARR", formatCurrencyCompact(northstarBaseline.startingARR)],
-                  ["Starting Customers", northstarBaseline.startingCustomers.toLocaleString()],
-                  ["Starting Cash", formatCurrencyCompact(northstarBaseline.startingCash)],
-                  ["Starting ARPU", `${formatCurrency(northstarBaseline.annualArpu)}/yr`],
+                  ["Starting ARR", formatCurrencyCompact(activeBaseline.startingARR)],
+                  ["Starting Customers", activeBaseline.startingCustomers.toLocaleString()],
+                  ["Starting Cash", formatCurrencyCompact(activeBaseline.startingCash)],
+                  ["Starting ARPU", `${formatCurrency(activeBaseline.annualArpu)}/yr`],
                   [
                     "Avg. Employee Cost",
                     `${formatCurrencyCompact(AVG_FULLY_LOADED_COST_PER_EMPLOYEE)}/yr`,
@@ -1062,8 +1341,102 @@ export default function FpaDecisionLab() {
                 ))}
               </dl>
               <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
-                Fixed for this demo — not editable.
+                {customBaseline
+                  ? "Starting point derived from your uploaded CSV. Avg. employee cost and fixed G&A stay fixed for this demo."
+                  : "Fixed for this demo — not editable."}
               </p>
+            </AccordionSection>
+
+            <AccordionSection
+              title="Data & Upload"
+              badge={
+                customBaseline ? (
+                  <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brass">
+                    Imported
+                  </span>
+                ) : (
+                  <SampleBadge />
+                )
+              }
+            >
+              <div className="flex flex-col gap-3">
+                <p className="text-[11px] leading-4 text-charcoal-soft">
+                  Upload your own company&apos;s monthly data to forecast
+                  forward from real numbers instead of the sample company.
+                  Required columns: month, customers, mrr, cash, headcount,
+                  sales_marketing_spend. Optional: churned_customers,
+                  expansion_mrr, contraction_mrr, new_mrr.
+                </p>
+                <label className="flex w-full cursor-pointer items-center justify-center rounded-lg border border-dashed border-forest/30 px-3 py-2 text-xs font-semibold text-forest transition-colors hover:bg-forest/5">
+                  Upload CSV
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={handleCsvUpload}
+                    className="hidden"
+                  />
+                </label>
+                {csvFileName && !csvError && (
+                  <p className="text-[11px] font-semibold text-forest">
+                    Loaded {csvFileName} ({csvPreviewRows?.length ?? 0} row
+                    {csvPreviewRows?.length === 1 ? "" : "s"})
+                  </p>
+                )}
+                {csvError && (
+                  <p className="rounded-lg bg-rust-pale px-2.5 py-2 text-[11px] leading-4 text-rust">
+                    {csvError}
+                  </p>
+                )}
+                {csvWarnings.length > 0 && (
+                  <ul className="flex flex-col gap-1">
+                    {csvWarnings.map((w) => (
+                      <li
+                        key={w}
+                        className="text-[11px] leading-4 text-brass before:mr-1 before:content-['⚠_']"
+                      >
+                        {w}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {csvPreviewRows && csvPreviewRows.length > 0 && (
+                  <div className="overflow-x-auto rounded-lg border border-forest/10">
+                    <table className="w-full min-w-[280px] text-left text-[10px]">
+                      <thead>
+                        <tr className="border-b border-forest/10 text-charcoal-soft">
+                          <th className="px-2 py-1 font-semibold">Mo</th>
+                          <th className="px-2 py-1 font-semibold">Customers</th>
+                          <th className="px-2 py-1 font-semibold">MRR</th>
+                          <th className="px-2 py-1 font-semibold">Cash</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvPreviewRows.slice(-5).map((row) => (
+                          <tr key={row.month} className="border-b border-forest/5 last:border-0">
+                            <td className="px-2 py-1 text-charcoal-soft">{row.month}</td>
+                            <td className="px-2 py-1 text-charcoal-soft">{row.customers}</td>
+                            <td className="px-2 py-1 text-charcoal-soft">
+                              {formatCurrencyCompact(row.mrr)}
+                            </td>
+                            <td className="px-2 py-1 text-charcoal-soft">
+                              {formatCurrencyCompact(row.cash)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {customBaseline && (
+                  <button
+                    type="button"
+                    onClick={resetToSampleData}
+                    className="w-full rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
+                  >
+                    Reset to Sample Data
+                  </button>
+                )}
+              </div>
             </AccordionSection>
           </aside>
 
@@ -1088,7 +1461,7 @@ export default function FpaDecisionLab() {
                 </ul>
               </div>
               <p className="mt-1.5 text-sm leading-5 text-charcoal">
-                Under these assumptions, {northstarBaseline.name} ends the
+                Under these assumptions, {activeBaseline.name} ends the
                 year at {formatCurrency(activeResult.endingARR)} ARR with a{" "}
                 {formatPercent(activeResult.endingEBITDAMargin)} EBITDA margin
                 and {runwayPhrase(activeResult.runwayMonths)}{" "}
@@ -1422,9 +1795,7 @@ export default function FpaDecisionLab() {
               </h2>
               <ul className="mt-3 flex flex-col gap-1.5">
                 {[
-                  "CSV upload of historical company data",
                   "AI-generated commentary",
-                  "Save / load / share a scenario",
                   "Additional industry models beyond SaaS",
                   "Random-data / Monte Carlo mode",
                 ].map((item) => (
