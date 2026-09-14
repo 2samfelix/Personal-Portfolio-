@@ -6,33 +6,42 @@ import Link from "next/link";
 import {
   AVG_FULLY_LOADED_COST_PER_EMPLOYEE,
   FIXED_GA_MONTHLY,
+  buildCfoCommentaryData,
   classifyArrTrend,
   classifyCash,
   classifyMargin,
+  classifyNRR,
   classifyRunway,
   compareToBase,
   decideStance,
   diffFromBase,
   explainDecision,
-  getSensitivityDetail,
   northstarBaseline,
   runSaaSForecast,
-  runSaaSSensitivity,
+  runSaaSSensitivityByMetric,
   scenarioPresets,
   type ArrTrend,
   type CashStatus,
   type Decision,
   type MarginStatus,
+  type NRRStatus,
   type RunwayStatus,
   type SaaSAssumptions,
   type SaaSForecastResult,
   type SaaSMonthResult,
   type ScenarioKey,
   type SensitivityDriverKey,
+  type SensitivityMetric,
 } from "@/lib/models/saas";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
 
 const SCENARIO_KEYS: ScenarioKey[] = ["base", "upside", "downside"];
+
+const SENSITIVITY_TABS: { key: SensitivityMetric; label: string }[] = [
+  { key: "ebitda", label: "EBITDA" },
+  { key: "revenue", label: "Revenue" },
+  { key: "cash", label: "Cash / Runway" },
+];
 
 const SERIES_STYLE: Record<
   ScenarioKey,
@@ -160,6 +169,22 @@ const RUNWAY_TONE: Record<RunwayStatus, BadgeTone> = {
   Watch: "neutral",
   Critical: "bad",
 };
+const NRR_TONE: Record<NRRStatus, BadgeTone> = {
+  Strong: "good",
+  Healthy: "good",
+  Watch: "neutral",
+  Weak: "bad",
+};
+
+// Same runway thresholds as RUNWAY_TONE/classifyRunway, relabeled for the
+// compact Cash Forecast callout per its own "Healthy / Watch / Critical"
+// wording — no new thresholds introduced.
+const RUNWAY_HEALTH_LABEL: Record<RunwayStatus, "Healthy" | "Watch" | "Critical"> = {
+  Safe: "Healthy",
+  "Self-funded": "Healthy",
+  Watch: "Watch",
+  Critical: "Critical",
+};
 
 function KpiCard({
   label,
@@ -195,6 +220,8 @@ function formatAssumptionValue(key: SensitivityDriverKey, value: number): string
   switch (key) {
     case "monthlyGrowthRate":
     case "monthlyChurnRate":
+    case "monthlyExpansionRate":
+    case "monthlyContractionRate":
       return formatPercent(value, 1);
     case "pricingChangePct":
       return `${value >= 0 ? "+" : ""}${formatPercent(value, 1)}`;
@@ -228,7 +255,7 @@ function valueY(value: number, minValue: number, maxValue: number) {
   return PAD_TOP + innerHeight * (1 - ratio);
 }
 
-type ChartMetric = "mrr" | "cash";
+type ChartMetric = "mrr" | "cash" | "nrr";
 
 type ChartSeries = {
   key: string;
@@ -251,11 +278,18 @@ function ForecastChart({
   currentMonths,
   metric,
   ariaLabel,
+  zeroFloor = true,
+  valueFormatter = formatCurrencyCompact,
 }: {
   seriesByScenario: Record<ScenarioKey, SaaSForecastResult>;
   currentMonths?: SaaSMonthResult[];
   metric: ChartMetric;
   ariaLabel: string;
+  // Dollar metrics (MRR, Cash) anchor the y-axis at $0 by default. A ratio
+  // metric like NRR reads better auto-scaled to its own tight data range —
+  // pass false to skip the zero floor.
+  zeroFloor?: boolean;
+  valueFormatter?: (value: number) => string;
 }) {
   const [hoverMonth, setHoverMonth] = useState<number | null>(null);
 
@@ -278,14 +312,20 @@ function ForecastChart({
 
   const { minValue, maxValue } = useMemo(() => {
     const all = series.flatMap((s) => s.months.map((m) => m[metric]));
-    const rawMin = Math.min(0, ...all);
+    if (zeroFloor) {
+      const rawMin = Math.min(0, ...all);
+      const rawMax = Math.max(...all);
+      const pad = (rawMax - rawMin) * 0.12 || Math.abs(rawMax) * 0.12 || 1;
+      return {
+        minValue: rawMin < 0 ? rawMin - pad : 0,
+        maxValue: rawMax + pad,
+      };
+    }
+    const rawMin = Math.min(...all);
     const rawMax = Math.max(...all);
-    const pad = (rawMax - rawMin) * 0.12 || Math.abs(rawMax) * 0.12 || 1;
-    return {
-      minValue: rawMin < 0 ? rawMin - pad : 0,
-      maxValue: rawMax + pad,
-    };
-  }, [series, metric]);
+    const pad = (rawMax - rawMin) * 0.15 || 0.01;
+    return { minValue: rawMin - pad, maxValue: rawMax + pad };
+  }, [series, metric, zeroFloor]);
 
   const showZeroLine = minValue < 0 && maxValue > 0;
   const gridFracs = [0, 0.25, 0.5, 0.75, 1];
@@ -353,7 +393,7 @@ function ForecastChart({
             textAnchor="end"
             className="fill-charcoal-soft text-[10px]"
           >
-            {formatCurrencyCompact(v)}
+            {valueFormatter(v)}
           </text>
         ))}
 
@@ -474,7 +514,7 @@ function ForecastChart({
                   </text>
                   {series.map((s, i) => (
                     <text key={s.key} x={10} y={32 + i * 13} fontSize={10} fill={s.stroke}>
-                      {s.label}: {formatCurrencyCompact(s.months[hoverMonth - 1][metric])}
+                      {s.label}: {valueFormatter(s.months[hoverMonth - 1][metric])}
                     </text>
                   ))}
                 </g>
@@ -492,6 +532,136 @@ function ForecastChart({
             {s.label}
           </span>
         ))}
+      </div>
+    </div>
+  );
+}
+
+const BRIDGE_WIDTH = 640;
+const BRIDGE_HEIGHT = 220;
+const BRIDGE_PAD_LEFT = 52;
+const BRIDGE_PAD_RIGHT = 16;
+const BRIDGE_PAD_TOP = 24;
+const BRIDGE_PAD_BOTTOM = 34;
+
+type BridgeStep = {
+  label: string;
+  value: number; // signed: positive for New/Expansion, negative for Contraction/Churned
+  kind: "anchor" | "add" | "subtract";
+};
+
+/**
+ * Month-12 MRR bridge as a compact waterfall: two solid "anchor" bars
+ * (Beginning, Ending) with floating bars in between showing exactly how one
+ * becomes the other. Every value is read straight off the engine's month-12
+ * SaaSMonthResult — no recomputation here.
+ */
+function MrrBridgeChart({ month }: { month: SaaSMonthResult }) {
+  const steps: BridgeStep[] = [
+    { label: "Beginning", value: month.beginningMRR, kind: "anchor" },
+    { label: "New", value: month.newMRR, kind: "add" },
+    { label: "Expansion", value: month.expansionMRR, kind: "add" },
+    { label: "Contraction", value: -month.contractionMRR, kind: "subtract" },
+    { label: "Churned", value: -month.churnedMRR, kind: "subtract" },
+    { label: "Ending", value: month.mrr, kind: "anchor" },
+  ];
+
+  let running = 0;
+  const positioned = steps.map((step) => {
+    if (step.kind === "anchor") {
+      running = step.value;
+      return { ...step, from: 0, to: step.value };
+    }
+    const from = running;
+    running = running + step.value;
+    return { ...step, from: Math.min(from, running), to: Math.max(from, running) };
+  });
+
+  const maxValue = Math.max(...positioned.map((p) => p.to)) * 1.2;
+  const innerWidth = BRIDGE_WIDTH - BRIDGE_PAD_LEFT - BRIDGE_PAD_RIGHT;
+  const innerHeight = BRIDGE_HEIGHT - BRIDGE_PAD_TOP - BRIDGE_PAD_BOTTOM;
+  const colWidth = innerWidth / steps.length;
+  const barWidth = colWidth * 0.55;
+
+  const y = (v: number) =>
+    BRIDGE_PAD_TOP + innerHeight * (1 - (maxValue === 0 ? 0 : v / maxValue));
+
+  const fillFor = (kind: BridgeStep["kind"]) =>
+    kind === "anchor" ? "#2a2820" : kind === "add" ? "#1e3a2b" : "#a1462f";
+
+  return (
+    <div className="mt-2">
+      <svg
+        viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`}
+        className="w-full"
+        role="img"
+        aria-label={`Month 12 MRR bridge: beginning ${formatCurrency(
+          month.beginningMRR
+        )}, plus new ${formatCurrency(month.newMRR)}, plus expansion ${formatCurrency(
+          month.expansionMRR
+        )}, minus contraction ${formatCurrency(
+          month.contractionMRR
+        )}, minus churned ${formatCurrency(month.churnedMRR)}, equals ending ${formatCurrency(
+          month.mrr
+        )}`}
+      >
+        <line
+          x1={BRIDGE_PAD_LEFT}
+          x2={BRIDGE_WIDTH - BRIDGE_PAD_RIGHT}
+          y1={y(0)}
+          y2={y(0)}
+          stroke="#1e3a2b"
+          strokeOpacity={0.15}
+        />
+        {positioned.map((step, i) => {
+          const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
+          const yTop = y(step.to);
+          const yBottom = y(step.from);
+          const height = Math.max(1.5, yBottom - yTop);
+          return (
+            <g key={step.label}>
+              <rect
+                x={x}
+                y={yTop}
+                width={barWidth}
+                height={height}
+                fill={fillFor(step.kind)}
+                rx={2}
+              />
+              <text
+                x={x + barWidth / 2}
+                y={yTop - 6}
+                textAnchor="middle"
+                fontSize={10}
+                fontWeight={700}
+                fill="#2a2820"
+              >
+                {step.kind === "anchor"
+                  ? formatCurrencyCompact(step.value)
+                  : formatSignedCompact(step.kind === "subtract" ? -Math.abs(step.value) : step.value)}
+              </text>
+              <text
+                x={x + barWidth / 2}
+                y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 18}
+                textAnchor="middle"
+                className="fill-charcoal-soft text-[10px]"
+              >
+                {step.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="mt-2 flex flex-wrap gap-4">
+        <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
+          <span className="h-2.5 w-2.5 rounded-full bg-charcoal" /> Beginning / Ending
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
+          <span className="h-2.5 w-2.5 rounded-full bg-forest" /> Adds MRR
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
+          <span className="h-2.5 w-2.5 rounded-full bg-rust" /> Removes MRR
+        </span>
       </div>
     </div>
   );
@@ -595,7 +765,7 @@ export default function FpaDecisionLab() {
   const [assumptions, setAssumptions] = useState<SaaSAssumptions>(
     scenarioPresets.base.assumptions
   );
-  const [expandedDriver, setExpandedDriver] = useState<SensitivityDriverKey | null>(null);
+  const [sensitivityTab, setSensitivityTab] = useState<SensitivityMetric>("ebitda");
 
   const set = <K extends keyof SaaSAssumptions>(key: K) => (value: number) =>
     setAssumptions((prev) => ({ ...prev, [key]: value }));
@@ -619,7 +789,11 @@ export default function FpaDecisionLab() {
   // The currently tunable assumptions drive the KPI cards, banner,
   // commentary, and sensitivity panel.
   const activeResult = useMemo(() => runSaaSForecast(assumptions), [assumptions]);
-  const sensitivity = useMemo(() => runSaaSSensitivity(assumptions), [assumptions]);
+  const activeMonth12 = activeResult.months[activeResult.months.length - 1];
+  const sensitivity = useMemo(
+    () => runSaaSSensitivityByMetric(assumptions, sensitivityTab),
+    [assumptions, sensitivityTab]
+  );
   const decision = decideStance(
     activeResult.runwayMonths,
     activeResult.endingEBITDAMargin
@@ -655,15 +829,41 @@ export default function FpaDecisionLab() {
     [activeResult, scenarioResults]
   );
 
-  const sensitivityDetail = useMemo(
-    () => (expandedDriver ? getSensitivityDetail(assumptions, expandedDriver) : null),
-    [assumptions, expandedDriver]
-  );
-
   const arrTrend = classifyArrTrend(activeResult);
   const marginStatus = classifyMargin(activeResult.endingEBITDAMargin);
   const cashStatus = classifyCash(activeResult.endingCash);
   const runwayStatus = classifyRunway(activeResult.runwayMonths);
+  const nrrStatus = classifyNRR(activeResult.endingNRR);
+
+  const cfoCommentaryData = useMemo(
+    () => buildCfoCommentaryData(activeResult),
+    [activeResult]
+  );
+  const cfoCommentary = {
+    performance: `ARR reaches ${formatCurrencyCompact(cfoCommentaryData.endingARR)}, ${
+      cfoCommentaryData.arrGrowthPct >= 0 ? "up" : "down"
+    } ${Math.abs(cfoCommentaryData.arrGrowthPct * 100).toFixed(0)}% from the starting ${formatCurrencyCompact(
+      cfoCommentaryData.startingARR
+    )}, ${cfoCommentaryData.arrTrendPhrase}.`,
+    profitability: `EBITDA margin reaches ${formatPercent(
+      cfoCommentaryData.endingEBITDAMargin
+    )}, ${cfoCommentaryData.marginPhrase}.`,
+    cashPosition:
+      cfoCommentaryData.runwayMonths === null
+        ? `Ending cash of ${formatCurrencyCompact(
+            cfoCommentaryData.endingCash
+          )} remains ${cfoCommentaryData.cashHealthPhrase} and the company is cash-flow positive, removing near-term runway pressure.`
+        : `Ending cash of ${formatCurrencyCompact(
+            cfoCommentaryData.endingCash
+          )} remains ${cfoCommentaryData.cashHealthPhrase}, with ${cfoCommentaryData.runwayMonths.toFixed(
+            1
+          )} months of runway.`,
+    retention: `Net revenue retention is ${formatPercent(
+      cfoCommentaryData.endingNRR
+    )}, ${cfoCommentaryData.nrrPhrase}. Revenue growth this year has been driven ${
+      cfoCommentaryData.growthDriverPhrase
+    }.`,
+  };
 
   return (
     <main className="bg-cream">
@@ -706,7 +906,7 @@ export default function FpaDecisionLab() {
         <div className="mt-12 border-t border-forest/10 pt-8 lg:grid lg:grid-cols-[280px_1fr] lg:items-start lg:gap-8">
           {/* Sidebar */}
           <aside className="mb-8 rounded-2xl border border-forest/15 bg-white p-4 lg:sticky lg:top-24 lg:mb-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
-            <div className="mb-1 flex items-center justify-between px-1 pb-3">
+            <div className="mb-1 flex items-center justify-between px-1 pb-2">
               <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
               <span
                 className={`text-xs font-semibold ${
@@ -716,6 +916,13 @@ export default function FpaDecisionLab() {
                 {scenarioStatusLabel}
               </span>
             </div>
+            <button
+              type="button"
+              onClick={() => applyPreset("base")}
+              className="mb-3 w-full rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
+            >
+              Reset to Base
+            </button>
 
             <AccordionSection title="Scenario" defaultOpen>
               <div className="flex flex-col gap-2">
@@ -793,6 +1000,24 @@ export default function FpaDecisionLab() {
                   max={1_500_000}
                   step={25_000}
                   display={formatCurrencyCompact(assumptions.annualSalesMarketing)}
+                />
+                <SliderField
+                  label="Monthly Expansion Rate"
+                  value={assumptions.monthlyExpansionRate * 100}
+                  onChange={(v) => set("monthlyExpansionRate")(v / 100)}
+                  min={0}
+                  max={5}
+                  step={0.1}
+                  display={formatPercent(assumptions.monthlyExpansionRate, 1)}
+                />
+                <SliderField
+                  label="Monthly Contraction Rate"
+                  value={assumptions.monthlyContractionRate * 100}
+                  onChange={(v) => set("monthlyContractionRate")(v / 100)}
+                  min={0}
+                  max={5}
+                  step={0.1}
+                  display={formatPercent(assumptions.monthlyContractionRate, 1)}
                 />
               </div>
             </AccordionSection>
@@ -887,6 +1112,14 @@ export default function FpaDecisionLab() {
                   tone={RUNWAY_TONE[runwayStatus]}
                 />
               </div>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <KpiCard
+                  label="NRR"
+                  value={formatPercent(activeResult.endingNRR)}
+                  badge={nrrStatus}
+                  tone={NRR_TONE[nrrStatus]}
+                />
+              </div>
             </section>
 
             {/* Main chart */}
@@ -907,6 +1140,39 @@ export default function FpaDecisionLab() {
               />
             </section>
 
+            {/* MRR Bridge */}
+            <section className="border-t border-forest/10 pt-8">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                MRR Bridge — Month 12
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+                How Beginning MRR becomes Ending MRR in the final forecast
+                month: Beginning + New + Expansion − Contraction − Churned.
+              </p>
+              <MrrBridgeChart month={activeMonth12} />
+            </section>
+
+            {/* NRR trend chart */}
+            <section className="border-t border-forest/10 pt-8">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                NRR Trend
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+                Monthly net revenue retention — excludes New MRR, so it
+                isolates how the existing customer base is trending.
+              </p>
+              <div className="mx-auto mt-2 max-w-lg">
+                <ForecastChart
+                  seriesByScenario={scenarioResults}
+                  currentMonths={isBaseCase ? undefined : activeResult.months}
+                  metric="nrr"
+                  zeroFloor={false}
+                  valueFormatter={(v) => formatPercent(v, 1)}
+                  ariaLabel="12-month net revenue retention trend under Base, Upside, and Downside scenarios, plus your current custom case"
+                />
+              </div>
+            </section>
+
             {/* Cash chart */}
             <section className="border-t border-forest/10 pt-8">
               <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
@@ -923,6 +1189,34 @@ export default function FpaDecisionLab() {
                 metric="cash"
                 ariaLabel="12-month cash balance forecast under Base, Upside, and Downside scenarios, plus your current custom case"
               />
+              <div className="mt-3 flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border border-forest/15 bg-white px-4 py-3">
+                <div>
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
+                    Ending Cash
+                  </span>
+                  <span className="text-base font-bold text-charcoal">
+                    {formatCurrencyCompact(activeResult.endingCash)}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
+                    Runway
+                  </span>
+                  <span className="text-base font-bold text-charcoal">
+                    {runwayLabel(activeResult.runwayMonths)}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
+                    Status
+                  </span>
+                  <span
+                    className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[RUNWAY_TONE[runwayStatus]]}`}
+                  >
+                    {RUNWAY_HEALTH_LABEL[runwayStatus]}
+                  </span>
+                </div>
+              </div>
             </section>
 
             {/* Scenario comparison table */}
@@ -983,86 +1277,104 @@ export default function FpaDecisionLab() {
               </section>
             )}
 
-            {/* Sensitivity panel */}
+            {/* Top Drivers Sensitivity */}
+            <section className="border-t border-forest/10 pt-8">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  Top Drivers Sensitivity
+                </h2>
+                <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
+                  {SENSITIVITY_TABS.map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setSensitivityTab(tab.key)}
+                      aria-pressed={sensitivityTab === tab.key}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                        sensitivityTab === tab.key
+                          ? "bg-forest text-cream"
+                          : "text-charcoal-soft hover:text-charcoal"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                Impact of a +10% change on each driver,{" "}
+                {sensitivityTab === "cash" ? "on ending cash" : `on ${SENSITIVITY_TABS.find((t) => t.key === sensitivityTab)?.label.toLowerCase()}`}.
+              </p>
+              <ul className="mt-3 flex flex-col gap-2.5">
+                {(() => {
+                  const maxAbsImpact = Math.max(...sensitivity.map((r) => Math.abs(r.impact)), 1);
+                  return sensitivity.map((row, i) => {
+                    const isPositive = row.impact >= 0;
+                    const pct = (Math.abs(row.impact) / maxAbsImpact) * 100;
+                    return (
+                      <li key={row.key} className="flex items-center gap-3">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
+                          {i + 1}
+                        </span>
+                        <span className="w-32 shrink-0 text-xs font-semibold text-charcoal sm:w-40 sm:text-sm">
+                          {row.label}
+                        </span>
+                        <span className="h-2 flex-1 overflow-hidden rounded-full bg-mist">
+                          <span
+                            className={`block h-full rounded-full ${isPositive ? "bg-forest" : "bg-rust"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </span>
+                        <span
+                          className={`w-20 shrink-0 text-right text-xs font-semibold sm:text-sm ${
+                            isPositive ? "text-forest" : "text-rust"
+                          }`}
+                        >
+                          {formatSignedCompact(row.impact)}
+                        </span>
+                      </li>
+                    );
+                  });
+                })()}
+              </ul>
+              {sensitivityTab === "cash" && (
+                <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
+                  Runway impact shown in months where both the base and +10%
+                  cases have finite runway:{" "}
+                  {sensitivity
+                    .filter((r) => r.runwayImpactMonths !== undefined)
+                    .map((r) => `${r.label} ${r.runwayImpactMonths! >= 0 ? "+" : ""}${r.runwayImpactMonths!.toFixed(1)}mo`)
+                    .join(" · ") || "n/a while cash-flow positive"}
+                </p>
+              )}
+            </section>
+
+            {/* CFO Commentary */}
             <section className="border-t border-forest/10 pt-8">
               <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                What Moves EBITDA Most (±10%)
+                CFO Commentary — {scenarioStatusLabel}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-                Click a driver to see its current value and the impact of
-                ±10% on cumulative 12-month EBITDA.
+              <div className="mt-3 flex flex-col gap-3 rounded-xl border border-forest/15 bg-white p-4">
+                <p className="text-sm leading-6 text-charcoal">
+                  <span className="font-semibold text-brass">Performance: </span>
+                  {cfoCommentary.performance}
+                </p>
+                <p className="text-sm leading-6 text-charcoal">
+                  <span className="font-semibold text-brass">Profitability: </span>
+                  {cfoCommentary.profitability}
+                </p>
+                <p className="text-sm leading-6 text-charcoal">
+                  <span className="font-semibold text-brass">Cash Position: </span>
+                  {cfoCommentary.cashPosition}
+                </p>
+                <p className="text-sm leading-6 text-charcoal">
+                  <span className="font-semibold text-brass">Retention: </span>
+                  {cfoCommentary.retention}
+                </p>
+              </div>
+              <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                Generated deterministically from live model outputs — not AI-written.
               </p>
-              <ul className="mt-4 flex flex-col gap-2">
-                {sensitivity.map((row, i) => {
-                  const isExpanded = expandedDriver === row.key;
-                  return (
-                    <li key={row.key} className="rounded-lg border border-forest/15 bg-white">
-                      <button
-                        type="button"
-                        onClick={() => setExpandedDriver(isExpanded ? null : row.key)}
-                        className="flex w-full items-center justify-between px-4 py-3 text-left"
-                      >
-                        <span className="flex items-center gap-3">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-forest/10 text-xs font-bold text-forest">
-                            {i + 1}
-                          </span>
-                          <span className="text-sm font-semibold text-charcoal">
-                            {row.label}
-                          </span>
-                        </span>
-                        <span className="flex items-center gap-3">
-                          <span className="text-sm font-semibold text-brass">
-                            {formatCurrency(row.range)} swing
-                          </span>
-                          <span className="text-charcoal-soft">
-                            {isExpanded ? "−" : "+"}
-                          </span>
-                        </span>
-                      </button>
-                      {isExpanded && sensitivityDetail && sensitivityDetail.key === row.key && (
-                        <div className="grid grid-cols-1 gap-3 border-t border-forest/10 px-4 py-3 text-xs sm:grid-cols-3">
-                          <div>
-                            <span className="block text-charcoal-soft">Current value</span>
-                            <span className="font-semibold text-charcoal">
-                              {formatAssumptionValue(row.key, sensitivityDetail.baseValue)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="block text-charcoal-soft">
-                              -10% ({formatAssumptionValue(row.key, sensitivityDetail.downValue)})
-                              cumulative EBITDA
-                            </span>
-                            <span className="font-semibold text-rust">
-                              {formatCurrency(sensitivityDetail.downCumulativeEBITDA)}{" "}
-                              (
-                              {formatSignedCompact(
-                                sensitivityDetail.downCumulativeEBITDA -
-                                  sensitivityDetail.baseCumulativeEBITDA
-                              )}
-                              )
-                            </span>
-                          </div>
-                          <div>
-                            <span className="block text-charcoal-soft">
-                              +10% ({formatAssumptionValue(row.key, sensitivityDetail.upValue)})
-                              cumulative EBITDA
-                            </span>
-                            <span className="font-semibold text-forest">
-                              {formatCurrency(sensitivityDetail.upCumulativeEBITDA)}{" "}
-                              (
-                              {formatSignedCompact(
-                                sensitivityDetail.upCumulativeEBITDA -
-                                  sensitivityDetail.baseCumulativeEBITDA
-                              )}
-                              )
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
             </section>
 
             {/* Planned, not built */}
