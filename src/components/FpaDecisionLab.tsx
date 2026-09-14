@@ -9,6 +9,7 @@ import {
   buildCfoCommentaryData,
   classifyArrTrend,
   classifyCash,
+  classifyLtvToCac,
   classifyMargin,
   classifyNRR,
   classifyRunway,
@@ -23,6 +24,7 @@ import {
   type ArrTrend,
   type CashStatus,
   type Decision,
+  type LtvCacStatus,
   type MarginStatus,
   type NRRStatus,
   type RunwayStatus,
@@ -41,7 +43,15 @@ const SENSITIVITY_TABS: { key: SensitivityMetric; label: string }[] = [
   { key: "ebitda", label: "EBITDA" },
   { key: "revenue", label: "Revenue" },
   { key: "cash", label: "Cash / Runway" },
+  { key: "ltvToCac", label: "LTV/CAC" },
 ];
+
+function formatSensitivityImpact(metric: SensitivityMetric, value: number): string {
+  if (metric === "ltvToCac") {
+    return `${value >= 0 ? "+" : ""}${value.toFixed(2)}x`;
+  }
+  return formatSignedCompact(value);
+}
 
 const SERIES_STYLE: Record<
   ScenarioKey,
@@ -171,6 +181,11 @@ const RUNWAY_TONE: Record<RunwayStatus, BadgeTone> = {
 };
 const NRR_TONE: Record<NRRStatus, BadgeTone> = {
   Strong: "good",
+  Healthy: "good",
+  Watch: "neutral",
+  Weak: "bad",
+};
+const LTV_CAC_TONE: Record<LtvCacStatus, BadgeTone> = {
   Healthy: "good",
   Watch: "neutral",
   Weak: "bad",
@@ -834,6 +849,7 @@ export default function FpaDecisionLab() {
   const cashStatus = classifyCash(activeResult.endingCash);
   const runwayStatus = classifyRunway(activeResult.runwayMonths);
   const nrrStatus = classifyNRR(activeResult.endingNRR);
+  const ltvCacStatus = classifyLtvToCac(activeResult.ltvToCac);
 
   const cfoCommentaryData = useMemo(
     () => buildCfoCommentaryData(activeResult),
@@ -862,6 +878,10 @@ export default function FpaDecisionLab() {
       cfoCommentaryData.endingNRR
     )}, ${cfoCommentaryData.nrrPhrase}. Revenue growth this year has been driven ${
       cfoCommentaryData.growthDriverPhrase
+    }. LTV/CAC stands at ${cfoCommentaryData.ltvToCac.toFixed(2)}x (LTV ${formatCurrencyCompact(
+      cfoCommentaryData.ltv
+    )} vs. CAC ${formatCurrencyCompact(cfoCommentaryData.cac)}), ${
+      cfoCommentaryData.ltvCacPhrase
     }.`,
   };
 
@@ -1119,7 +1139,20 @@ export default function FpaDecisionLab() {
                   badge={nrrStatus}
                   tone={NRR_TONE[nrrStatus]}
                 />
+                <KpiCard
+                  label="LTV / CAC"
+                  value={`${activeResult.ltvToCac.toFixed(2)}x`}
+                  badge={ltvCacStatus}
+                  tone={LTV_CAC_TONE[ltvCacStatus]}
+                />
               </div>
+              <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                CAC {formatCurrency(activeResult.cac)}{" "}
+                (blended: annual S&amp;M spend ÷ new customers acquired over
+                the year) · LTV {formatCurrency(activeResult.ltv)}{" "}
+                (gross-margin-adjusted monthly ARPU ÷ monthly logo churn
+                rate).
+              </p>
             </section>
 
             {/* Main chart */}
@@ -1303,7 +1336,12 @@ export default function FpaDecisionLab() {
               </div>
               <p className="mt-2 text-xs leading-5 text-charcoal-soft">
                 Impact of a +10% change on each driver,{" "}
-                {sensitivityTab === "cash" ? "on ending cash" : `on ${SENSITIVITY_TABS.find((t) => t.key === sensitivityTab)?.label.toLowerCase()}`}.
+                {sensitivityTab === "cash"
+                  ? "on ending cash"
+                  : sensitivityTab === "ltvToCac"
+                    ? "on the LTV/CAC ratio"
+                    : `on ${SENSITIVITY_TABS.find((t) => t.key === sensitivityTab)?.label.toLowerCase()}`}
+                .
               </p>
               <ul className="mt-3 flex flex-col gap-2.5">
                 {(() => {
@@ -1330,7 +1368,7 @@ export default function FpaDecisionLab() {
                             isPositive ? "text-forest" : "text-rust"
                           }`}
                         >
-                          {formatSignedCompact(row.impact)}
+                          {formatSensitivityImpact(sensitivityTab, row.impact)}
                         </span>
                       </li>
                     );
@@ -1368,7 +1406,7 @@ export default function FpaDecisionLab() {
                   {cfoCommentary.cashPosition}
                 </p>
                 <p className="text-sm leading-6 text-charcoal">
-                  <span className="font-semibold text-brass">Retention: </span>
+                  <span className="font-semibold text-brass">Retention / Unit Economics: </span>
                   {cfoCommentary.retention}
                 </p>
               </div>
@@ -1384,7 +1422,6 @@ export default function FpaDecisionLab() {
               </h2>
               <ul className="mt-3 flex flex-col gap-1.5">
                 {[
-                  "LTV / CAC unit-economics",
                   "CSV upload of historical company data",
                   "AI-generated commentary",
                   "Save / load / share a scenario",

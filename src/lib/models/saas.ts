@@ -129,6 +129,19 @@ export type SaaSForecastResult = {
   // a future version with time-varying retention rates doesn't need a new
   // field.
   averageNRR: number;
+  // Blended Customer Acquisition Cost: total annual Sales & Marketing spend
+  // divided by total new customers acquired across the 12-month window. Not
+  // a new adjustable assumption — derived from existing ones (S&M spend,
+  // growth rate) so it moves consistently with the rest of the model instead
+  // of introducing an independent, possibly-inconsistent CAC input.
+  cac: number;
+  // Gross-margin-adjusted customer lifetime value:
+  // (new-customer monthly ARPU x gross margin %) / monthly logo churn rate.
+  // This is the standard "ARPU / churn" LTV approximation for a monthly
+  // subscription model, gross-margin-adjusted so it's comparable to CAC in
+  // gross-profit dollars rather than raw revenue dollars.
+  ltv: number;
+  ltvToCac: number;
 };
 
 /**
@@ -228,6 +241,16 @@ export function runSaaSForecast(
     last.ebitda >= 0 ? null : Math.max(0, last.cash / Math.abs(last.ebitda));
   const averageNRR = months.reduce((sum, m) => sum + m.nrr, 0) / months.length;
 
+  const totalNewCustomers = months.reduce((sum, m) => sum + m.newCustomers, 0);
+  const cac =
+    totalNewCustomers === 0 ? 0 : assumptions.annualSalesMarketing / totalNewCustomers;
+  const ltv =
+    assumptions.monthlyChurnRate === 0
+      ? 0
+      : ((newCustomerAnnualArpu / 12) * assumptions.grossMarginPct) /
+        assumptions.monthlyChurnRate;
+  const ltvToCac = cac === 0 ? 0 : ltv / cac;
+
   return {
     months,
     endingARR: last.arr,
@@ -236,6 +259,9 @@ export function runSaaSForecast(
     runwayMonths,
     endingNRR: last.nrr,
     averageNRR,
+    cac,
+    ltv,
+    ltvToCac,
   };
 }
 
@@ -362,6 +388,15 @@ export function classifyNRR(nrr: number): NRRStatus {
   if (nrr >= 1.1) return "Strong";
   if (nrr >= 1.0) return "Healthy";
   if (nrr >= 0.9) return "Watch";
+  return "Weak";
+}
+
+export type LtvCacStatus = "Healthy" | "Watch" | "Weak";
+
+// Thresholds: >=3.0x = Healthy, 2.0-3.0x = Watch, <2.0x = Weak.
+export function classifyLtvToCac(ltvToCac: number): LtvCacStatus {
+  if (ltvToCac >= 3) return "Healthy";
+  if (ltvToCac >= 2) return "Watch";
   return "Weak";
 }
 
@@ -550,7 +585,7 @@ export function compareToBase(
   };
 }
 
-export type SensitivityMetric = "ebitda" | "revenue" | "cash";
+export type SensitivityMetric = "ebitda" | "revenue" | "cash" | "ltvToCac";
 
 function metricValue(result: SaaSForecastResult, metric: SensitivityMetric): number {
   switch (metric) {
@@ -560,6 +595,8 @@ function metricValue(result: SaaSForecastResult, metric: SensitivityMetric): num
       return result.endingARR;
     case "cash":
       return result.endingCash;
+    case "ltvToCac":
+      return result.ltvToCac;
   }
 }
 
@@ -625,6 +662,10 @@ export type CfoCommentaryData = {
   endingNRR: number;
   nrrPhrase: string;
   growthDriverPhrase: string;
+  cac: number;
+  ltv: number;
+  ltvToCac: number;
+  ltvCacPhrase: string;
 };
 
 /**
@@ -669,6 +710,13 @@ export function buildCfoCommentaryData(
     Weak: "as churn and contraction are eroding the existing customer base faster than expansion can offset",
   };
 
+  const ltvCacStatus = classifyLtvToCac(result.ltvToCac);
+  const ltvCacPhrase: Record<LtvCacStatus, string> = {
+    Healthy: "acquiring customers efficiently relative to their lifetime value",
+    Watch: "acquiring customers at a cost that leaves a thinner-than-ideal margin of safety against lifetime value",
+    Weak: "spending more to acquire customers than their lifetime value comfortably supports",
+  };
+
   const totalNewMRR = result.months.reduce((sum, m) => sum + m.newMRR, 0);
   const totalExpansionMRR = result.months.reduce((sum, m) => sum + m.expansionMRR, 0);
   let growthDriverPhrase: string;
@@ -696,5 +744,9 @@ export function buildCfoCommentaryData(
     endingNRR: result.endingNRR,
     nrrPhrase: nrrPhrase[nrrStatus],
     growthDriverPhrase,
+    cac: result.cac,
+    ltv: result.ltv,
+    ltvToCac: result.ltvToCac,
+    ltvCacPhrase: ltvCacPhrase[ltvCacStatus],
   };
 }
