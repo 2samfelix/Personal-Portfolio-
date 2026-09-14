@@ -238,6 +238,30 @@ export const builds: Project[] = [
     status: "in-development",
     icon: "🤖",
   },
+  {
+    slug: "driver-sensitivity-simulator",
+    title: "Driver Sensitivity Simulator",
+    category: "Interactive Demo",
+    summary:
+      "An interactive tool that flexes revenue and cost drivers ±5% to show which assumptions move EBITDA the most — illustrative sample data, not a real case study.",
+    tools: ["Sensitivity Analysis", "Interactive"],
+    year: "2026",
+    status: "live",
+    icon: "📉",
+    link: "/tools/driver-sensitivity-simulator",
+  },
+  {
+    slug: "fpa-decision-lab",
+    title: "FP&A Decision Lab",
+    category: "Interactive Demo",
+    summary:
+      "A SaaS financial-planning simulator that projects MRR, EBITDA, and cash runway 12 months forward under Base, Upside, and Downside scenarios for a fictional company.",
+    tools: ["FP&A", "Scenario Modeling", "Interactive"],
+    year: "2026",
+    status: "live",
+    icon: "🧭",
+    link: "/tools/fpa-decision-lab",
+  },
 ];
 
 export function getProjectBySlug(slug: string): Project | undefined {
