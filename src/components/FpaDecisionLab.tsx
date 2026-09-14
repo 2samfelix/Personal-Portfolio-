@@ -1384,11 +1384,11 @@ export default function FpaDecisionLab() {
               </h2>
               <ul className="mt-3 flex flex-col gap-1.5">
                 {[
-                  "Additional industry models beyond SaaS",
-                  "CSV upload of real company data",
+                  "LTV / CAC unit-economics",
+                  "CSV upload of historical company data",
                   "AI-generated commentary",
-                  "Save / share a scenario",
-                  "NRR and LTV:CAC metrics",
+                  "Save / load / share a scenario",
+                  "Additional industry models beyond SaaS",
                   "Random-data / Monte Carlo mode",
                 ].map((item) => (
                   <li
