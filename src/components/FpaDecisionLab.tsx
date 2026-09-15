@@ -7,7 +7,10 @@ import {
   FIXED_HEADCOUNT,
   AVG_FULLY_LOADED_COST_PER_EMPLOYEE,
   FIXED_GA_MONTHLY,
+  EXPANSION_RATE_CONSTANT,
+  CONTRACTION_RATE_CONSTANT,
   SAAS_BASE_DEFAULTS,
+  SAAS_CHARTS,
   SAAS_DRIVERS,
   applySaaSScenario,
   buildCfoCommentaryData,
@@ -32,13 +35,13 @@ import {
   type SaaSAssumptions,
   type SaaSCompanyBaseline,
   type SaaSForecastResult,
-  type SaaSMonthResult,
   type SensitivityMetric,
 } from "@/lib/models/saas";
 import { parseCompanyCsv, type CsvRow } from "@/lib/csvImport";
 import { runMonteCarloSimulation, type MonteCarloResult } from "@/lib/monteCarlo";
 import {
   CONSULTING_BASE_DEFAULTS,
+  CONSULTING_CHARTS,
   CONSULTING_DRIVERS,
   REFERENCE_CONVERSION,
   STANDARD_BILLABLE_HOURS_PER_MONTH,
@@ -57,6 +60,7 @@ import {
 } from "@/lib/models/consulting";
 import {
   REAL_ESTATE_BASE_DEFAULTS,
+  REAL_ESTATE_CHARTS,
   REAL_ESTATE_DRIVERS,
   applyRealEstateScenario,
   buildRealEstateRiskAndAction,
@@ -74,7 +78,7 @@ import {
   type RealEstateForecastResult,
   type RealEstateSensitivityMetric,
 } from "@/lib/models/realEstate";
-import type { DriverConfig } from "@/lib/models/shared";
+import type { BadgeTone, ChartConfig, ChartValueFormat, DriverConfig } from "@/lib/models/shared";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
 
 type Industry = "saas" | "consulting" | "realEstate";
@@ -261,8 +265,6 @@ function AccordionSection({
   );
 }
 
-type BadgeTone = "good" | "neutral" | "bad";
-
 const TONE_CLASS: Record<BadgeTone, string> = {
   good: "bg-forest/10 text-forest",
   neutral: "bg-brass/15 text-brass",
@@ -331,16 +333,6 @@ const REAL_ESTATE_MARGIN_PHRASE: Record<MarginStatus, string> = {
   NearBreakeven: "only modestly positive free cash flow, just above breakeven",
   ApproachingBreakeven: "still free-cash-flow negative after debt service, though approaching breakeven",
   MateriallyUnprofitable: "materially free-cash-flow negative after debt service",
-};
-
-// Same runway thresholds as RUNWAY_TONE/classifyRunway, relabeled for the
-// compact Cash Forecast callout per its own "Healthy / Watch / Critical"
-// wording — no new thresholds introduced.
-const RUNWAY_HEALTH_LABEL: Record<RunwayStatus, "Healthy" | "Watch" | "Critical"> = {
-  Safe: "Healthy",
-  "Self-funded": "Healthy",
-  Watch: "Watch",
-  Critical: "Critical",
 };
 
 function KpiCard({
@@ -427,387 +419,6 @@ function valueY(value: number, minValue: number, maxValue: number) {
   return PAD_TOP + innerHeight * (1 - ratio);
 }
 
-type ChartMetric = "mrr" | "cash" | "nrr";
-
-type ChartSeries = {
-  key: string;
-  label: string;
-  stroke: string;
-  dash?: string;
-  swatchClass: string;
-  months: SaaSMonthResult[];
-};
-
-function ForecastChart({
-  seriesByScenario,
-  metric,
-  ariaLabel,
-  zeroFloor = true,
-  valueFormatter = formatCurrencyCompact,
-}: {
-  seriesByScenario: Record<ScenarioKey, SaaSForecastResult>;
-  metric: ChartMetric;
-  ariaLabel: string;
-  // Dollar metrics (MRR, Cash) anchor the y-axis at $0 by default. A ratio
-  // metric like NRR reads better auto-scaled to its own tight data range —
-  // pass false to skip the zero floor.
-  zeroFloor?: boolean;
-  valueFormatter?: (value: number) => string;
-}) {
-  const [hoverMonth, setHoverMonth] = useState<number | null>(null);
-
-  // All three scenarios always render, regardless of which one is
-  // currently selected to feed the KPI cards/badges/commentary — Base is
-  // one of these three lines (whatever the sliders say), never a separate
-  // "Current" overlay.
-  const series: ChartSeries[] = useMemo(() => {
-    return SCENARIO_KEYS.map((key) => ({
-      key,
-      months: seriesByScenario[key].months,
-      ...SERIES_STYLE[key],
-    }));
-  }, [seriesByScenario]);
-
-  const { minValue, maxValue } = useMemo(() => {
-    const all = series.flatMap((s) => s.months.map((m) => m[metric]));
-    if (zeroFloor) {
-      const rawMin = Math.min(0, ...all);
-      const rawMax = Math.max(...all);
-      const pad = (rawMax - rawMin) * 0.12 || Math.abs(rawMax) * 0.12 || 1;
-      return {
-        minValue: rawMin < 0 ? rawMin - pad : 0,
-        maxValue: rawMax + pad,
-      };
-    }
-    const rawMin = Math.min(...all);
-    const rawMax = Math.max(...all);
-    const pad = (rawMax - rawMin) * 0.15 || 0.01;
-    return { minValue: rawMin - pad, maxValue: rawMax + pad };
-  }, [series, metric, zeroFloor]);
-
-  const showZeroLine = minValue < 0 && maxValue > 0;
-  const gridFracs = [0, 0.25, 0.5, 0.75, 1];
-  const gridValues = gridFracs.map((f) => minValue + (maxValue - minValue) * f);
-
-  // Direct end-labels can collide when two series end at similar values —
-  // nudge them apart vertically, closest-first, so text never overlaps.
-  const endLabelY = useMemo(() => {
-    const raw = series
-      .map((s) => {
-        const last = s.months[s.months.length - 1];
-        return { key: s.key, y: valueY(last[metric], minValue, maxValue) };
-      })
-      .sort((a, b) => a.y - b.y);
-
-    const minGap = 12;
-    for (let i = 1; i < raw.length; i++) {
-      if (raw[i].y - raw[i - 1].y < minGap) {
-        raw[i].y = raw[i - 1].y + minGap;
-      }
-    }
-    return Object.fromEntries(raw.map((r) => [r.key, r.y])) as Record<string, number>;
-  }, [series, metric, minValue, maxValue]);
-
-  return (
-    <div className="mt-2">
-      <svg
-        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-        className="w-full"
-        role="img"
-        aria-label={ariaLabel}
-      >
-        {/* Gridlines */}
-        {gridValues.map((v, i) => (
-          <line
-            key={i}
-            x1={PAD_LEFT}
-            x2={CHART_WIDTH - PAD_RIGHT}
-            y1={valueY(v, minValue, maxValue)}
-            y2={valueY(v, minValue, maxValue)}
-            stroke="#1e3a2b"
-            strokeOpacity={0.08}
-          />
-        ))}
-
-        {/* Zero baseline, only shown when the range actually crosses zero */}
-        {showZeroLine && (
-          <line
-            x1={PAD_LEFT}
-            x2={CHART_WIDTH - PAD_RIGHT}
-            y1={valueY(0, minValue, maxValue)}
-            y2={valueY(0, minValue, maxValue)}
-            stroke="#2a2820"
-            strokeOpacity={0.35}
-            strokeDasharray="3 3"
-          />
-        )}
-
-        {/* Y axis labels */}
-        {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
-          <text
-            key={i}
-            x={PAD_LEFT - 8}
-            y={valueY(v, minValue, maxValue) + 4}
-            textAnchor="end"
-            className="fill-charcoal-soft text-[10px]"
-          >
-            {valueFormatter(v)}
-          </text>
-        ))}
-
-        {/* X axis month labels */}
-        {[1, 3, 6, 9, 12].map((m) => (
-          <text
-            key={m}
-            x={monthX(m)}
-            y={CHART_HEIGHT - PAD_BOTTOM + 18}
-            textAnchor="middle"
-            className="fill-charcoal-soft text-[10px]"
-          >
-            M{m}
-          </text>
-        ))}
-
-        {/* Lines */}
-        {series.map((s) => {
-          const points = s.months
-            .map((m) => `${monthX(m.month)},${valueY(m[metric], minValue, maxValue)}`)
-            .join(" ");
-          return (
-            <polyline
-              key={s.key}
-              points={points}
-              fill="none"
-              stroke={s.stroke}
-              strokeWidth={2}
-              strokeDasharray={s.dash}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          );
-        })}
-
-        {/* Direct end labels — a cream halo (paintOrder stroke) keeps the
-            label legible where a line's own dashes pass close behind it. */}
-        {series.map((s) => (
-          <text
-            key={s.key}
-            x={CHART_WIDTH - PAD_RIGHT - 4}
-            y={endLabelY[s.key] - 6}
-            textAnchor="end"
-            fontSize={10}
-            fontWeight={700}
-            fill={s.stroke}
-            stroke="#f5f1e6"
-            strokeWidth={4}
-            paintOrder="stroke"
-          >
-            {s.label}
-          </text>
-        ))}
-
-        {/* Hover hit zones */}
-        {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-          <rect
-            key={month}
-            x={monthX(month) - (CHART_WIDTH - PAD_LEFT - PAD_RIGHT) / 22}
-            y={PAD_TOP}
-            width={(CHART_WIDTH - PAD_LEFT - PAD_RIGHT) / 11}
-            height={CHART_HEIGHT - PAD_TOP - PAD_BOTTOM}
-            fill="transparent"
-            onMouseEnter={() => setHoverMonth(month)}
-            onMouseLeave={() => setHoverMonth(null)}
-          />
-        ))}
-
-        {/* Crosshair + tooltip */}
-        {hoverMonth && (
-          <g pointerEvents="none">
-            <line
-              x1={monthX(hoverMonth)}
-              x2={monthX(hoverMonth)}
-              y1={PAD_TOP}
-              y2={CHART_HEIGHT - PAD_BOTTOM}
-              stroke="#2a2820"
-              strokeOpacity={0.25}
-              strokeWidth={1}
-            />
-            {(() => {
-              const boxWidth = 132;
-              const boxHeight = 36 + series.length * 13;
-              const rawX = monthX(hoverMonth) + 10;
-              const x =
-                rawX + boxWidth > CHART_WIDTH - PAD_RIGHT
-                  ? monthX(hoverMonth) - boxWidth - 10
-                  : rawX;
-              const y = PAD_TOP + 4;
-              return (
-                <g transform={`translate(${x}, ${y})`}>
-                  <rect
-                    width={boxWidth}
-                    height={boxHeight}
-                    rx={8}
-                    fill="#ffffff"
-                    stroke="#1e3a2b"
-                    strokeOpacity={0.2}
-                  />
-                  <text x={10} y={16} fontSize={10} fontWeight={700} fill="#2a2820">
-                    Month {hoverMonth}
-                  </text>
-                  {series.map((s, i) => (
-                    <text key={s.key} x={10} y={32 + i * 13} fontSize={10} fill={s.stroke}>
-                      {s.label}: {valueFormatter(s.months[hoverMonth - 1][metric])}
-                    </text>
-                  ))}
-                </g>
-              );
-            })()}
-          </g>
-        )}
-      </svg>
-
-      {/* Legend */}
-      <div className="mt-3 flex flex-wrap gap-4">
-        {series.map((s) => (
-          <span key={s.key} className="flex items-center gap-1.5 text-xs text-charcoal-soft">
-            <span className={`h-2.5 w-2.5 rounded-full ${s.swatchClass}`} />
-            {s.label}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const BRIDGE_WIDTH = 640;
-const BRIDGE_HEIGHT = 220;
-const BRIDGE_PAD_LEFT = 52;
-const BRIDGE_PAD_RIGHT = 16;
-const BRIDGE_PAD_TOP = 24;
-const BRIDGE_PAD_BOTTOM = 34;
-
-type BridgeStep = {
-  label: string;
-  value: number; // signed: positive for New/Expansion, negative for Contraction/Churned
-  kind: "anchor" | "add" | "subtract";
-};
-
-/**
- * Month-12 MRR bridge as a compact waterfall: two solid "anchor" bars
- * (Beginning, Ending) with floating bars in between showing exactly how one
- * becomes the other. Every value is read straight off the engine's month-12
- * SaaSMonthResult — no recomputation here.
- */
-function MrrBridgeChart({ month }: { month: SaaSMonthResult }) {
-  const steps: BridgeStep[] = [
-    { label: "Beginning", value: month.beginningMRR, kind: "anchor" },
-    { label: "New", value: month.newMRR, kind: "add" },
-    { label: "Expansion", value: month.expansionMRR, kind: "add" },
-    { label: "Contraction", value: -month.contractionMRR, kind: "subtract" },
-    { label: "Churned", value: -month.churnedMRR, kind: "subtract" },
-    { label: "Ending", value: month.mrr, kind: "anchor" },
-  ];
-
-  let running = 0;
-  const positioned = steps.map((step) => {
-    if (step.kind === "anchor") {
-      running = step.value;
-      return { ...step, from: 0, to: step.value };
-    }
-    const from = running;
-    running = running + step.value;
-    return { ...step, from: Math.min(from, running), to: Math.max(from, running) };
-  });
-
-  const maxValue = Math.max(...positioned.map((p) => p.to)) * 1.2;
-  const innerWidth = BRIDGE_WIDTH - BRIDGE_PAD_LEFT - BRIDGE_PAD_RIGHT;
-  const innerHeight = BRIDGE_HEIGHT - BRIDGE_PAD_TOP - BRIDGE_PAD_BOTTOM;
-  const colWidth = innerWidth / steps.length;
-  const barWidth = colWidth * 0.55;
-
-  const y = (v: number) =>
-    BRIDGE_PAD_TOP + innerHeight * (1 - (maxValue === 0 ? 0 : v / maxValue));
-
-  const fillFor = (kind: BridgeStep["kind"]) =>
-    kind === "anchor" ? "#2a2820" : kind === "add" ? "#1e3a2b" : "#a1462f";
-
-  return (
-    <div className="mt-2">
-      <svg
-        viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`}
-        className="w-full"
-        role="img"
-        aria-label={`Month 12 MRR bridge: beginning ${formatCurrency(
-          month.beginningMRR
-        )}, plus new ${formatCurrency(month.newMRR)}, plus expansion ${formatCurrency(
-          month.expansionMRR
-        )}, minus contraction ${formatCurrency(
-          month.contractionMRR
-        )}, minus churned ${formatCurrency(month.churnedMRR)}, equals ending ${formatCurrency(
-          month.mrr
-        )}`}
-      >
-        <line
-          x1={BRIDGE_PAD_LEFT}
-          x2={BRIDGE_WIDTH - BRIDGE_PAD_RIGHT}
-          y1={y(0)}
-          y2={y(0)}
-          stroke="#1e3a2b"
-          strokeOpacity={0.15}
-        />
-        {positioned.map((step, i) => {
-          const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
-          const yTop = y(step.to);
-          const yBottom = y(step.from);
-          const height = Math.max(1.5, yBottom - yTop);
-          return (
-            <g key={step.label}>
-              <rect
-                x={x}
-                y={yTop}
-                width={barWidth}
-                height={height}
-                fill={fillFor(step.kind)}
-                rx={2}
-              />
-              <text
-                x={x + barWidth / 2}
-                y={yTop - 6}
-                textAnchor="middle"
-                fontSize={10}
-                fontWeight={700}
-                fill="#2a2820"
-              >
-                {step.kind === "anchor"
-                  ? formatCurrencyCompact(step.value)
-                  : formatSignedCompact(step.kind === "subtract" ? -Math.abs(step.value) : step.value)}
-              </text>
-              <text
-                x={x + barWidth / 2}
-                y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 18}
-                textAnchor="middle"
-                className="fill-charcoal-soft text-[10px]"
-              >
-                {step.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <div className="mt-2 flex flex-wrap gap-4">
-        <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
-          <span className="h-2.5 w-2.5 rounded-full bg-charcoal" /> Beginning / Ending
-        </span>
-        <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
-          <span className="h-2.5 w-2.5 rounded-full bg-forest" /> Adds MRR
-        </span>
-        <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
-          <span className="h-2.5 w-2.5 rounded-full bg-rust" /> Removes MRR
-        </span>
-      </div>
-    </div>
-  );
-}
 
 const DECISION_STYLE: Record<Decision, string> = {
   "Invest for growth": "bg-forest text-cream",
@@ -1131,6 +742,126 @@ function GenericForecastChart({
   );
 }
 
+// A chart declares what KIND of number it shows (currency vs. percent, and
+// at what precision) as data — the model layer's ChartValueFormat — never
+// a formatting function itself, keeping the model files free of
+// currency-symbol/display concerns. This is the one place that turns that
+// declaration into display text, so every chart's axis labels, stat bar,
+// and tooltip render a value the same way.
+function formatChartValue(format: ChartValueFormat, value: number): string {
+  return format.kind === "percent" ? formatPercent(value, format.digits) : formatCurrencyCompact(value);
+}
+
+// Severity-colored background for the alert line: neutral (a light forest
+// tint, not green) when the underlying badge is healthy, amber when it's a
+// watch-level caution, red when it's material — the same 3-tone vocabulary
+// as every other badge in the app, reused rather than a second palette.
+const ALERT_STYLE: Record<BadgeTone, string> = {
+  good: "bg-forest/5 text-charcoal",
+  neutral: "bg-brass-pale text-brass",
+  bad: "bg-rust-pale text-rust",
+};
+
+/**
+ * The three-part caption block under every chart (see ChartConfig in
+ * shared.ts): a computed stat bar (value + badge + delta vs Month 1), a
+ * computed, severity-colored alert line, and a static explainer. The badge
+ * and alert are read from a single getCaption() call on the active
+ * scenario's own result — the same status value drives both, so the alert
+ * line can never end up a different color, or claim a different health
+ * reading, than the badge next to it.
+ */
+function ChartCaptionBlock<TResult, TAssumptions>({
+  chart,
+  result,
+  assumptions,
+}: {
+  chart: ChartConfig<TResult, TAssumptions>;
+  result: TResult;
+  assumptions: TAssumptions;
+}) {
+  const series = chart.getSeries(result);
+  const first = series[0];
+  const last = series[series.length - 1];
+  const delta = last - first;
+  const deltaText =
+    chart.valueFormat.kind === "percent"
+      ? `${delta >= 0 ? "+" : ""}${(delta * 100).toFixed(chart.valueFormat.digits)}pt`
+      : formatSignedCompact(delta);
+  const arrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "→";
+  const caption = chart.getCaption(result, assumptions);
+
+  return (
+    <div className="mt-3 flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-forest/15 bg-white px-4 py-3">
+        <div>
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
+            {chart.statLabel} at Month 12
+          </span>
+          <span className="text-xl font-bold text-charcoal">
+            {formatChartValue(chart.valueFormat, last)}
+          </span>
+        </div>
+        <span
+          className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[caption.badge.tone]}`}
+        >
+          {caption.badge.label}
+        </span>
+        <span className="ml-auto text-sm font-semibold text-charcoal-soft">
+          {arrow} {deltaText} vs Month 1
+        </span>
+      </div>
+      <div className={`rounded-xl px-4 py-2.5 text-sm leading-6 ${ALERT_STYLE[caption.alertTone]}`}>
+        <span className="font-bold">{caption.alertLead}</span> {caption.alertExplanation}
+      </div>
+      <p className="text-xs leading-5 text-charcoal-soft">{chart.explainer}</p>
+    </div>
+  );
+}
+
+/**
+ * One chart + its caption block, entirely driven by a ChartConfig — never
+ * a hardcoded per-metric section. All three scenarios always plot; which
+ * one is "active" only controls what feeds the caption block, the same
+ * rule every other part of this page follows.
+ */
+function ChartSection<TResult, TAssumptions>({
+  chart,
+  scenarioResults,
+  activeResult,
+  activeAssumptions,
+  first = false,
+}: {
+  chart: ChartConfig<TResult, TAssumptions>;
+  scenarioResults: Record<ScenarioKey, TResult>;
+  activeResult: TResult;
+  activeAssumptions: TAssumptions;
+  first?: boolean;
+}) {
+  const seriesByScenario = useMemo(
+    () => ({
+      base: chart.getSeries(scenarioResults.base),
+      upside: chart.getSeries(scenarioResults.upside),
+      downside: chart.getSeries(scenarioResults.downside),
+    }),
+    [chart, scenarioResults]
+  );
+
+  return (
+    <section className={first ? undefined : "border-t border-forest/10 pt-8"}>
+      <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+        {chart.chartLabel}
+      </h2>
+      <GenericForecastChart
+        seriesByScenario={seriesByScenario}
+        ariaLabel={chart.ariaLabel}
+        valueFormatter={(v) => formatChartValue(chart.valueFormat, v)}
+      />
+      <ChartCaptionBlock chart={chart} result={activeResult} assumptions={activeAssumptions} />
+    </section>
+  );
+}
+
 // AI-generated commentary is only ever wired up if a server-side LLM API
 // key is already configured — none is in this environment, so AI-Assisted
 // stays visibly present but disabled with an explanation, rather than
@@ -1343,7 +1074,6 @@ export default function FpaDecisionLab() {
     [assumptions, activeScenario]
   );
   const activeResult = scenarioResults[activeScenario];
-  const activeMonth12 = activeResult.months[activeResult.months.length - 1];
   const sensitivity = useMemo(
     () => runSaaSSensitivityByMetric(activeAssumptions, sensitivityTab, activeBaseline),
     [activeAssumptions, sensitivityTab, activeBaseline]
@@ -1759,6 +1489,8 @@ export default function FpaDecisionLab() {
                     `${formatCurrencyCompact(AVG_FULLY_LOADED_COST_PER_EMPLOYEE)}/yr`,
                   ],
                   ["Fixed G&A", `${formatCurrencyCompact(FIXED_GA_MONTHLY)}/mo`],
+                  ["Expansion Rate", `${formatPercent(EXPANSION_RATE_CONSTANT, 1)} of retained MRR`],
+                  ["Contraction Rate", `${formatPercent(CONTRACTION_RATE_CONSTANT, 1)} of retained MRR`],
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-center justify-between gap-2">
                     <dt className="text-charcoal-soft">{label}</dt>
@@ -1768,8 +1500,8 @@ export default function FpaDecisionLab() {
               </dl>
               <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
                 {customBaseline
-                  ? "Starting cash derived from your uploaded CSV. Headcount, employee cost, and G&A stay fixed model constants for this demo — not sliders."
-                  : "Fixed model constants for this demo — not sliders. Starting Customers and Avg MRR per Customer are drivers above, not fixed facts."}
+                  ? "Starting cash derived from your uploaded CSV. Headcount, employee cost, G&A, and the expansion/contraction rates stay fixed model constants for this demo — not sliders."
+                  : "Fixed model constants for this demo — not sliders. Starting Customers and Avg MRR per Customer are drivers above, not fixed facts. Expansion and contraction feed the NRR chart's retention bridge and are held constant so NRR responds only to the churn driver, never inferred from pricing or churn itself."}
               </p>
             </AccordionSection>
 
@@ -2116,99 +1848,19 @@ export default function FpaDecisionLab() {
               </p>
             </section>
 
-            {/* Main chart */}
-            <section>
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                12-Month MRR Forecast
-              </h2>
-              <p className="mt-1 text-xs leading-5 text-charcoal-soft">
-                All three scenarios always render. Base moves live with the
-                Drivers below; Upside/Downside apply this industry&apos;s
-                signed delta on top of it.
-              </p>
-              <ForecastChart
-                seriesByScenario={scenarioResults}
-                metric="mrr"
-                ariaLabel="12-month MRR forecast under Base, Upside, and Downside scenarios"
+            {/* Chart set — exactly the three SaaS charts, config-driven from
+                SAAS_CHARTS (model layer). Adding, removing, or reordering a
+                chart is a model-layer-only edit; this just maps over it. */}
+            {SAAS_CHARTS.map((chart, i) => (
+              <ChartSection
+                key={chart.key}
+                chart={chart}
+                scenarioResults={scenarioResults}
+                activeResult={activeResult}
+                activeAssumptions={activeAssumptions}
+                first={i === 0}
               />
-            </section>
-
-            {/* MRR Bridge */}
-            <section className="border-t border-forest/10 pt-8">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                MRR Bridge — Month 12
-              </h2>
-              <p className="mt-1 text-xs leading-5 text-charcoal-soft">
-                How Beginning MRR becomes Ending MRR in the final forecast
-                month: Beginning + New + Expansion − Contraction − Churned.
-              </p>
-              <MrrBridgeChart month={activeMonth12} />
-            </section>
-
-            {/* NRR trend chart */}
-            <section className="border-t border-forest/10 pt-8">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                NRR Trend
-              </h2>
-              <p className="mt-1 text-xs leading-5 text-charcoal-soft">
-                Monthly net revenue retention — excludes New MRR, so it
-                isolates how the existing customer base is trending.
-              </p>
-              <div className="mx-auto mt-2 max-w-lg">
-                <ForecastChart
-                  seriesByScenario={scenarioResults}
-                  metric="nrr"
-                  zeroFloor={false}
-                  valueFormatter={(v) => formatPercent(v, 1)}
-                  ariaLabel="12-month net revenue retention trend under Base, Upside, and Downside scenarios"
-                />
-              </div>
-            </section>
-
-            {/* Cash chart */}
-            <section className="border-t border-forest/10 pt-8">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                12-Month Cash Balance Forecast
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-                Same scenarios, tracking ending cash instead of revenue —
-                watch how a scenario that turns cash-flow positive levels off
-                rather than continuing to decline.
-              </p>
-              <ForecastChart
-                seriesByScenario={scenarioResults}
-                metric="cash"
-                ariaLabel="12-month cash balance forecast under Base, Upside, and Downside scenarios"
-              />
-              <div className="mt-3 flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border border-forest/15 bg-white px-4 py-3">
-                <div>
-                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
-                    Ending Cash
-                  </span>
-                  <span className="text-base font-bold text-charcoal">
-                    {formatCurrencyCompact(activeResult.endingCash)}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
-                    Runway
-                  </span>
-                  <span className="text-base font-bold text-charcoal">
-                    {runwayLabel(activeResult.runwayMonths)}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
-                    Status
-                  </span>
-                  <span
-                    className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[RUNWAY_TONE[runwayStatus]]}`}
-                  >
-                    {RUNWAY_HEALTH_LABEL[runwayStatus]}
-                  </span>
-                </div>
-              </div>
-            </section>
+            ))}
 
             {/* Scenario comparison table */}
             <section className="border-t border-forest/10 pt-8">
@@ -2551,25 +2203,18 @@ export default function FpaDecisionLab() {
                   </p>
                 </section>
 
-                {/* Cash chart */}
-                <section>
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                    12-Month Cash Trajectory
-                  </h2>
-                  <p className="mt-1 text-xs leading-5 text-charcoal-soft">
-                    Net revenue and margins are flat under fixed drivers each
-                    month — cash is what actually moves, accumulating (or
-                    draining) monthly EBITDA.
-                  </p>
-                  <GenericForecastChart
-                    seriesByScenario={{
-                      base: consultingScenarioResults.base.months.map((m) => m.cash),
-                      upside: consultingScenarioResults.upside.months.map((m) => m.cash),
-                      downside: consultingScenarioResults.downside.months.map((m) => m.cash),
-                    }}
-                    ariaLabel="12-month cash trajectory under Base, Upside, and Downside scenarios for the consulting firm"
+                {/* Chart set — exactly the three Consulting charts,
+                    config-driven from CONSULTING_CHARTS (model layer). */}
+                {CONSULTING_CHARTS.map((chart, i) => (
+                  <ChartSection
+                    key={chart.key}
+                    chart={chart}
+                    scenarioResults={consultingScenarioResults}
+                    activeResult={consultingResult}
+                    activeAssumptions={consultingActiveAssumptions}
+                    first={i === 0}
                   />
-                </section>
+                ))}
 
                 {/* Scenario comparison */}
                 <section className="border-t border-forest/10 pt-8">
@@ -2891,25 +2536,18 @@ export default function FpaDecisionLab() {
                   </p>
                 </section>
 
-                {/* Cash chart */}
-                <section>
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                    12-Month Cash Trajectory
-                  </h2>
-                  <p className="mt-1 text-xs leading-5 text-charcoal-soft">
-                    Rental revenue and NOI are flat under fixed drivers each
-                    month — cash is what actually moves, accumulating (or
-                    draining) monthly free cash flow after debt service.
-                  </p>
-                  <GenericForecastChart
-                    seriesByScenario={{
-                      base: realEstateScenarioResults.base.months.map((m) => m.cash),
-                      upside: realEstateScenarioResults.upside.months.map((m) => m.cash),
-                      downside: realEstateScenarioResults.downside.months.map((m) => m.cash),
-                    }}
-                    ariaLabel="12-month cash trajectory under Base, Upside, and Downside scenarios for the real estate portfolio"
+                {/* Chart set — exactly the three Real Estate charts,
+                    config-driven from REAL_ESTATE_CHARTS (model layer). */}
+                {REAL_ESTATE_CHARTS.map((chart, i) => (
+                  <ChartSection
+                    key={chart.key}
+                    chart={chart}
+                    scenarioResults={realEstateScenarioResults}
+                    activeResult={realEstateResult}
+                    activeAssumptions={realEstateActiveAssumptions}
+                    first={i === 0}
                   />
-                </section>
+                ))}
 
                 {/* Scenario comparison */}
                 <section className="border-t border-forest/10 pt-8">

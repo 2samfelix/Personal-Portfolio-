@@ -10,7 +10,12 @@ import {
   classifyMargin,
   classifyRunway,
   classifyTrend,
+  formatPct,
+  formatUsdCompact,
+  MARGIN_STATUS_LABEL,
+  type BadgeTone,
   type CashStatus,
+  type ChartConfig,
   type Decision,
   type DriverConfig,
   type MarginStatus,
@@ -248,6 +253,136 @@ export function classifyDebtCoverage(dscr: number): DebtCoverageStatus {
 
 export { classifyMargin, classifyRunway };
 export type { CashStatus, Decision, MarginStatus, RunwayStatus };
+
+const OCCUPANCY_STATUS_TONE: Record<OccupancyStatus, BadgeTone> = {
+  Healthy: "good",
+  Watch: "neutral",
+  Weak: "bad",
+};
+
+const MARGIN_STATUS_TONE: Record<MarginStatus, BadgeTone> = {
+  Strong: "good",
+  Profitable: "good",
+  NearBreakeven: "neutral",
+  ApproachingBreakeven: "neutral",
+  MateriallyUnprofitable: "bad",
+};
+
+const DSCR_STATUS_TONE: Record<DebtCoverageStatus, BadgeTone> = {
+  Strong: "good",
+  Healthy: "good",
+  Watch: "neutral",
+  Weak: "bad",
+};
+
+/**
+ * The three Real Estate charts (exactly these, in this order). Rental
+ * revenue and NOI are flat month-to-month under fixed drivers (see
+ * runRealEstateForecast) — badging on trend would read "Flat" for every
+ * scenario regardless of severity, so instead each chart badges on the
+ * health classifier that actually explains its level: occupancy for
+ * revenue, NOI margin for operating profitability, and DSCR (the metric
+ * this whole industry model exists to protect) for free cash flow.
+ */
+export const REAL_ESTATE_CHARTS: ChartConfig<RealEstateForecastResult, RealEstateAssumptions>[] = [
+  {
+    key: "rentalRevenue",
+    chartLabel: "Rental Revenue",
+    statLabel: "Rental Revenue",
+    valueFormat: { kind: "currency" },
+    ariaLabel: "12-month rental revenue (effective gross income) under Base, Upside, and Downside scenarios",
+    getSeries: (result) => result.months.map((m) => m.rentalRevenue),
+    getCaption: (result, assumptions) => {
+      const status = classifyOccupancy(assumptions.occupancyPct);
+      const tone = OCCUPANCY_STATUS_TONE[status];
+      const monthlyRevenue = result.months[0].rentalRevenue;
+      const occPct = formatPct(assumptions.occupancyPct, 0);
+
+      let alertLead: string;
+      let alertExplanation: string;
+      if (status === "Healthy") {
+        alertLead = "Occupancy is healthy.";
+        alertExplanation = `Effective gross income runs at ${formatUsdCompact(monthlyRevenue)}/mo on ${occPct} occupancy across ${assumptions.totalUnits} units.`;
+      } else if (status === "Watch") {
+        alertLead = "Occupancy is below target.";
+        alertExplanation = `Effective gross income runs at ${formatUsdCompact(monthlyRevenue)}/mo on ${occPct} occupancy across ${assumptions.totalUnits} units — vacant units are leaving revenue on the table.`;
+      } else {
+        alertLead = "Occupancy is weak.";
+        alertExplanation = `Effective gross income runs at ${formatUsdCompact(monthlyRevenue)}/mo on just ${occPct} occupancy across ${assumptions.totalUnits} units — vacancy is materially reducing revenue below the portfolio's full potential.`;
+      }
+      return { badge: { label: status, tone }, alertTone: tone, alertLead, alertExplanation };
+    },
+    explainer:
+      "Rental revenue (effective gross income) is occupied units times average monthly rent. Because occupancy and rent are held constant across the window, this is a level, not a trend — it's set entirely by how many units are actually leased and at what rent.",
+  },
+  {
+    key: "noi",
+    chartLabel: "Net Operating Income",
+    statLabel: "NOI",
+    valueFormat: { kind: "currency" },
+    ariaLabel: "12-month net operating income under Base, Upside, and Downside scenarios",
+    getSeries: (result) => result.months.map((m) => m.noi),
+    getCaption: (result) => {
+      const status = classifyMargin(result.endingNOIMargin);
+      const tone = MARGIN_STATUS_TONE[status];
+      const monthlyNOI = result.months[0].noi;
+      const noiMarginPct = formatPct(result.endingNOIMargin, 1);
+
+      let alertLead: string;
+      let alertExplanation: string;
+      if (status === "Strong" || status === "Profitable") {
+        alertLead = `NOI margin is ${status === "Strong" ? "strong" : "solidly positive"}.`;
+        alertExplanation = `Net operating income runs at ${formatUsdCompact(monthlyNOI)}/mo, a ${noiMarginPct} margin on rental revenue — operating expenses are well covered before debt service is even considered.`;
+      } else if (status === "NearBreakeven") {
+        alertLead = "NOI margin is only modestly positive.";
+        alertExplanation = `Net operating income runs at ${formatUsdCompact(monthlyNOI)}/mo, a ${noiMarginPct} margin on rental revenue — just above breakeven before debt service.`;
+      } else if (status === "ApproachingBreakeven") {
+        alertLead = "NOI margin is still negative.";
+        alertExplanation = `Net operating income runs at ${formatUsdCompact(monthlyNOI)}/mo, a ${noiMarginPct} margin on rental revenue — operating expenses aren't yet covered, before debt service is even considered.`;
+      } else {
+        alertLead = "NOI margin is materially negative.";
+        alertExplanation = `Net operating income runs at ${formatUsdCompact(monthlyNOI)}/mo, a ${noiMarginPct} margin on rental revenue — operating expenses alone exceed what the property collects, before debt service.`;
+      }
+      return { badge: { label: MARGIN_STATUS_LABEL[status], tone }, alertTone: tone, alertLead, alertExplanation };
+    },
+    explainer:
+      "Net operating income (NOI) is rental revenue minus operating expenses — profitability from running the property, before debt service or cap-rate valuation enter the picture. It's the number a lender looks at first when sizing how much debt the property can support.",
+  },
+  {
+    key: "freeCashFlow",
+    chartLabel: "Free Cash Flow",
+    statLabel: "Free Cash Flow",
+    valueFormat: { kind: "currency" },
+    ariaLabel: "12-month free cash flow after debt service under Base, Upside, and Downside scenarios",
+    getSeries: (result) => result.months.map((m) => m.freeCashFlow),
+    getCaption: (result, assumptions) => {
+      const dscr = debtServiceCoverageRatio(result, assumptions);
+      const status = classifyDebtCoverage(dscr);
+      const tone = DSCR_STATUS_TONE[status];
+      const monthlyFCF = result.months[0].freeCashFlow;
+      const dscrText = `${dscr.toFixed(2)}x`;
+
+      let alertLead: string;
+      let alertExplanation: string;
+      if (status === "Strong") {
+        alertLead = "Debt service coverage is strong.";
+        alertExplanation = `Free cash flow after debt service is ${formatUsdCompact(monthlyFCF)}/mo, at ${dscrText} DSCR — a strong cushion well above typical lender covenants.`;
+      } else if (status === "Healthy") {
+        alertLead = "Debt service coverage is healthy.";
+        alertExplanation = `Free cash flow after debt service is ${formatUsdCompact(monthlyFCF)}/mo, at ${dscrText} DSCR — a comfortable cushion above typical lender covenants.`;
+      } else if (status === "Watch") {
+        alertLead = "Debt service coverage is thin.";
+        alertExplanation = `Free cash flow after debt service is ${formatUsdCompact(monthlyFCF)}/mo, at ${dscrText} DSCR — a thin cushion above break-even coverage, worth watching.`;
+      } else {
+        alertLead = "Debt service coverage is weak.";
+        alertExplanation = `Free cash flow after debt service is ${formatUsdCompact(monthlyFCF)}/mo, at just ${dscrText} DSCR — NOI barely covers (or doesn't cover) debt service, a real lender-covenant and refinancing risk.`;
+      }
+      return { badge: { label: status, tone }, alertTone: tone, alertLead, alertExplanation };
+    },
+    explainer:
+      "Free cash flow is NOI minus debt service — what's left after the mortgage is paid. Debt service coverage ratio (DSCR, annualized NOI divided by annual debt service) is the standard lender metric for how much cushion that leaves: below ~1.10x is thin enough to risk a covenant breach or refinancing trouble from even a small vacancy uptick or rate reset.",
+  },
+];
 
 /**
  * Real Estate's own decision framework — deliberately NOT a reuse of the

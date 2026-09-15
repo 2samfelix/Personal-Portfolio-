@@ -100,3 +100,86 @@ export function classifyTrend(first: number, last: number): TrendStatus {
   if (trend < -0.05) return "Contracting";
   return "Flat";
 }
+
+// Badge coloring vocabulary shared by every KPI card, chart badge, and
+// alert line in the app: "good" = healthy, "neutral" = a watch-level
+// caution, "bad" = a material problem. One 3-value tone, reused everywhere
+// a status needs a color, so a chart's alert line can never end up a
+// different color than its own badge — both are derived from the same
+// classification value, never computed independently.
+export type BadgeTone = "good" | "neutral" | "bad";
+
+// Human-readable labels for MarginStatus's 5 bands, since (unlike
+// CashStatus/RunwayStatus/NRRStatus/etc., whose values already read fine
+// as badge text) "ApproachingBreakeven" and "MateriallyUnprofitable" need
+// word-spacing before they're shown as a badge. Exported once here so both
+// the KPI cards and any chart config that badges on margin use the exact
+// same wording.
+export const MARGIN_STATUS_LABEL: Record<MarginStatus, string> = {
+  Strong: "Strong",
+  Profitable: "Profitable",
+  NearBreakeven: "Near Breakeven",
+  ApproachingBreakeven: "Approaching Breakeven",
+  MateriallyUnprofitable: "Materially Unprofitable",
+};
+
+// A chart's value is either a dollar figure (rendered compact, e.g.
+// "$1.7K") or a ratio/percentage (rendered to a chosen number of decimal
+// places, e.g. "76.0%"). This is data, not a formatting function — model
+// files declare *what kind* of number a chart shows, the same way
+// DriverConfig.unit declares a driver's kind; the UI resolves it to actual
+// display text (see formatChartValue in the component), keeping the model
+// layer free of currency-symbol/formatting concerns.
+export type ChartValueFormat = { kind: "currency" } | { kind: "percent"; digits: number };
+
+export type ChartBadge = { label: string; tone: BadgeTone };
+
+// A chart's computed caption: the badge (reused verbatim from an existing
+// classify* threshold — never a second, chart-specific band) plus the
+// alert line's severity-colored lead phrase and driver explanation. Both
+// are produced by one function per chart from the same underlying status
+// value, so an alert can never end up describing a metric as healthier (or
+// worse) than its own badge says.
+export type ChartCaption = {
+  badge: ChartBadge;
+  alertTone: BadgeTone;
+  alertLead: string;
+  alertExplanation: string;
+};
+
+// Config-driven chart contract every industry's chart list conforms to.
+// The UI renders the chart set by mapping over an industry's exported
+// array — never by hardcoding a chart list in a component — so adding,
+// removing, or reordering a chart is a model-layer-only edit.
+export type ChartConfig<TResult, TAssumptions> = {
+  key: string;
+  chartLabel: string; // heading above the chart, e.g. "MRR Growth"
+  statLabel: string; // combined with "at Month 12" in the stat bar, e.g. "MRR"
+  valueFormat: ChartValueFormat;
+  ariaLabel: string;
+  getSeries: (result: TResult) => number[]; // 12 monthly values plotted for this scenario
+  getCaption: (result: TResult, assumptions: TAssumptions) => ChartCaption;
+  explainer: string; // static, doesn't change with the numbers — written once per metric
+};
+
+// The alert line's explanation sentence has to embed real numbers ("fell to
+// $1.7K, down 32.4% from $2.5K") — that's what "computed, not decoration"
+// means for a sentence, not just a badge color. These two tiny helpers
+// exist so that number-to-text step happens once, here, instead of being
+// duplicated three times across the industry model files that build alert
+// text. This is narrower than the UI's own src/lib/format.ts (which also
+// handles driver-unit/precision rules for sliders and tables) — it exists
+// only to put a number into a caption sentence, mirroring the same
+// compact-dollar/percent conventions so an alert's embedded figure always
+// matches what the stat bar above it shows for the same value.
+export function formatUsdCompact(value: number): string {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(0)}K`;
+  return `${sign}$${abs.toFixed(0)}`;
+}
+
+export function formatPct(value: number, digits = 1): string {
+  return `${(value * 100).toFixed(digits)}%`;
+}

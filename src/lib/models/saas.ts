@@ -11,7 +11,11 @@ import {
   classifyRunway as sharedClassifyRunway,
   classifyTrend,
   decideStance as sharedDecideStance,
+  formatPct,
+  formatUsdCompact,
+  type BadgeTone,
   type CashStatus as SharedCashStatus,
+  type ChartConfig,
   type Decision as SharedDecision,
   type DriverConfig,
   type MarginStatus as SharedMarginStatus,
@@ -431,6 +435,140 @@ export function classifyLtvToCac(ltvToCac: number): LtvCacStatus {
   if (ltvToCac >= 2) return "Watch";
   return "Weak";
 }
+
+const ARR_TREND_TONE: Record<ArrTrend, BadgeTone> = {
+  Growing: "good",
+  Flat: "neutral",
+  Contracting: "bad",
+};
+
+const NRR_STATUS_TONE: Record<NRRStatus, BadgeTone> = {
+  Strong: "good",
+  Healthy: "good",
+  Watch: "neutral",
+  Weak: "bad",
+};
+
+const RUNWAY_STATUS_TONE: Record<RunwayStatus, BadgeTone> = {
+  Safe: "good",
+  "Self-funded": "good",
+  Watch: "neutral",
+  Critical: "bad",
+};
+
+/**
+ * The three SaaS charts (exactly these, in this order — see SAAS_DRIVERS
+ * for the equivalent contract on sliders). Each chart's badge reuses an
+ * existing classify* threshold (never a new band invented for the
+ * presentation layer), and its alert line is derived from that same
+ * classification value, so the two can never disagree.
+ */
+export const SAAS_CHARTS: ChartConfig<SaaSForecastResult, SaaSAssumptions>[] = [
+  {
+    key: "mrrGrowth",
+    chartLabel: "MRR Growth",
+    statLabel: "MRR",
+    valueFormat: { kind: "currency" },
+    ariaLabel: "12-month MRR forecast under Base, Upside, and Downside scenarios",
+    getSeries: (result) => result.months.map((m) => m.mrr),
+    getCaption: (result) => {
+      const first = result.months[0].mrr;
+      const last = result.months[result.months.length - 1].mrr;
+      const trend = classifyTrend(first, last);
+      const tone = ARR_TREND_TONE[trend];
+      const pctChange = first === 0 ? 0 : ((last - first) / first) * 100;
+      const totalNewMRR = result.months.reduce((sum, m) => sum + m.newMRR, 0);
+      const totalExpansionMRR = result.months.reduce((sum, m) => sum + m.expansionMRR, 0);
+      const driverPhrase =
+        totalNewMRR > totalExpansionMRR * 1.5
+          ? "new customer acquisition outpacing churn"
+          : totalExpansionMRR > totalNewMRR * 1.5
+            ? "expansion within the existing customer base outpacing churn"
+            : "a mix of new customer acquisition and expansion outpacing churn";
+
+      let alertLead: string;
+      let alertExplanation: string;
+      if (trend === "Growing") {
+        alertLead = "MRR is growing.";
+        alertExplanation = `Monthly recurring revenue rose to ${formatUsdCompact(last)} by Month 12, up ${pctChange.toFixed(1)}% from ${formatUsdCompact(first)}. Growth is driven by ${driverPhrase}.`;
+      } else if (trend === "Flat") {
+        alertLead = "MRR is roughly flat.";
+        alertExplanation = `Monthly recurring revenue is little changed at ${formatUsdCompact(last)}, versus ${formatUsdCompact(first)} at the start of the window — new and expansion revenue are roughly offsetting churn.`;
+      } else {
+        alertLead = "MRR is declining.";
+        alertExplanation = `Monthly recurring revenue fell to ${formatUsdCompact(last)} by Month 12, down ${Math.abs(pctChange).toFixed(1)}% from ${formatUsdCompact(first)}. Churn is outpacing new and expansion revenue.`;
+      }
+      return { badge: { label: trend, tone }, alertTone: tone, alertLead, alertExplanation };
+    },
+    explainer:
+      "Monthly recurring revenue (MRR) is the subscription revenue run-rate at a point in time. A healthy SaaS business grows MRR faster than it loses it to churn; a declining line means customer losses are outpacing new sales and expansion within the existing base.",
+  },
+  {
+    key: "nrr",
+    chartLabel: "Net Revenue Retention",
+    statLabel: "NRR",
+    valueFormat: { kind: "percent", digits: 1 },
+    ariaLabel: "12-month net revenue retention trend under Base, Upside, and Downside scenarios",
+    getSeries: (result) => result.months.map((m) => m.nrr),
+    getCaption: (result, assumptions) => {
+      const status = classifyNRR(result.endingNRR);
+      const tone = NRR_STATUS_TONE[status];
+      const churnPct = formatPct(assumptions.monthlyChurnRate, 1);
+      const nrrPct = formatPct(result.endingNRR, 1);
+
+      let alertLead: string;
+      let alertExplanation: string;
+      if (status === "Strong" || status === "Healthy") {
+        alertLead = status === "Strong" ? "Net revenue retention is strong." : "Net revenue retention is healthy.";
+        alertExplanation = `NRR sits at ${nrrPct} against the existing customer base — the fixed expansion assumption is outweighing a ${churnPct} monthly churn rate and contraction.`;
+      } else if (status === "Watch") {
+        alertLead = "Net revenue retention is in a watch band.";
+        alertExplanation = `NRR sits at ${nrrPct} against the existing customer base — a ${churnPct} monthly churn rate is currently outweighing the fixed expansion assumption, though not by a wide margin.`;
+      } else {
+        alertLead = "Net revenue retention is weak.";
+        alertExplanation = `NRR sits at ${nrrPct} against the existing customer base — a ${churnPct} monthly churn rate is eroding it faster than the fixed expansion assumption can offset.`;
+      }
+      return { badge: { label: status, tone }, alertTone: tone, alertLead, alertExplanation };
+    },
+    explainer:
+      "Net revenue retention (NRR) measures revenue kept from the existing customer base alone — expansion and contraction within that base, net of churn, excluding new logos. Above 100% means the existing base is growing on its own; below 100% means churn and contraction are shrinking it even before counting new sales.",
+  },
+  {
+    key: "cashRunway",
+    chartLabel: "Cash Runway",
+    statLabel: "Cash",
+    valueFormat: { kind: "currency" },
+    ariaLabel: "12-month cash balance forecast under Base, Upside, and Downside scenarios",
+    getSeries: (result) => result.months.map((m) => m.cash),
+    getCaption: (result) => {
+      const status = classifyRunway(result.runwayMonths);
+      const tone = RUNWAY_STATUS_TONE[status];
+      const endingCash = result.endingCash;
+
+      let alertLead: string;
+      let alertExplanation: string;
+      if (endingCash < 0) {
+        alertLead = "Cash has run out.";
+        alertExplanation = `Ending cash is ${formatUsdCompact(endingCash)} — the business has burned through its full starting cash cushion within the window.`;
+      } else if (status === "Self-funded") {
+        alertLead = "Cash is self-funding.";
+        alertExplanation = `The business is cash-flow positive at the ending run-rate, closing at ${formatUsdCompact(endingCash)} — no runway ceiling applies.`;
+      } else if (status === "Safe") {
+        alertLead = "Runway is comfortable.";
+        alertExplanation = `At ${(result.runwayMonths ?? 0).toFixed(1)} months of runway and ${formatUsdCompact(endingCash)} ending cash, burn is well covered by the starting cushion.`;
+      } else if (status === "Watch") {
+        alertLead = "Runway is in a caution band.";
+        alertExplanation = `At ${(result.runwayMonths ?? 0).toFixed(1)} months of runway and ${formatUsdCompact(endingCash)} ending cash, the cushion is adequate for now but worth watching if burn doesn't improve.`;
+      } else {
+        alertLead = "Runway is critical.";
+        alertExplanation = `At ${(result.runwayMonths ?? 0).toFixed(1)} months of runway and ${formatUsdCompact(endingCash)} ending cash, burn would exhaust the cushion well within a year at the current rate.`;
+      }
+      return { badge: { label: status, tone }, alertTone: tone, alertLead, alertExplanation };
+    },
+    explainer:
+      "Cash runway is how long the business can keep operating at its current burn rate before running out of money. A business that's cash-flow positive has no runway ceiling; a shrinking runway means the starting cash cushion is being spent down faster than it's being replenished.",
+  },
+];
 
 export type SensitivityDriverKey = SaaSDriverKey;
 

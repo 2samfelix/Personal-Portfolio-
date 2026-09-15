@@ -11,7 +11,12 @@ import {
   classifyMargin,
   classifyRunway,
   classifyTrend,
+  formatPct,
+  formatUsdCompact,
+  MARGIN_STATUS_LABEL,
+  type BadgeTone,
   type CashStatus,
+  type ChartConfig,
   type Decision,
   type DriverConfig,
   type MarginStatus,
@@ -277,6 +282,125 @@ export function classifyUtilization(achievedUtilization: number): UtilizationSta
 
 export { classifyMargin, classifyRunway };
 export type { CashStatus, Decision, MarginStatus, RunwayStatus };
+
+const UTILIZATION_STATUS_TONE: Record<UtilizationStatus, BadgeTone> = {
+  Healthy: "good",
+  Watch: "neutral",
+  Weak: "bad",
+};
+
+const MARGIN_STATUS_TONE: Record<MarginStatus, BadgeTone> = {
+  Strong: "good",
+  Profitable: "good",
+  NearBreakeven: "neutral",
+  ApproachingBreakeven: "neutral",
+  MateriallyUnprofitable: "bad",
+};
+
+/**
+ * The three Consulting charts (exactly these, in this order). Net revenue
+ * and margin are flat month-to-month under fixed drivers (see
+ * runConsultingForecast) — badging on trend would read "Flat" for every
+ * scenario regardless of how severe Downside is, so instead each chart
+ * badges on the health classifier that actually explains its level:
+ * utilization (the firm's real capacity constraint) drives both billed
+ * revenue and utilization itself, and margin drives the EBITDA chart.
+ */
+export const CONSULTING_CHARTS: ChartConfig<ConsultingForecastResult, ConsultingAssumptions>[] = [
+  {
+    key: "netRevenue",
+    chartLabel: "Net Revenue",
+    statLabel: "Net Revenue",
+    valueFormat: { kind: "currency" },
+    ariaLabel: "12-month net revenue under Base, Upside, and Downside scenarios",
+    getSeries: (result) => result.months.map((m) => m.netRevenue),
+    getCaption: (result) => {
+      const utilStatus = classifyUtilization(result.endingUtilization);
+      const tone = UTILIZATION_STATUS_TONE[utilStatus];
+      const monthlyRevenue = result.months[0].netRevenue;
+      const utilPct = formatPct(result.endingUtilization, 0);
+
+      let alertLead: string;
+      let alertExplanation: string;
+      if (utilStatus === "Healthy") {
+        alertLead = "Net revenue is well-supported.";
+        alertExplanation = `Monthly net revenue runs at ${formatUsdCompact(monthlyRevenue)}, on ${utilPct} achieved utilization — pipeline conversion is comfortably keeping billable capacity booked.`;
+      } else if (utilStatus === "Watch") {
+        alertLead = "Net revenue is below full capacity.";
+        alertExplanation = `Monthly net revenue runs at ${formatUsdCompact(monthlyRevenue)}, on ${utilPct} achieved utilization — pipeline conversion is only partially keeping billable capacity booked, leaving some revenue on the table.`;
+      } else {
+        alertLead = "Net revenue is capacity-constrained.";
+        alertExplanation = `Monthly net revenue runs at ${formatUsdCompact(monthlyRevenue)}, on just ${utilPct} achieved utilization — insufficient pipeline conversion is leaving significant billable capacity on the bench, unbilled.`;
+      }
+      return { badge: { label: utilStatus, tone }, alertTone: tone, alertLead, alertExplanation };
+    },
+    explainer:
+      "Net revenue is billed hours (capacity x achieved utilization) times the average bill rate. Because drivers are held constant across the window, revenue doesn't grow or shrink month to month here — it's a level set by how much of the firm's capacity pipeline conversion is actually keeping booked.",
+  },
+  {
+    key: "utilizationTrend",
+    chartLabel: "Utilization Trend",
+    statLabel: "Achieved Utilization",
+    valueFormat: { kind: "percent", digits: 0 },
+    ariaLabel: "12-month achieved utilization under Base, Upside, and Downside scenarios",
+    getSeries: (result) => result.months.map((m) => m.achievedUtilization),
+    getCaption: (result, assumptions) => {
+      const status = classifyUtilization(result.endingUtilization);
+      const tone = UTILIZATION_STATUS_TONE[status];
+      const utilPct = formatPct(result.endingUtilization, 0);
+      const targetPct = formatPct(assumptions.utilizationPct, 0);
+      const conversionPct = formatPct(assumptions.pipelineConversionPct, 0);
+
+      let alertLead: string;
+      let alertExplanation: string;
+      if (status === "Healthy") {
+        alertLead = "Utilization is healthy.";
+        alertExplanation = `Achieved utilization is ${utilPct} against a ${targetPct} target, at ${conversionPct} pipeline conversion — comfortably keeping the bench booked.`;
+      } else if (status === "Watch") {
+        alertLead = "Utilization is below target.";
+        alertExplanation = `Achieved utilization is ${utilPct} against a ${targetPct} target — ${conversionPct} pipeline conversion is only partially keeping the bench booked.`;
+      } else {
+        alertLead = "Utilization is weak.";
+        alertExplanation = `Achieved utilization is ${utilPct} against a ${targetPct} target — ${conversionPct} pipeline conversion is insufficient to keep the bench booked, leaving significant bench time.`;
+      }
+      return { badge: { label: status, tone }, alertTone: tone, alertLead, alertExplanation };
+    },
+    explainer:
+      "Achieved utilization is the share of billable capacity actually billed, after pipeline conversion adjusts target utilization up or down (see the Model Assumptions panel for the formula). Above ~75% is healthy; below ~60% means significant bench time the firm is already paying delivery cost for.",
+  },
+  {
+    key: "ebitdaMarginTrend",
+    chartLabel: "EBITDA Margin Trend",
+    statLabel: "EBITDA Margin",
+    valueFormat: { kind: "percent", digits: 1 },
+    ariaLabel: "12-month EBITDA margin under Base, Upside, and Downside scenarios",
+    getSeries: (result) => result.months.map((m) => m.ebitdaMargin),
+    getCaption: (result) => {
+      const status = classifyMargin(result.endingEBITDAMargin);
+      const tone = MARGIN_STATUS_TONE[status];
+      const marginPct = formatPct(result.endingEBITDAMargin, 1);
+
+      let alertLead: string;
+      let alertExplanation: string;
+      if (status === "Strong" || status === "Profitable") {
+        alertLead = `EBITDA margin is ${status === "Strong" ? "strong" : "solidly positive"}.`;
+        alertExplanation = `EBITDA margin runs at ${marginPct} — delivery cost and SG&A leave a comfortable profit after billed revenue.`;
+      } else if (status === "NearBreakeven") {
+        alertLead = "EBITDA margin is only modestly positive.";
+        alertExplanation = `EBITDA margin runs at ${marginPct}, just above breakeven — delivery cost and SG&A leave little cushion.`;
+      } else if (status === "ApproachingBreakeven") {
+        alertLead = "EBITDA margin is still negative.";
+        alertExplanation = `EBITDA margin runs at ${marginPct}, approaching breakeven — delivery cost and SG&A aren't yet covered by billed revenue, though the gap is closing.`;
+      } else {
+        alertLead = "EBITDA margin is materially negative.";
+        alertExplanation = `EBITDA margin runs at ${marginPct} — delivery cost and SG&A aren't supported by billed revenue at this scale.`;
+      }
+      return { badge: { label: MARGIN_STATUS_LABEL[status], tone }, alertTone: tone, alertLead, alertExplanation };
+    },
+    explainer:
+      "EBITDA margin here is project margin (net revenue minus delivery cost) minus SG&A, as a share of net revenue. It's the firm's bottom-line operating profitability after both the cost of delivering the work and the overhead of selling and running the firm.",
+  },
+];
 
 /**
  * Consulting's own decision framework — deliberately NOT a reuse of the
