@@ -45,6 +45,7 @@ import {
   classifyConsultingCash,
   classifyUtilization,
   consultingScenarioPresets,
+  decideConsultingStance,
   explainConsultingDecision,
   meridianBaseline,
   runConsultingForecast,
@@ -61,6 +62,7 @@ import {
   classifyOccupancy,
   classifyRealEstateCash,
   debtServiceCoverageRatio,
+  decideRealEstateStance,
   explainRealEstateDecision,
   harborViewBaseline,
   realEstateScenarioPresets,
@@ -271,9 +273,20 @@ const ARR_TONE: Record<ArrTrend, BadgeTone> = {
   Contracting: "bad",
 };
 const MARGIN_TONE: Record<MarginStatus, BadgeTone> = {
-  Healthy: "good",
-  Watch: "neutral",
-  Negative: "bad",
+  Strong: "good",
+  Profitable: "good",
+  NearBreakeven: "neutral",
+  ApproachingBreakeven: "neutral",
+  MateriallyUnprofitable: "bad",
+};
+// Profitability-language badge text — kept short for the KPI card (the
+// full explanation lives in the CFO Commentary / Key Risk prose).
+const MARGIN_BADGE_LABEL: Record<MarginStatus, string> = {
+  Strong: "Strong",
+  Profitable: "Profitable",
+  NearBreakeven: "Near Breakeven",
+  ApproachingBreakeven: "Approaching Breakeven",
+  MateriallyUnprofitable: "Materially Unprofitable",
 };
 const CASH_TONE: Record<CashStatus, BadgeTone> = {
   Strong: "good",
@@ -296,6 +309,25 @@ const LTV_CAC_TONE: Record<LtvCacStatus, BadgeTone> = {
   Healthy: "good",
   Watch: "neutral",
   Weak: "bad",
+};
+const DSCR_TONE: Record<DebtCoverageStatus, BadgeTone> = {
+  Strong: "good",
+  Healthy: "good",
+  Watch: "neutral",
+  Weak: "bad",
+};
+const REAL_ESTATE_DSCR_PHRASE: Record<DebtCoverageStatus, string> = {
+  Strong: "a strong cushion well above typical lender covenants",
+  Healthy: "a comfortable cushion above typical lender covenants",
+  Watch: "a thin cushion above break-even coverage — worth watching, not yet a covenant-level concern",
+  Weak: "below the coverage a lender would consider safe, meaning NOI barely covers (or doesn't cover) debt service",
+};
+const REAL_ESTATE_MARGIN_PHRASE: Record<MarginStatus, string> = {
+  Strong: "a strong free cash flow position after debt service",
+  Profitable: "a solidly positive free cash flow position after debt service",
+  NearBreakeven: "only modestly positive free cash flow, just above breakeven",
+  ApproachingBreakeven: "still free-cash-flow negative after debt service, though approaching breakeven",
+  MateriallyUnprofitable: "materially free-cash-flow negative after debt service",
 };
 
 // Same runway thresholds as RUNWAY_TONE/classifyRunway, relabeled for the
@@ -1454,10 +1486,7 @@ export default function FpaDecisionLab() {
       ),
     [consultingAssumptions, consultingSensitivityTab]
   );
-  const consultingDecision = decideStance(
-    consultingResult.runwayMonths,
-    consultingResult.endingEBITDAMargin
-  );
+  const consultingDecision = decideConsultingStance(consultingResult);
   const consultingDecisionReasons = explainConsultingDecision(consultingResult, consultingDecision);
   const consultingMatchedPresetKey =
     (["base", "upside", "downside"] as ConsultingScenarioKey[]).find(
@@ -1520,10 +1549,7 @@ export default function FpaDecisionLab() {
       ),
     [realEstateAssumptions, realEstateSensitivityTab]
   );
-  const realEstateDecision = decideStance(
-    realEstateResult.runwayMonths,
-    realEstateResult.endingFreeCashFlowMargin
-  );
+  const realEstateDecision = decideRealEstateStance(realEstateResult, realEstateAssumptions);
   const realEstateDecisionReasons = explainRealEstateDecision(
     realEstateResult,
     realEstateAssumptions,
@@ -1543,6 +1569,7 @@ export default function FpaDecisionLab() {
   const realEstateDscrStatus = classifyDebtCoverage(realEstateDscr);
   const realEstateCashStatus = classifyRealEstateCash(realEstateResult.endingCash, harborViewBaseline);
   const realEstateRunwayStatus = classifyRunway(realEstateResult.runwayMonths);
+  const realEstateMarginStatus = classifyMargin(realEstateResult.endingFreeCashFlowMargin);
   const realEstateRiskAndAction = useMemo(
     () => buildRealEstateRiskAndAction(realEstateResult, realEstateAssumptions),
     [realEstateResult, realEstateAssumptions]
@@ -2247,7 +2274,7 @@ export default function FpaDecisionLab() {
                 <KpiCard
                   label="EBITDA Margin"
                   value={formatPercent(activeResult.endingEBITDAMargin)}
-                  badge={marginStatus}
+                  badge={MARGIN_BADGE_LABEL[marginStatus]}
                   tone={MARGIN_TONE[marginStatus]}
                 />
                 <KpiCard
@@ -2279,10 +2306,15 @@ export default function FpaDecisionLab() {
               </div>
               <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
                 CAC {formatCurrency(activeResult.cac)}{" "}
-                (blended: annual S&amp;M spend ÷ new customers acquired over
-                the year) · LTV {formatCurrency(activeResult.ltv)}{" "}
+                (blended: ALL annual S&amp;M spend ÷ new customers acquired
+                over the year — the model has one combined S&amp;M line, so
+                this includes retention/expansion-oriented spend too, not
+                only acquisition-specific cost, which can understate true
+                acquisition CAC) · LTV {formatCurrency(activeResult.ltv)}{" "}
                 (gross-margin-adjusted monthly ARPU ÷ monthly logo churn
-                rate).
+                rate — churn is monthly and used directly, so 1 ÷ monthly
+                churn is the expected customer lifetime in months; nothing
+                is annualized).
               </p>
             </section>
 
@@ -2695,9 +2727,13 @@ export default function FpaDecisionLab() {
                     read is to &ldquo;{consultingDecision.toLowerCase()}.&rdquo;
                   </p>
                   <p className="mt-1 text-xs leading-4 text-charcoal-soft">
-                    Deterministic thresholds: runway &gt;18mo + positive
-                    margin &rarr; Invest for growth; 12–18mo &rarr; Run
-                    cautiously; &lt;12mo &rarr; Preserve cash.
+                    Deterministic thresholds: weak achieved utilization
+                    (&lt;60%) or a margin that isn&apos;t at least
+                    profitable &rarr; never &ldquo;Invest for growth&rdquo;,
+                    even with ample runway; otherwise runway &gt;18mo +
+                    profitable margin + healthy utilization (&ge;75%)
+                    &rarr; Invest for growth; runway &ge;12mo &rarr; Run
+                    cautiously; else &rarr; Preserve cash.
                   </p>
                 </section>
 
@@ -2734,14 +2770,8 @@ export default function FpaDecisionLab() {
                     <KpiCard
                       label="EBITDA Margin"
                       value={formatPercent(consultingResult.endingEBITDAMargin)}
-                      badge={consultingMarginStatus}
-                      tone={
-                        consultingMarginStatus === "Healthy"
-                          ? "good"
-                          : consultingMarginStatus === "Watch"
-                            ? "neutral"
-                            : "bad"
-                      }
+                      badge={MARGIN_BADGE_LABEL[consultingMarginStatus]}
+                      tone={MARGIN_TONE[consultingMarginStatus]}
                     />
                     <KpiCard
                       label="Ending Cash"
@@ -3023,9 +3053,14 @@ export default function FpaDecisionLab() {
                     read is to &ldquo;{realEstateDecision.toLowerCase()}.&rdquo;
                   </p>
                   <p className="mt-1 text-xs leading-4 text-charcoal-soft">
-                    Deterministic thresholds: runway &gt;18mo + positive free
-                    cash flow margin &rarr; Invest for growth; 12–18mo &rarr;
-                    Run cautiously; &lt;12mo &rarr; Preserve cash.
+                    Deterministic thresholds: debt service coverage below
+                    1.10x &rarr; Preserve cash regardless of runway or
+                    margin; 1.10–1.25x &rarr; never better than
+                    &ldquo;Run cautiously&rdquo;; otherwise (DSCR
+                    &ge;1.25x) runway &gt;18mo + positive free cash flow
+                    margin + occupancy not weak &rarr; Invest for growth;
+                    runway &ge;12mo &rarr; Run cautiously; else &rarr;
+                    Preserve cash.
                   </p>
                 </section>
 
@@ -3095,13 +3130,7 @@ export default function FpaDecisionLab() {
                       label="Debt Service Coverage"
                       value={`${realEstateDscr.toFixed(2)}x`}
                       badge={realEstateDscrStatus}
-                      tone={
-                        realEstateDscrStatus === "Healthy"
-                          ? "good"
-                          : realEstateDscrStatus === "Watch"
-                            ? "neutral"
-                            : "bad"
-                      }
+                      tone={DSCR_TONE[realEstateDscrStatus]}
                     />
                     <KpiCard
                       label="Implied Valuation"
@@ -3308,7 +3337,8 @@ export default function FpaDecisionLab() {
                       <span className="font-semibold text-brass">Profitability: </span>
                       NOI margin is {formatPercent(realEstateResult.endingNOIMargin)}, landing at{" "}
                       {formatPercent(realEstateResult.endingFreeCashFlowMargin)} free cash flow
-                      margin after debt service.
+                      margin after debt service —{" "}
+                      {REAL_ESTATE_MARGIN_PHRASE[realEstateMarginStatus]}.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
                       <span className="font-semibold text-brass">Cash Position: </span>
@@ -3319,12 +3349,7 @@ export default function FpaDecisionLab() {
                     <p className="text-sm leading-6 text-charcoal">
                       <span className="font-semibold text-brass">Debt Coverage: </span>
                       NOI covers debt service at {realEstateDscr.toFixed(2)}x —{" "}
-                      {realEstateDscrStatus === "Healthy"
-                        ? "a comfortable cushion above typical lender covenants"
-                        : realEstateDscrStatus === "Watch"
-                          ? "a thin cushion above break-even coverage"
-                          : "below break-even, meaning NOI alone doesn't fully cover debt service"}
-                      .
+                      {REAL_ESTATE_DSCR_PHRASE[realEstateDscrStatus]}.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
                       <span className="font-semibold text-brass">Key Risk: </span>

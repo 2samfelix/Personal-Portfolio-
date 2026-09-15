@@ -11,7 +11,6 @@ import {
   classifyMargin,
   classifyRunway,
   classifyTrend,
-  decideStance,
   type CashStatus,
   type Decision,
   type MarginStatus,
@@ -201,21 +200,58 @@ export function classifyUtilization(achievedUtilization: number): UtilizationSta
   return "Weak";
 }
 
-export { classifyMargin, classifyRunway, decideStance };
+export { classifyMargin, classifyRunway };
 export type { CashStatus, Decision, MarginStatus, RunwayStatus };
 
 /**
+ * Consulting's own decision framework — deliberately NOT a reuse of the
+ * shared runway+margin-only decideStance(), because a services firm's real
+ * constraint is billable capacity: a firm can have a comfortable runway and
+ * even a strong margin while badly under-utilized (bench time it's already
+ * paying delivery staff for), and that structural problem shouldn't be
+ * waved through to "invest for growth" — hiring more heads onto a bench
+ * that's already under-booked only compounds it. Utilization gates the top
+ * tier the way DSCR gates Real Estate's; margin still matters, but on its
+ * own it isn't sufficient.
+ */
+export function decideConsultingStance(result: ConsultingForecastResult): Decision {
+  const marginStatus = classifyMargin(result.endingEBITDAMargin);
+  const utilizationStatus = classifyUtilization(result.endingUtilization);
+  const runway = result.runwayMonths;
+  const runwayOk = runway === null || runway > 18;
+
+  // Weak utilization (insufficient pipeline conversion to keep the bench
+  // booked) is a structural revenue-generation problem that caps the
+  // recommendation regardless of how the margin currently looks — margin
+  // earned at under-booked utilization is fragile, not a base to grow from.
+  if (utilizationStatus === "Weak") {
+    return runwayOk ? "Run cautiously" : "Preserve cash";
+  }
+  if (marginStatus === "MateriallyUnprofitable" || marginStatus === "ApproachingBreakeven") {
+    return runwayOk ? "Run cautiously" : "Preserve cash";
+  }
+  if (
+    runwayOk &&
+    (marginStatus === "Strong" || marginStatus === "Profitable") &&
+    utilizationStatus === "Healthy"
+  ) {
+    return "Invest for growth";
+  }
+  if (runway === null || runway >= 12) return "Run cautiously";
+  return "Preserve cash";
+}
+
+/**
  * Generates 2-3 short, deterministic reasons behind a decision — built from
- * the same runway/margin thresholds decideStance uses, plus achieved
- * utilization, which is this industry's own operating-health signal (the
- * SaaS engine uses ARR trend for the equivalent role).
+ * the same runway/margin/utilization signals decideConsultingStance uses,
+ * so the reasons and the recommendation can never disagree.
  */
 export function explainConsultingDecision(
   result: ConsultingForecastResult,
   decision: Decision
 ): string[] {
   const runway = result.runwayMonths;
-  const margin = result.endingEBITDAMargin;
+  const marginStatus = classifyMargin(result.endingEBITDAMargin);
   const utilization = result.endingUtilization;
   const reasons: string[] = [];
 
@@ -231,19 +267,25 @@ export function explainConsultingDecision(
     reasons.push(`Runway has fallen below 12 months (${runway.toFixed(1)} months)`);
   }
 
-  if (margin > 0) {
-    reasons.push(`EBITDA margin is positive (${(margin * 100).toFixed(1)}%)`);
-  } else {
-    reasons.push(`EBITDA margin is still negative (${(margin * 100).toFixed(1)}%)`);
-  }
+  const marginPct = (result.endingEBITDAMargin * 100).toFixed(1);
+  const marginReasonText: Record<MarginStatus, string> = {
+    Strong: `EBITDA margin is strong (${marginPct}%)`,
+    Profitable: `EBITDA margin is solidly positive (${marginPct}%)`,
+    NearBreakeven: `EBITDA margin is only modestly positive, near breakeven (${marginPct}%)`,
+    ApproachingBreakeven: `EBITDA margin is still negative, approaching breakeven (${marginPct}%)`,
+    MateriallyUnprofitable: `EBITDA margin is materially negative (${marginPct}%)`,
+  };
+  reasons.push(marginReasonText[marginStatus]);
 
   const utilizationStatus = classifyUtilization(utilization);
   if (utilizationStatus === "Healthy") {
     reasons.push(`Achieved utilization is healthy (${(utilization * 100).toFixed(1)}%)`);
   } else if (utilizationStatus === "Watch") {
-    reasons.push(
-      `Achieved utilization is below target (${(utilization * 100).toFixed(1)}%) — pipeline conversion isn't fully keeping the bench booked`
-    );
+    const suffix =
+      decision === "Invest for growth"
+        ? ", short of the healthy band this recommendation would ideally want"
+        : " — pipeline conversion isn't fully keeping the bench booked";
+    reasons.push(`Achieved utilization is below target (${(utilization * 100).toFixed(1)}%)${suffix}`);
   } else {
     const suffix =
       decision !== "Invest for growth" ? "" : ", a risk despite the runway and margin picture";
@@ -256,11 +298,14 @@ export function explainConsultingDecision(
 }
 
 /**
- * Key Risk / Next Action for the CFO Commentary panel — same fixed
- * priority order as the SaaS engine's equivalent (cash first, then
- * profitability, then this industry's own operating-health signal, then
- * top-line direction), tied to the same decideStance thresholds so the
- * commentary and the Recommendation banner can never disagree.
+ * Key Risk / Next Action for the CFO Commentary panel. Two tiers, same
+ * structure as the SaaS engine's equivalent: Tier 1 covers metrics
+ * materially outside a healthy range, Tier 2 covers a metric merely in a
+ * cautionary Watch/ApproachingBreakeven band. The "no material risk"
+ * fallback is only reachable when neither tier finds anything, so it can
+ * never fire while a badge on screen reads Watch or worse. Uses
+ * decideConsultingStance (not the shared runway+margin-only decideStance)
+ * so Next Action always agrees with the Recommendation banner.
  */
 export function buildConsultingRiskAndAction(
   result: ConsultingForecastResult
@@ -270,6 +315,7 @@ export function buildConsultingRiskAndAction(
   const cashStatus = classifyConsultingCash(result.endingCash);
   const utilizationStatus = classifyUtilization(result.endingUtilization);
   const trendStatus = classifyConsultingTrend(result);
+  const marginPct = (result.endingEBITDAMargin * 100).toFixed(1);
 
   let keyRiskPhrase: string;
   if (runwayStatus === "Critical") {
@@ -278,20 +324,26 @@ export function buildConsultingRiskAndAction(
   } else if (cashStatus === "Low") {
     keyRiskPhrase =
       "Ending cash is tight relative to the starting balance, leaving little cushion for a downside surprise.";
-  } else if (marginStatus === "Negative") {
-    keyRiskPhrase =
-      "EBITDA margin remains materially negative — delivery cost and SG&A aren't yet supported by billed revenue at this scale.";
+  } else if (marginStatus === "MateriallyUnprofitable") {
+    keyRiskPhrase = `EBITDA margin is materially negative (${marginPct}%) — delivery cost and SG&A aren't supported by billed revenue at this scale.`;
   } else if (utilizationStatus === "Weak") {
     keyRiskPhrase =
       "Achieved utilization is weak — insufficient pipeline conversion is leaving significant bench time, the firm's main lever on profitability.";
   } else if (trendStatus === "Contracting") {
     keyRiskPhrase = "Net revenue is contracting over the window.";
+  } else if (marginStatus === "ApproachingBreakeven") {
+    keyRiskPhrase = `EBITDA margin is still negative (${marginPct}%), approaching breakeven — not yet a material risk, but worth watching.`;
+  } else if (utilizationStatus === "Watch") {
+    keyRiskPhrase =
+      `Achieved utilization is below target (${(result.endingUtilization * 100).toFixed(1)}%) — pipeline conversion isn't fully keeping the bench booked, though not yet a material shortfall.`;
+  } else if (runwayStatus === "Watch") {
+    keyRiskPhrase = `Runway is in the 12-18 month caution band (${(result.runwayMonths ?? 0).toFixed(1)} months) — worth watching, though not yet critical.`;
   } else {
     keyRiskPhrase =
       "No metric is outside a healthy band at these assumptions — the main risk is an unmodeled external shock.";
   }
 
-  const decision = decideStance(result.runwayMonths, result.endingEBITDAMargin);
+  const decision = decideConsultingStance(result);
   const nextActionPhrase: Record<Decision, string> = {
     "Invest for growth":
       "Continue investing in growth (headcount, bid rate) while keeping an eye on the risk above so it doesn't become the binding constraint.",

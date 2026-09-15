@@ -687,9 +687,11 @@ export function buildCfoCommentaryData(
   };
 
   const marginPhrase: Record<MarginStatus, string> = {
-    Healthy: "moving the business into positive operating profitability",
-    Watch: "keeping the business close to breakeven but still burning cash",
-    Negative: "leaving the business materially unprofitable at the current cost base",
+    Strong: "reflecting strong, durable operating profitability",
+    Profitable: "reflecting solid operating profitability",
+    NearBreakeven: "keeping the business only modestly profitable, just above breakeven",
+    ApproachingBreakeven: "leaving the business still loss-making, though approaching breakeven",
+    MateriallyUnprofitable: "leaving the business materially unprofitable at the current cost base",
   };
 
   const cashHealthPhrase: Record<CashStatus, string> = {
@@ -711,6 +713,20 @@ export function buildCfoCommentaryData(
     Watch: "acquiring customers at a cost that leaves a thinner-than-ideal margin of safety against lifetime value",
     Weak: "spending more to acquire customers than their lifetime value comfortably supports",
   };
+  // A very high ratio is a caution, not automatically a win: with CAC
+  // derived from blended S&M spend and no independent acquisition-spend
+  // input, a ratio this high more plausibly reflects under-investment in
+  // acquisition (spending too little to grow as fast as the unit economics
+  // would support) or the model's simplified assumptions than a genuinely
+  // elite efficiency profile. Never hidden or capped — the number is shown
+  // as computed — but the phrase adds the caveat rather than treating a
+  // bigger number as unambiguously better.
+  const VERY_HIGH_LTV_TO_CAC = 8;
+  let ltvCacPhraseFull = ltvCacPhrase[ltvCacStatus];
+  if (result.ltvToCac >= VERY_HIGH_LTV_TO_CAC) {
+    ltvCacPhraseFull +=
+      " — though a ratio this high more likely reflects under-investment in acquisition spend or the model's simplified CAC/LTV assumptions than a genuinely elite efficiency profile, and is worth treating with some skepticism rather than as an unambiguous positive";
+  }
 
   const totalNewMRR = result.months.reduce((sum, m) => sum + m.newMRR, 0);
   const totalExpansionMRR = result.months.reduce((sum, m) => sum + m.expansionMRR, 0);
@@ -723,11 +739,17 @@ export function buildCfoCommentaryData(
     growthDriverPhrase = "by a mix of new customer acquisition and expansion within the existing base";
   }
 
-  // Key Risk: a fixed priority order (cash exhaustion first, since it's an
-  // existential constraint; then profitability, retention, unit economics,
-  // and finally top-line direction), not a severity score — picks the
-  // single most pressing issue rather than listing every metric that's off
-  // its healthy band.
+  // Key Risk: two tiers, each in a fixed priority order (cash exhaustion
+  // first, since it's an existential constraint; then profitability,
+  // retention, unit economics, and finally top-line direction) — not a
+  // severity score, picks the single most pressing issue. Tier 1 is
+  // metrics materially outside a healthy range (their own badge would read
+  // Critical/Weak/MateriallyUnprofitable/Contracting); Tier 2 covers a
+  // metric merely in a cautionary Watch/ApproachingBreakeven band. The
+  // "no material risk" fallback is only reachable when NEITHER tier finds
+  // anything — it must never fire while a badge on screen reads Watch or
+  // worse, which is exactly the contradiction ("close to breakeven" at a
+  // -29% margin) this two-tier structure exists to rule out.
   const runwayStatus = classifyRunway(result.runwayMonths);
   let keyRiskPhrase: string;
   if (runwayStatus === "Critical") {
@@ -735,14 +757,22 @@ export function buildCfoCommentaryData(
       "Runway has fallen below 12 months — cash exhaustion is the dominant risk if burn and spend don't change.";
   } else if (cashStatus === "Low") {
     keyRiskPhrase = "Ending cash is tight relative to the starting balance, leaving little cushion for a downside surprise.";
-  } else if (marginStatus === "Negative") {
-    keyRiskPhrase = "EBITDA margin remains materially negative — the cost base isn't yet supported by revenue at this scale.";
+  } else if (marginStatus === "MateriallyUnprofitable") {
+    keyRiskPhrase = `EBITDA margin is materially negative (${(result.endingEBITDAMargin * 100).toFixed(1)}%) — the cost base isn't supported by revenue at this scale.`;
   } else if (nrrStatus === "Weak") {
     keyRiskPhrase = "Net revenue retention is weak — churn and contraction are eroding the existing base faster than expansion offsets it.";
   } else if (ltvCacStatus === "Weak") {
     keyRiskPhrase = "LTV/CAC is weak — customer acquisition cost isn't comfortably supported by lifetime value at current assumptions.";
   } else if (arrTrend === "Contracting") {
     keyRiskPhrase = "ARR is contracting over the window — customer losses are outpacing new growth.";
+  } else if (marginStatus === "ApproachingBreakeven") {
+    keyRiskPhrase = `EBITDA margin is still negative (${(result.endingEBITDAMargin * 100).toFixed(1)}%), approaching breakeven — not yet a material risk, but worth watching.`;
+  } else if (runwayStatus === "Watch") {
+    keyRiskPhrase = `Runway is in the 12-18 month caution band (${(result.runwayMonths ?? 0).toFixed(1)} months) — worth watching, though not yet critical.`;
+  } else if (nrrStatus === "Watch") {
+    keyRiskPhrase = "Net revenue retention is in a watch band — contraction and churn currently outweigh expansion, though not by a wide margin.";
+  } else if (ltvCacStatus === "Watch") {
+    keyRiskPhrase = "LTV/CAC is in a watch band — acquisition cost leaves a thinner-than-ideal margin of safety against lifetime value.";
   } else {
     keyRiskPhrase = "No metric is outside a healthy band at these assumptions — the main risk is an unmodeled external shock.";
   }
@@ -778,7 +808,7 @@ export function buildCfoCommentaryData(
     cac: result.cac,
     ltv: result.ltv,
     ltvToCac: result.ltvToCac,
-    ltvCacPhrase: ltvCacPhrase[ltvCacStatus],
+    ltvCacPhrase: ltvCacPhraseFull,
     keyRiskPhrase,
     nextActionPhrase: nextActionPhrase[decision],
   };

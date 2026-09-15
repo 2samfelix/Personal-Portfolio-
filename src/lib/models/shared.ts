@@ -16,13 +16,36 @@ export function decideStance(runwayMonths: number | null, endingEBITDAMargin: nu
   return "Preserve cash";
 }
 
-export type MarginStatus = "Healthy" | "Watch" | "Negative";
+export type MarginStatus =
+  | "Strong"
+  | "Profitable"
+  | "NearBreakeven"
+  | "ApproachingBreakeven"
+  | "MateriallyUnprofitable";
 
-// Thresholds: >0% = Healthy, -40%..0% = Watch, <-40% = Negative.
-export function classifyMargin(endingEBITDAMargin: number): MarginStatus {
-  if (endingEBITDAMargin > 0) return "Healthy";
-  if (endingEBITDAMargin >= -0.4) return "Watch";
-  return "Negative";
+// Profitability-language thresholds, deliberately finer than a simple
+// positive/negative split. The old 2-bucket version ("Healthy" for any
+// margin >0%, "Watch" for anything from -40% to 0%) let a margin as bad as
+// -39% share the same badge and the same "close to breakeven" phrasing as
+// a margin of -2% — a real -29.4% case got the same treatment and produced
+// commentary claiming the business was "close to breakeven," which isn't
+// true. These bands fix that:
+//   >15%        = Strong        (comfortably, durably profitable)
+//   5% to 15%   = Profitable    (solidly profitable)
+//   0% to 5%    = NearBreakeven (barely profitable / modest profitability)
+//   -10% to 0%  = ApproachingBreakeven (still loss-making, but closing in)
+//   <-10%       = MateriallyUnprofitable (cost base isn't supported by
+//                 revenue at this scale — a real risk, not a rounding
+//                 error)
+// Applies identically to any margin-like ratio — SaaS/Consulting EBITDA
+// margin, Real Estate free cash flow margin — since "how profitable is
+// this" doesn't depend on which industry produced the number.
+export function classifyMargin(margin: number): MarginStatus {
+  if (margin > 0.15) return "Strong";
+  if (margin > 0.05) return "Profitable";
+  if (margin >= 0) return "NearBreakeven";
+  if (margin >= -0.1) return "ApproachingBreakeven";
+  return "MateriallyUnprofitable";
 }
 
 export type CashStatus = "Strong" | "Adequate" | "Low";

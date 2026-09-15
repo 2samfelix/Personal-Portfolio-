@@ -10,7 +10,6 @@ import {
   classifyMargin,
   classifyRunway,
   classifyTrend,
-  decideStance,
   type CashStatus,
   type Decision,
   type MarginStatus,
@@ -180,11 +179,14 @@ export function classifyOccupancy(occupancyPct: number): OccupancyStatus {
   return "Weak";
 }
 
-export type DebtCoverageStatus = "Healthy" | "Watch" | "Weak";
+export type DebtCoverageStatus = "Strong" | "Healthy" | "Watch" | "Weak";
 
 // Debt Service Coverage Ratio = annualized NOI / annual debt service.
-// Thresholds: >=1.25x = Healthy, 1.0-1.25x = Watch, <1.0x = Weak (NOI
-// doesn't fully cover debt service) — standard commercial-lending bands.
+// Thresholds (standard commercial-lending bands): >=1.50x = Strong,
+// 1.25-1.50x = Healthy, 1.10-1.25x = Watch, <1.10x = Weak — thin coverage
+// carrying real refinancing/covenant risk even when cash flow is
+// technically positive (a DSCR of ~1.0x means NOI barely clears debt
+// service with almost no cushion for a vacancy tick-up or rate reset).
 export function debtServiceCoverageRatio(
   result: RealEstateForecastResult,
   assumptions: RealEstateAssumptions
@@ -195,20 +197,59 @@ export function debtServiceCoverageRatio(
 }
 
 export function classifyDebtCoverage(dscr: number): DebtCoverageStatus {
+  if (dscr >= 1.5) return "Strong";
   if (dscr >= 1.25) return "Healthy";
-  if (dscr >= 1.0) return "Watch";
+  if (dscr >= 1.1) return "Watch";
   return "Weak";
 }
 
-export { classifyMargin, classifyRunway, decideStance };
+export { classifyMargin, classifyRunway };
 export type { CashStatus, Decision, MarginStatus, RunwayStatus };
 
 /**
+ * Real Estate's own decision framework — deliberately NOT a reuse of the
+ * shared runway+margin-only decideStance(), because a property's real
+ * constraint is debt-service risk: a portfolio can show "technically
+ * positive" free cash flow and a self-funded runway while NOI barely
+ * clears its debt service, which is a real lender-covenant / refinancing
+ * risk that has nothing to do with cash burn. DSCR gates the top tier the
+ * way utilization gates Consulting's — a thin DSCR can never be waved
+ * through to "invest for growth" purely because cash flow is positive.
+ */
+export function decideRealEstateStance(
+  result: RealEstateForecastResult,
+  assumptions: RealEstateAssumptions
+): Decision {
+  const dscr = debtServiceCoverageRatio(result, assumptions);
+  const dscrStatus = classifyDebtCoverage(dscr);
+  const runway = result.runwayMonths;
+  const runwayOk = runway === null || runway > 18;
+  const margin = result.endingFreeCashFlowMargin;
+  const occupancyStatus = classifyOccupancy(assumptions.occupancyPct);
+
+  // Weak DSCR (<1.10x) is a real risk regardless of runway/margin — NOI
+  // barely (or doesn't) cover debt service, leaving almost no cushion for
+  // a vacancy uptick or rate reset.
+  if (dscrStatus === "Weak") return "Preserve cash";
+  // Watch-band DSCR (1.10-1.25x) rules out the aggressive top tier, but
+  // still allows "Run cautiously" if the rest of the picture is fine.
+  if (dscrStatus === "Watch") {
+    return runwayOk ? "Run cautiously" : "Preserve cash";
+  }
+
+  // DSCR is Healthy or Strong (>=1.25x) — fall back to the standard
+  // runway/margin framework, with occupancy as an additional gate on the
+  // top tier: a comfortably-financed but poorly-occupied property
+  // shouldn't be called "invest for growth" on debt structure alone.
+  if (runwayOk && margin > 0 && occupancyStatus !== "Weak") return "Invest for growth";
+  if (runway === null || runway >= 12) return "Run cautiously";
+  return "Preserve cash";
+}
+
+/**
  * Generates 2-3 short, deterministic reasons behind a decision — built from
- * the same runway/margin thresholds decideStance uses, plus the debt
- * service coverage ratio, which is this industry's own operating-health
- * signal (the SaaS engine uses ARR trend, Consulting uses utilization, for
- * the equivalent role).
+ * the same runway/margin/DSCR signals decideRealEstateStance uses, so the
+ * reasons and the recommendation can never disagree.
  */
 export function explainRealEstateDecision(
   result: RealEstateForecastResult,
@@ -216,7 +257,7 @@ export function explainRealEstateDecision(
   decision: Decision
 ): string[] {
   const runway = result.runwayMonths;
-  const margin = result.endingFreeCashFlowMargin;
+  const marginStatus = classifyMargin(result.endingFreeCashFlowMargin);
   const dscr = debtServiceCoverageRatio(result, assumptions);
   const reasons: string[] = [];
 
@@ -232,17 +273,27 @@ export function explainRealEstateDecision(
     reasons.push(`Runway has fallen below 12 months (${runway.toFixed(1)} months)`);
   }
 
-  if (margin > 0) {
-    reasons.push(`Free cash flow margin is positive (${(margin * 100).toFixed(1)}%)`);
-  } else {
-    reasons.push(`Free cash flow margin is still negative (${(margin * 100).toFixed(1)}%)`);
-  }
+  const marginPct = (result.endingFreeCashFlowMargin * 100).toFixed(1);
+  const marginReasonText: Record<MarginStatus, string> = {
+    Strong: `Free cash flow margin is strong (${marginPct}%)`,
+    Profitable: `Free cash flow margin is solidly positive (${marginPct}%)`,
+    NearBreakeven: `Free cash flow margin is only modestly positive, near breakeven (${marginPct}%)`,
+    ApproachingBreakeven: `Free cash flow margin is still negative, approaching breakeven (${marginPct}%)`,
+    MateriallyUnprofitable: `Free cash flow margin is materially negative (${marginPct}%)`,
+  };
+  reasons.push(marginReasonText[marginStatus]);
 
   const dscrStatus = classifyDebtCoverage(dscr);
-  if (dscrStatus === "Healthy") {
+  if (dscrStatus === "Strong") {
+    reasons.push(`Debt service coverage is strong (${dscr.toFixed(2)}x)`);
+  } else if (dscrStatus === "Healthy") {
     reasons.push(`Debt service coverage is healthy (${dscr.toFixed(2)}x)`);
   } else if (dscrStatus === "Watch") {
-    reasons.push(`Debt service coverage is thin (${dscr.toFixed(2)}x)`);
+    const suffix =
+      decision === "Invest for growth"
+        ? ", short of the healthy band this recommendation would ideally want"
+        : "";
+    reasons.push(`Debt service coverage is thin (${dscr.toFixed(2)}x)${suffix}`);
   } else {
     const suffix =
       decision !== "Invest for growth" ? "" : ", a risk despite the runway and margin picture";
@@ -253,12 +304,14 @@ export function explainRealEstateDecision(
 }
 
 /**
- * Key Risk / Next Action for the CFO Commentary panel — same fixed
- * priority order as the SaaS and Consulting engines' equivalents (cash
- * first, then profitability, then this industry's own operating-health
- * signal, then top-line direction), tied to the same decideStance
- * thresholds so the commentary and the Recommendation banner can never
- * disagree.
+ * Key Risk / Next Action for the CFO Commentary panel. Two tiers, same
+ * structure as the SaaS and Consulting engines' equivalents: Tier 1 covers
+ * metrics materially outside a healthy range, Tier 2 covers a metric
+ * merely in a cautionary Watch/ApproachingBreakeven band. The "no material
+ * risk" fallback is only reachable when neither tier finds anything.
+ * Uses decideRealEstateStance (not the shared runway+margin-only
+ * decideStance) so Next Action always agrees with the Recommendation
+ * banner, including its DSCR gate.
  */
 export function buildRealEstateRiskAndAction(
   result: RealEstateForecastResult,
@@ -270,6 +323,7 @@ export function buildRealEstateRiskAndAction(
   const dscr = debtServiceCoverageRatio(result, assumptions);
   const dscrStatus = classifyDebtCoverage(dscr);
   const trendStatus = classifyRealEstateTrend(result);
+  const marginPct = (result.endingFreeCashFlowMargin * 100).toFixed(1);
 
   let keyRiskPhrase: string;
   if (runwayStatus === "Critical") {
@@ -278,20 +332,24 @@ export function buildRealEstateRiskAndAction(
   } else if (cashStatus === "Low") {
     keyRiskPhrase =
       "Ending cash is tight relative to the starting balance, leaving little cushion for a downside surprise.";
-  } else if (marginStatus === "Negative") {
-    keyRiskPhrase =
-      "Free cash flow margin remains materially negative — operating expenses and debt service aren't yet supported by rental revenue at this occupancy and rent.";
+  } else if (marginStatus === "MateriallyUnprofitable") {
+    keyRiskPhrase = `Free cash flow margin is materially negative (${marginPct}%) — operating expenses and debt service aren't supported by rental revenue at this occupancy and rent.`;
   } else if (dscrStatus === "Weak") {
-    keyRiskPhrase =
-      `NOI doesn't fully cover debt service (${dscr.toFixed(2)}x) — a lender covenant or refinancing risk even with adequate cash on hand.`;
+    keyRiskPhrase = `NOI doesn't fully cover debt service (${dscr.toFixed(2)}x) — a lender covenant or refinancing risk even with adequate cash on hand.`;
   } else if (trendStatus === "Contracting") {
     keyRiskPhrase = "NOI is contracting over the window.";
+  } else if (marginStatus === "ApproachingBreakeven") {
+    keyRiskPhrase = `Free cash flow margin is still negative (${marginPct}%), approaching breakeven — not yet a material risk, but worth watching.`;
+  } else if (dscrStatus === "Watch") {
+    keyRiskPhrase = `Debt service coverage is thin (${dscr.toFixed(2)}x) — worth watching, though not yet a covenant-level concern.`;
+  } else if (runwayStatus === "Watch") {
+    keyRiskPhrase = `Runway is in the 12-18 month caution band (${(result.runwayMonths ?? 0).toFixed(1)} months) — worth watching, though not yet critical.`;
   } else {
     keyRiskPhrase =
       "No metric is outside a healthy band at these assumptions — the main risk is an unmodeled external shock (rate reset, major vacancy).";
   }
 
-  const decision = decideStance(result.runwayMonths, result.endingFreeCashFlowMargin);
+  const decision = decideRealEstateStance(result, assumptions);
   const nextActionPhrase: Record<Decision, string> = {
     "Invest for growth":
       "Continue pursuing occupancy and rent growth while keeping an eye on the risk above so it doesn't become the binding constraint.",
