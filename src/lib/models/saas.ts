@@ -13,92 +13,136 @@ import {
   decideStance as sharedDecideStance,
   type CashStatus as SharedCashStatus,
   type Decision as SharedDecision,
+  type DriverConfig,
   type MarginStatus as SharedMarginStatus,
   type RunwayStatus as SharedRunwayStatus,
   type TrendStatus,
 } from "./shared";
 
+// Baseline now holds only what isn't a driver: the company name (cosmetic)
+// and starting cash. Starting customers and ARPU used to be hardcoded here,
+// out of the user's reach — they're now real drivers below.
 export type SaaSCompanyBaseline = {
   name: string;
-  startingARR: number;
-  startingCustomers: number;
-  annualArpu: number;
   startingCash: number;
 };
 
-// Fictional company used to seed the demo — disclosed in the UI as
-// illustrative, not a real client.
-export const northstarBaseline: SaaSCompanyBaseline = {
-  name: "Northstar Software",
-  startingARR: 2_000_000,
-  startingCustomers: 600,
-  annualArpu: 3_300,
-  startingCash: 3_500_000,
-};
-
-// Modeling constants the engine needs but the brief didn't specify. Kept
-// here (not hidden in a component) and surfaced in the UI as disclosed
-// assumptions, since this whole tool is explicitly illustrative.
+// Modeling constants the engine needs but that aren't drivers — disclosed
+// here, not hidden in a component, since this whole tool is illustrative.
+// STARTING_CASH is deliberately modest (not "however much a funded startup
+// would have") so that a genuinely bad Downside can actually run the
+// business out of cash within the 12-month window — a larger cushion would
+// make the Critical-runway/Depleted-cash decision branches undemonstrable
+// no matter how bad the operating assumptions get, since Base is
+// EBITDA-positive and never touches this cushion at all.
+export const STARTING_CASH = 1_800_000;
+// Headcount is no longer a slider — Sales & Marketing spend is now derived
+// from CAC x new customers acquired (see runSaaSForecast), so the only
+// remaining fixed opex is headcount and G&A, both disclosed as constants.
+export const FIXED_HEADCOUNT = 10; // heads, held constant across the window
 export const AVG_FULLY_LOADED_COST_PER_EMPLOYEE = 90_000; // $ / year
 export const FIXED_GA_MONTHLY = 15_000; // $ / month
+// Expansion/contraction are no longer user-adjustable drivers (SaaS keeps
+// exactly 6: see SAAS_DRIVERS below) but the retention bridge, MRR Bridge
+// chart, and NRR trend still need them, so they're fixed constants here.
+export const EXPANSION_RATE_CONSTANT = 0.01; // % of retained MRR that expands (upsell)
+export const CONTRACTION_RATE_CONSTANT = 0.005; // % of retained MRR that contracts (downsell)
+
+export const northstarBaseline: SaaSCompanyBaseline = {
+  name: "Northstar Software",
+  startingCash: STARTING_CASH,
+};
 
 export type SaaSAssumptions = {
-  monthlyGrowthRate: number; // e.g. 0.05 = 5% new customers/mo, relative to prior base
+  startingCustomers: number; // customers today — a starting fact, not a forward assumption
+  avgMrrPerCustomer: number; // $ / customer / month, applies to the whole book (existing + new)
+  monthlyGrowthRate: number; // e.g. 0.035 = 3.5% new customers/mo, relative to prior base
   monthlyChurnRate: number; // logo churn rate, e.g. 0.015 = 1.5% of customers/mo
-  pricingChangePct: number; // applied to NEW-customer ARPU only, e.g. 0.02 = +2%
-  grossMarginPct: number; // e.g. 0.80 = 80%
-  headcount: number; // heads, held constant across the 12-month window
-  annualSalesMarketing: number; // $ / year
-  monthlyExpansionRate: number; // % of retained MRR that expands (upsell), e.g. 0.01 = 1%
-  monthlyContractionRate: number; // % of retained MRR that contracts (downsell), e.g. 0.005 = 0.5%
+  cac: number; // $ per new customer acquired (blended); S&M spend = cac x new customers
+  grossMarginPct: number; // e.g. 0.78 = 78%
 };
 
-export type ScenarioKey = "base" | "upside" | "downside";
+export type SaaSDriverKey = keyof SaaSAssumptions;
 
-export const scenarioPresets: Record<
-  ScenarioKey,
-  { label: string; assumptions: SaaSAssumptions }
+// The 6 SaaS drivers — exactly these, each moving at least one displayed
+// output and none moving an output it shouldn't (see the driver-to-output
+// dependency map in the accompanying writeup). Sliders are rendered by
+// mapping over this array; there is no separate hardcoded slider list.
+export const SAAS_DRIVERS: DriverConfig<SaaSDriverKey>[] = [
+  { key: "startingCustomers", label: "Starting Customers", unit: "count", min: 100, max: 3000, step: 10 },
+  { key: "avgMrrPerCustomer", label: "Avg MRR per Customer", unit: "currency", min: 50, max: 800, step: 5 },
+  { key: "monthlyGrowthRate", label: "Monthly Growth % (new customers)", unit: "percent", min: 0, max: 0.15, step: 0.005 },
+  { key: "monthlyChurnRate", label: "Monthly Churn %", unit: "percent", min: 0, max: 0.08, step: 0.001 },
+  { key: "cac", label: "Customer CAC", unit: "currency", min: 500, max: 8000, step: 50 },
+  { key: "grossMarginPct", label: "Gross Margin %", unit: "percent", min: 0.4, max: 0.95, step: 0.01 },
+];
+
+const DRIVER_BOUNDS = new Map(SAAS_DRIVERS.map((d) => [d.key, d]));
+
+function clampToDriverBounds(key: SaaSDriverKey, value: number): number {
+  const driver = DRIVER_BOUNDS.get(key)!;
+  return Math.min(driver.max, Math.max(driver.min, value));
+}
+
+export type SaaSScenarioKey = "base" | "upside" | "downside";
+
+// Base is whatever the sliders currently say — these are only the
+// starting/default values shown on first load, not a fixed preset the
+// sliders snap back to.
+export const SAAS_BASE_DEFAULTS: SaaSAssumptions = {
+  startingCustomers: 600,
+  avgMrrPerCustomer: 300,
+  monthlyGrowthRate: 0.035,
+  monthlyChurnRate: 0.015,
+  cac: 3_200,
+  grossMarginPct: 0.78,
+};
+
+// Signed, directionally-aware per-driver deltas applied to Base to produce
+// Upside/Downside. A driver where higher is better (ARPU, growth, gross
+// margin) moves up in Upside and down in Downside; a driver where higher is
+// worse (churn, CAC) moves the opposite way — never a blanket +/-X% on
+// every driver. startingCustomers is omitted (delta 0 in both directions):
+// it's the company's starting point today, not a forward-looking
+// assumption a scenario should stress.
+export const SAAS_SCENARIO_DELTAS: Record<
+  Exclude<SaaSScenarioKey, "base">,
+  Partial<Record<SaaSDriverKey, number>>
 > = {
-  base: {
-    label: "Base",
-    assumptions: {
-      monthlyGrowthRate: 0.05,
-      monthlyChurnRate: 0.015,
-      pricingChangePct: 0.02,
-      grossMarginPct: 0.8,
-      headcount: 28, // 25 + 10%
-      annualSalesMarketing: 750_000,
-      monthlyExpansionRate: 0.01,
-      monthlyContractionRate: 0.005,
-    },
-  },
   upside: {
-    label: "Upside",
-    assumptions: {
-      monthlyGrowthRate: 0.08,
-      monthlyChurnRate: 0.01,
-      pricingChangePct: 0.03,
-      grossMarginPct: 0.8,
-      headcount: 28, // 25 + 12%, rounded
-      annualSalesMarketing: 750_000,
-      monthlyExpansionRate: 0.015,
-      monthlyContractionRate: 0.003,
-    },
+    avgMrrPerCustomer: 30,
+    monthlyGrowthRate: 0.015,
+    monthlyChurnRate: -0.002,
+    cac: -400,
+    grossMarginPct: 0.03,
   },
   downside: {
-    label: "Downside",
-    assumptions: {
-      monthlyGrowthRate: 0.01,
-      monthlyChurnRate: 0.025,
-      pricingChangePct: 0,
-      grossMarginPct: 0.8,
-      headcount: 26, // 25 + 5%, rounded
-      annualSalesMarketing: 750_000,
-      monthlyExpansionRate: 0.005,
-      monthlyContractionRate: 0.01,
-    },
+    avgMrrPerCustomer: -20,
+    monthlyGrowthRate: -0.015,
+    monthlyChurnRate: 0.025,
+    cac: 1_800,
+    grossMarginPct: -0.08,
   },
 };
+
+/**
+ * Base + this scenario's signed delta table, each driver clamped to its own
+ * slider bounds. If every delta in the table were 0, this returns Base
+ * unchanged for every scenario — the required "all three lines collapse
+ * onto one" property when deltas are zeroed out.
+ */
+export function applySaaSScenario(
+  base: SaaSAssumptions,
+  scenario: SaaSScenarioKey
+): SaaSAssumptions {
+  if (scenario === "base") return base;
+  const delta = SAAS_SCENARIO_DELTAS[scenario];
+  const out: SaaSAssumptions = { ...base };
+  (Object.keys(delta) as SaaSDriverKey[]).forEach((key) => {
+    out[key] = clampToDriverBounds(key, base[key] + (delta[key] ?? 0));
+  });
+  return out;
+}
 
 export type SaaSMonthResult = {
   month: number; // 1-12
@@ -123,8 +167,8 @@ export type SaaSMonthResult = {
   churnedMRR: number;
   // Net revenue retention using only the existing (non-new) customer base:
   // (beginningMRR + expansionMRR - contractionMRR - churnedMRR) / beginningMRR.
-  // New MRR is deliberately excluded — see runSaaSSensitivityByMetric-adjacent
-  // docs. This is a single month's NRR, not compounded/annualized.
+  // New MRR is deliberately excluded. This is a single month's NRR, not
+  // compounded/annualized.
   nrr: number;
 };
 
@@ -137,22 +181,23 @@ export type SaaSForecastResult = {
   // Month 12's NRR — the figure shown as the "NRR" KPI in the UI.
   endingNRR: number;
   // Mean of the 12 monthly NRR values. Under this model, NRR is driven
-  // entirely by the (constant) expansion/contraction/churn rates, so it is
-  // mathematically identical to endingNRR every month — both are exposed so
-  // a future version with time-varying retention rates doesn't need a new
-  // field.
+  // entirely by the (constant) expansion/contraction rates and the churn
+  // driver, so it is mathematically identical to endingNRR every month —
+  // both are exposed so a future version with time-varying retention rates
+  // doesn't need a new field.
   averageNRR: number;
-  // Blended Customer Acquisition Cost: total annual Sales & Marketing spend
-  // divided by total new customers acquired across the 12-month window. Not
-  // a new adjustable assumption — derived from existing ones (S&M spend,
-  // growth rate) so it moves consistently with the rest of the model instead
-  // of introducing an independent, possibly-inconsistent CAC input.
+  // Customer Acquisition Cost — a direct driver now (see SaaSAssumptions),
+  // not derived from spend / customers. Echoed back here so every place
+  // that reads a SaaSForecastResult has it without also needing the
+  // assumptions object.
   cac: number;
   // Gross-margin-adjusted customer lifetime value:
-  // (new-customer monthly ARPU x gross margin %) / monthly logo churn rate.
-  // This is the standard "ARPU / churn" LTV approximation for a monthly
+  // (avg MRR per customer x gross margin %) / monthly logo churn rate. This
+  // is the standard "ARPU / churn" LTV approximation for a monthly
   // subscription model, gross-margin-adjusted so it's comparable to CAC in
-  // gross-profit dollars rather than raw revenue dollars.
+  // gross-profit dollars rather than raw revenue dollars. Churn is used
+  // directly (monthly), never annualized — 1 / monthlyChurnRate is the
+  // expected customer lifetime in months.
   ltv: number;
   ltvToCac: number;
 };
@@ -161,36 +206,29 @@ export type SaaSForecastResult = {
  * Monthly SaaS retention bridge, in the order the money actually moves:
  *   1. Logo churn removes a share of existing customers (and a proportional
  *      share of their MRR) from the beginning-of-month base.
- *   2. Expansion/contraction are then applied to the *retained* MRR only —
- *      a customer that churns this month cannot also expand or contract in
- *      the same month.
- *   3. New customers arrive at "new customer ARPU" (the pricing-adjusted
- *      ARPU) and add New MRR on top.
+ *   2. Expansion/contraction (fixed model constants, not drivers) are then
+ *      applied to the *retained* MRR only — a customer that churns this
+ *      month cannot also expand or contract in the same month.
+ *   3. New customers arrive at the same avg-MRR-per-customer rate as the
+ *      existing book and add New MRR on top.
  * Ending MRR = Beginning MRR + New MRR + Expansion MRR - Contraction MRR
  *              - Churned MRR, reconciling exactly with the customer-count
  *              roll-forward (Beginning + New - Churned = Ending) because
  *              churnedMRR/beginningMRR == churnedCustomers/beginningCustomers
  *              by construction.
  *
- * Modeling choice, stated explicitly: `pricingChangePct` now reprices only
- * NEW customers (a "grandfathered pricing" model) — existing customers'
- * revenue moves only through expansion/contraction/churn, never through a
- * blanket ARPU change. This is more realistic than uniformly repricing the
- * whole base, but it does mean Pricing Change has less leverage over the
- * forecast than in the pre-retention-bridge model.
+ * Sales & Marketing spend is derived, not a driver: monthly S&M = CAC x new
+ * customers acquired that month. This is the causally correct direction
+ * (spend follows from how many customers you're buying, at what cost each)
+ * and is what makes CAC an independent, directly-tunable input instead of
+ * something that swings unpredictably with the growth rate.
  */
 export function runSaaSForecast(
   assumptions: SaaSAssumptions,
   baseline: SaaSCompanyBaseline = northstarBaseline
 ): SaaSForecastResult {
-  const newCustomerAnnualArpu =
-    baseline.annualArpu * (1 + assumptions.pricingChangePct);
-  const monthlyHeadcountCost =
-    (assumptions.headcount * AVG_FULLY_LOADED_COST_PER_EMPLOYEE) / 12;
-  const monthlySalesMarketing = assumptions.annualSalesMarketing / 12;
-
-  let customers = baseline.startingCustomers;
-  let mrr = baseline.startingCustomers * (baseline.annualArpu / 12);
+  let customers = assumptions.startingCustomers;
+  let mrr = assumptions.startingCustomers * assumptions.avgMrrPerCustomer;
   let cash = baseline.startingCash;
   const months: SaaSMonthResult[] = [];
 
@@ -203,11 +241,11 @@ export function runSaaSForecast(
     const logoChurnRate =
       beginningCustomers === 0 ? 0 : churnedCustomers / beginningCustomers;
 
-    const newMRR = newCustomers * (newCustomerAnnualArpu / 12);
+    const newMRR = newCustomers * assumptions.avgMrrPerCustomer;
     const churnedMRR = beginningMRR * assumptions.monthlyChurnRate;
     const retainedMRR = beginningMRR - churnedMRR;
-    const expansionMRR = retainedMRR * assumptions.monthlyExpansionRate;
-    const contractionMRR = retainedMRR * assumptions.monthlyContractionRate;
+    const expansionMRR = retainedMRR * EXPANSION_RATE_CONSTANT;
+    const contractionMRR = retainedMRR * CONTRACTION_RATE_CONSTANT;
 
     const endingMRR =
       beginningMRR + newMRR + expansionMRR - contractionMRR - churnedMRR;
@@ -219,6 +257,8 @@ export function runSaaSForecast(
 
     const arr = endingMRR * 12;
     const grossProfit = endingMRR * assumptions.grossMarginPct;
+    const monthlySalesMarketing = assumptions.cac * newCustomers;
+    const monthlyHeadcountCost = (FIXED_HEADCOUNT * AVG_FULLY_LOADED_COST_PER_EMPLOYEE) / 12;
     const opex = monthlySalesMarketing + monthlyHeadcountCost + FIXED_GA_MONTHLY;
     const ebitda = grossProfit - opex;
     cash = cash + ebitda;
@@ -254,13 +294,11 @@ export function runSaaSForecast(
     last.ebitda >= 0 ? null : Math.max(0, last.cash / Math.abs(last.ebitda));
   const averageNRR = months.reduce((sum, m) => sum + m.nrr, 0) / months.length;
 
-  const totalNewCustomers = months.reduce((sum, m) => sum + m.newCustomers, 0);
-  const cac =
-    totalNewCustomers === 0 ? 0 : assumptions.annualSalesMarketing / totalNewCustomers;
+  const cac = assumptions.cac;
   const ltv =
     assumptions.monthlyChurnRate === 0
       ? 0
-      : ((newCustomerAnnualArpu / 12) * assumptions.grossMarginPct) /
+      : (assumptions.avgMrrPerCustomer * assumptions.grossMarginPct) /
         assumptions.monthlyChurnRate;
   const ltvToCac = cac === 0 ? 0 : ltv / cac;
 
@@ -362,8 +400,9 @@ export const classifyMargin = sharedClassifyMargin;
 
 export type CashStatus = SharedCashStatus;
 
-// Thresholds, ending cash relative to starting cash: >=90% = Strong,
-// 50-90% = Adequate, <50% = Low. (See shared.ts.)
+// Thresholds, ending cash relative to starting cash — see
+// classifyCashRatio in shared.ts for the 4 bands (Strong/Adequate/Low/
+// Depleted).
 export function classifyCash(
   endingCash: number,
   baseline: SaaSCompanyBaseline = northstarBaseline
@@ -393,190 +432,13 @@ export function classifyLtvToCac(ltvToCac: number): LtvCacStatus {
   return "Weak";
 }
 
-export type SensitivityDriverKey =
-  | "monthlyGrowthRate"
-  | "monthlyChurnRate"
-  | "pricingChangePct"
-  | "grossMarginPct"
-  | "headcount"
-  | "annualSalesMarketing"
-  | "monthlyExpansionRate"
-  | "monthlyContractionRate";
+export type SensitivityDriverKey = SaaSDriverKey;
 
-export const sensitivityDriverLabels: Record<SensitivityDriverKey, string> = {
-  monthlyGrowthRate: "Customer Growth Rate",
-  monthlyChurnRate: "Churn Rate",
-  pricingChangePct: "Pricing Change",
-  grossMarginPct: "Gross Margin",
-  headcount: "Headcount",
-  annualSalesMarketing: "Sales & Marketing Spend",
-  monthlyExpansionRate: "Expansion Rate",
-  monthlyContractionRate: "Contraction Rate",
-};
+export const sensitivityDriverLabels: Record<SensitivityDriverKey, string> = Object.fromEntries(
+  SAAS_DRIVERS.map((d) => [d.key, d.label])
+) as Record<SensitivityDriverKey, string>;
 
-export type SensitivityRow = {
-  key: SensitivityDriverKey;
-  label: string;
-  range: number;
-};
-
-const SENSITIVITY_KEYS: SensitivityDriverKey[] = [
-  "monthlyGrowthRate",
-  "monthlyChurnRate",
-  "pricingChangePct",
-  "grossMarginPct",
-  "headcount",
-  "annualSalesMarketing",
-  "monthlyExpansionRate",
-  "monthlyContractionRate",
-];
-
-/**
- * Flexes each driver +/-10% (relative) in isolation, holding the rest at the
- * given assumptions, and ranks by the resulting swing in ending-month EBITDA.
- * Returns only the top `limit` drivers — this is a compact ranked list, not a
- * full tornado chart.
- */
-export function runSaaSSensitivity(
-  assumptions: SaaSAssumptions,
-  baseline: SaaSCompanyBaseline = northstarBaseline,
-  flexPct = 0.1,
-  limit = 3
-): SensitivityRow[] {
-  const rows: SensitivityRow[] = SENSITIVITY_KEYS.map((key) => {
-    const upAssumptions: SaaSAssumptions = {
-      ...assumptions,
-      [key]: assumptions[key] * (1 + flexPct),
-    };
-    const downAssumptions: SaaSAssumptions = {
-      ...assumptions,
-      [key]: assumptions[key] * (1 - flexPct),
-    };
-
-    const upEbitda =
-      runSaaSForecast(upAssumptions, baseline).months.at(-1)?.ebitda ?? 0;
-    const downEbitda =
-      runSaaSForecast(downAssumptions, baseline).months.at(-1)?.ebitda ?? 0;
-
-    return {
-      key,
-      label: sensitivityDriverLabels[key],
-      range: Math.abs(upEbitda - downEbitda),
-    };
-  }).sort((a, b) => b.range - a.range);
-
-  return rows.slice(0, limit);
-}
-
-export function cumulativeEBITDA(result: SaaSForecastResult): number {
-  return result.months.reduce((sum, m) => sum + m.ebitda, 0);
-}
-
-export type SensitivityDetail = {
-  key: SensitivityDriverKey;
-  label: string;
-  baseValue: number;
-  downValue: number;
-  upValue: number;
-  baseCumulativeEBITDA: number;
-  downCumulativeEBITDA: number;
-  upCumulativeEBITDA: number;
-};
-
-/**
- * Detail for a single sensitivity driver, on demand (e.g. an expanded row):
- * the driver's current value and the cumulative 12-month EBITDA impact of
- * flexing it +/-10%. Distinct from runSaaSSensitivity's ranking metric
- * (ending-month EBITDA swing) — this one sums EBITDA across the full year.
- */
-export function getSensitivityDetail(
-  assumptions: SaaSAssumptions,
-  key: SensitivityDriverKey,
-  baseline: SaaSCompanyBaseline = northstarBaseline,
-  flexPct = 0.1
-): SensitivityDetail {
-  const upAssumptions: SaaSAssumptions = {
-    ...assumptions,
-    [key]: assumptions[key] * (1 + flexPct),
-  };
-  const downAssumptions: SaaSAssumptions = {
-    ...assumptions,
-    [key]: assumptions[key] * (1 - flexPct),
-  };
-
-  return {
-    key,
-    label: sensitivityDriverLabels[key],
-    baseValue: assumptions[key],
-    downValue: downAssumptions[key],
-    upValue: upAssumptions[key],
-    baseCumulativeEBITDA: cumulativeEBITDA(runSaaSForecast(assumptions, baseline)),
-    downCumulativeEBITDA: cumulativeEBITDA(
-      runSaaSForecast(downAssumptions, baseline)
-    ),
-    upCumulativeEBITDA: cumulativeEBITDA(runSaaSForecast(upAssumptions, baseline)),
-  };
-}
-
-export type AssumptionDiff = {
-  key: SensitivityDriverKey;
-  label: string;
-  fromValue: number;
-  toValue: number;
-  impactOnEndingEBITDA: number;
-};
-
-/**
- * The drivers where `current` differs from `base`, each swapped one-at-a-time
- * into Base to isolate its own effect on ending-month EBITDA, ranked by the
- * size of that effect. Returns at most `limit` — used to drive the "What
- * changed vs Base?" panel without the UI re-deriving any of this itself.
- */
-export function diffFromBase(
-  current: SaaSAssumptions,
-  base: SaaSAssumptions = scenarioPresets.base.assumptions,
-  baseline: SaaSCompanyBaseline = northstarBaseline,
-  limit = 3
-): AssumptionDiff[] {
-  const baseEbitda =
-    runSaaSForecast(base, baseline).months.at(-1)?.ebitda ?? 0;
-
-  const diffs: AssumptionDiff[] = SENSITIVITY_KEYS.filter(
-    (key) => current[key] !== base[key]
-  ).map((key) => {
-    const swapped: SaaSAssumptions = { ...base, [key]: current[key] };
-    const swappedEbitda =
-      runSaaSForecast(swapped, baseline).months.at(-1)?.ebitda ?? 0;
-    return {
-      key,
-      label: sensitivityDriverLabels[key],
-      fromValue: base[key],
-      toValue: current[key],
-      impactOnEndingEBITDA: swappedEbitda - baseEbitda,
-    };
-  });
-
-  return diffs
-    .sort((a, b) => Math.abs(b.impactOnEndingEBITDA) - Math.abs(a.impactOnEndingEBITDA))
-    .slice(0, limit);
-}
-
-export type BaseComparison = {
-  arrDelta: number;
-  marginDeltaPts: number; // percentage points, e.g. -5.2
-  cashDelta: number;
-};
-
-export function compareToBase(
-  current: SaaSForecastResult,
-  base: SaaSForecastResult
-): BaseComparison {
-  return {
-    arrDelta: current.endingARR - base.endingARR,
-    marginDeltaPts: (current.endingEBITDAMargin - base.endingEBITDAMargin) * 100,
-    cashDelta: current.endingCash - base.endingCash,
-  };
-}
+const SENSITIVITY_KEYS: SensitivityDriverKey[] = SAAS_DRIVERS.map((d) => d.key);
 
 export type SensitivityMetric = "ebitda" | "revenue" | "cash" | "ltvToCac";
 
@@ -604,9 +466,10 @@ export type SensitivityImpactRow = {
 
 /**
  * Ranks the six drivers by the dollar (or month) impact of flexing each one
- * +10% in isolation, for a chosen headline metric (EBITDA, Revenue/ARR, or
- * Cash). Every row is a full engine rerun via runSaaSForecast — no shortcut
- * math — so this stays consistent with every other number in the app.
+ * +10% in isolation, for a chosen headline metric (EBITDA, Revenue/ARR,
+ * Cash, or LTV/CAC). Every row is a full engine rerun via runSaaSForecast —
+ * no shortcut math — so this stays consistent with every other number in
+ * the app.
  */
 export function runSaaSSensitivityByMetric(
   assumptions: SaaSAssumptions,
@@ -698,6 +561,7 @@ export function buildCfoCommentaryData(
     Strong: "healthy",
     Adequate: "adequate",
     Low: "tight",
+    Depleted: "depleted",
   };
 
   const nrrPhrase: Record<NRRStatus, string> = {
@@ -713,14 +577,13 @@ export function buildCfoCommentaryData(
     Watch: "acquiring customers at a cost that leaves a thinner-than-ideal margin of safety against lifetime value",
     Weak: "spending more to acquire customers than their lifetime value comfortably supports",
   };
-  // A very high ratio is a caution, not automatically a win: with CAC
-  // derived from blended S&M spend and no independent acquisition-spend
-  // input, a ratio this high more plausibly reflects under-investment in
-  // acquisition (spending too little to grow as fast as the unit economics
-  // would support) or the model's simplified assumptions than a genuinely
-  // elite efficiency profile. Never hidden or capped — the number is shown
-  // as computed — but the phrase adds the caveat rather than treating a
-  // bigger number as unambiguously better.
+  // A very high ratio is a caution, not automatically a win: a ratio this
+  // high more plausibly reflects under-investment in acquisition (spending
+  // too little to grow as fast as the unit economics would support) or the
+  // model's simplified assumptions than a genuinely elite efficiency
+  // profile. Never hidden or capped — the number is shown as computed — but
+  // the phrase adds the caveat rather than treating a bigger number as
+  // unambiguously better.
   const VERY_HIGH_LTV_TO_CAC = 8;
   let ltvCacPhraseFull = ltvCacPhrase[ltvCacStatus];
   if (result.ltvToCac >= VERY_HIGH_LTV_TO_CAC) {
@@ -744,15 +607,17 @@ export function buildCfoCommentaryData(
   // retention, unit economics, and finally top-line direction) — not a
   // severity score, picks the single most pressing issue. Tier 1 is
   // metrics materially outside a healthy range (their own badge would read
-  // Critical/Weak/MateriallyUnprofitable/Contracting); Tier 2 covers a
-  // metric merely in a cautionary Watch/ApproachingBreakeven band. The
-  // "no material risk" fallback is only reachable when NEITHER tier finds
-  // anything — it must never fire while a badge on screen reads Watch or
-  // worse, which is exactly the contradiction ("close to breakeven" at a
-  // -29% margin) this two-tier structure exists to rule out.
+  // Depleted/Critical/Weak/MateriallyUnprofitable/Contracting); Tier 2
+  // covers a metric merely in a cautionary Watch/ApproachingBreakeven band.
+  // The "no material risk" fallback is only reachable when NEITHER tier
+  // finds anything — it must never fire while a badge on screen reads
+  // Watch or worse.
   const runwayStatus = classifyRunway(result.runwayMonths);
   let keyRiskPhrase: string;
-  if (runwayStatus === "Critical") {
+  if (cashStatus === "Depleted") {
+    keyRiskPhrase =
+      "Cash has gone negative at these assumptions — the business has run out of money within the window.";
+  } else if (runwayStatus === "Critical") {
     keyRiskPhrase =
       "Runway has fallen below 12 months — cash exhaustion is the dominant risk if burn and spend don't change.";
   } else if (cashStatus === "Low") {
@@ -791,11 +656,12 @@ export function buildCfoCommentaryData(
 
   return {
     endingARR: result.endingARR,
-    startingARR: baseline.startingARR,
+    startingARR: result.months[0].beginningMRR * 12,
     arrGrowthPct:
-      baseline.startingARR === 0
+      result.months[0].beginningMRR === 0
         ? 0
-        : (result.endingARR - baseline.startingARR) / baseline.startingARR,
+        : (result.endingARR - result.months[0].beginningMRR * 12) /
+          (result.months[0].beginningMRR * 12),
     arrTrendPhrase: arrTrendPhrase[arrTrend],
     endingEBITDAMargin: result.endingEBITDAMargin,
     marginPhrase: marginPhrase[marginStatus],

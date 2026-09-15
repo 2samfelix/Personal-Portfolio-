@@ -13,6 +13,7 @@ import {
   classifyTrend,
   type CashStatus,
   type Decision,
+  type DriverConfig,
   type MarginStatus,
   type RunwayStatus,
   type TrendStatus,
@@ -23,70 +24,143 @@ export type ConsultingCompanyBaseline = {
   startingCash: number;
 };
 
-// Fictional services firm used to seed the demo.
+// Kept modest for the same reason as SaaS's STARTING_CASH: Base is
+// EBITDA-positive and never touches this cushion, so it costs Base nothing
+// to keep it small — but a small cushion is what makes Downside's
+// Critical-runway/Depleted-cash decision branches actually reachable
+// instead of permanently out of range no matter how bad the drivers get.
+export const STARTING_CASH = 900_000;
+
 export const meridianBaseline: ConsultingCompanyBaseline = {
   name: "Meridian Consulting Group",
-  startingCash: 1_800_000,
+  startingCash: STARTING_CASH,
 };
 
-// Modeling constants the engine needs but the brief didn't specify, kept
-// here (not hidden in a component) and disclosed in the UI.
+// Modeling constants the engine needs but that aren't drivers, disclosed
+// here (not hidden in a component).
 export const STANDARD_BILLABLE_HOURS_PER_MONTH = 160; // ~40 hrs/week x 4 weeks
-// Conversion rate needed to keep the bench fully booked at the target
-// utilization — below this, insufficient new signed work leaves billable
-// staff on the bench even though headcount and target utilization are
-// unchanged. Disclosed as a modeling assumption, not a real benchmark.
-export const PIPELINE_CONVERSION_BENCHMARK = 0.3;
+
+// --- Achieved-utilization formula ---
+// Naively multiplying target utilization by pipeline conversion (e.g. 75%
+// target x 40% conversion = 30% achieved) is wrong: it treats conversion as
+// a probability applied to the whole book, when it's actually a measure of
+// how well the sales pipeline is keeping pace with target utilization.
+// Instead, pipeline conversion applies a bounded ADJUSTMENT around target:
+//   - At REFERENCE_CONVERSION, achieved = target exactly (a firm converting
+//     pipeline at the reference rate hits its target utilization).
+//   - Above reference, stronger conversion lifts achieved utilization
+//     toward or modestly above target — capped at +CONVERSION_MAX_LIFT so
+//     no amount of conversion can push a firm absurdly over 100% capacity.
+//   - Below reference, weaker conversion pulls achieved utilization below
+//     target, creating real bench time — capped at -CONVERSION_MAX_DRAG so
+//     the relationship stays plausible even at very low conversion.
+// Example: 75% target, 40% conversion -> (0.40-0.30) x 0.5 = +0.05 (under
+// the +0.10 cap) -> 80% achieved: modestly ABOVE target, not 30%.
+export const REFERENCE_CONVERSION = 0.3; // conversion rate at which achieved = target
+export const CONVERSION_SENSITIVITY = 0.5; // achieved-utilization shift per point of conversion deviation
+export const CONVERSION_MAX_LIFT = 0.1; // cap on how far strong conversion can lift achieved above target
+export const CONVERSION_MAX_DRAG = 0.25; // cap on how far weak conversion can pull achieved below target
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function computeAchievedUtilization(
+  targetUtilizationPct: number,
+  pipelineConversionPct: number
+): number {
+  const adjustment = clamp(
+    (pipelineConversionPct - REFERENCE_CONVERSION) * CONVERSION_SENSITIVITY,
+    -CONVERSION_MAX_DRAG,
+    CONVERSION_MAX_LIFT
+  );
+  return clamp(targetUtilizationPct + adjustment, 0, 1);
+}
 
 export type ConsultingAssumptions = {
   billableHeadcount: number; // consultants, held constant across the 12-month window
-  utilizationPct: number; // target utilization, e.g. 0.75 = 75%
   averageBillRate: number; // $ per billable hour
+  utilizationPct: number; // TARGET utilization, e.g. 0.75 = 75% — achieved utilization is derived, see above
+  avgFullyLoadedCostPerConsultant: number; // $ / consultant / year — delivery cost = headcount x this, independent of revenue
   pipelineConversionPct: number; // % of generated pipeline that converts to signed, billable work
-  deliveryCostPct: number; // % of net revenue spent delivering the work (staff cost, subs, travel)
   sgaPct: number; // % of net revenue spent on sales, marketing, and G&A overhead
 };
 
+export type ConsultingDriverKey = keyof ConsultingAssumptions;
+
+// The 6 Consulting drivers — sliders are rendered by mapping over this
+// array; there is no separate hardcoded slider list.
+export const CONSULTING_DRIVERS: DriverConfig<ConsultingDriverKey>[] = [
+  { key: "billableHeadcount", label: "Billable Headcount", unit: "count", min: 10, max: 100, step: 1 },
+  { key: "averageBillRate", label: "Avg Bill Rate", unit: "currency", min: 80, max: 400, step: 5 },
+  { key: "utilizationPct", label: "Target Utilization %", unit: "percent", min: 0.3, max: 0.95, step: 0.01 },
+  { key: "avgFullyLoadedCostPerConsultant", label: "Avg Fully-Loaded Cost per Consultant", unit: "currency", min: 60_000, max: 300_000, step: 5_000 },
+  { key: "pipelineConversionPct", label: "Pipeline Conversion %", unit: "percent", min: 0.05, max: 0.7, step: 0.01 },
+  { key: "sgaPct", label: "SG&A % of Net Revenue", unit: "percent", min: 0.05, max: 0.45, step: 0.01 },
+];
+
+const DRIVER_BOUNDS = new Map(CONSULTING_DRIVERS.map((d) => [d.key, d]));
+
+function clampToDriverBounds(key: ConsultingDriverKey, value: number): number {
+  const driver = DRIVER_BOUNDS.get(key)!;
+  return Math.min(driver.max, Math.max(driver.min, value));
+}
+
 export type ConsultingScenarioKey = "base" | "upside" | "downside";
 
-export const consultingScenarioPresets: Record<
-  ConsultingScenarioKey,
-  { label: string; assumptions: ConsultingAssumptions }
+// Base is whatever the sliders currently say — these are only the
+// starting/default values shown on first load.
+export const CONSULTING_BASE_DEFAULTS: ConsultingAssumptions = {
+  billableHeadcount: 40,
+  averageBillRate: 185,
+  utilizationPct: 0.75,
+  avgFullyLoadedCostPerConsultant: 150_000,
+  pipelineConversionPct: 0.32,
+  sgaPct: 0.25,
+};
+
+// Signed, directionally-aware deltas: bill rate/target utilization/pipeline
+// conversion are "higher is better" (up in Upside, down in Downside);
+// fully-loaded cost per consultant and SG&A % are "higher is worse" (down
+// in Upside, up in Downside). billableHeadcount is a starting fact (delta
+// 0 both directions), not a scenario lever.
+export const CONSULTING_SCENARIO_DELTAS: Record<
+  Exclude<ConsultingScenarioKey, "base">,
+  Partial<Record<ConsultingDriverKey, number>>
 > = {
-  base: {
-    label: "Base",
-    assumptions: {
-      billableHeadcount: 40,
-      utilizationPct: 0.72,
-      averageBillRate: 185,
-      pipelineConversionPct: 0.28,
-      deliveryCostPct: 0.55,
-      sgaPct: 0.22,
-    },
-  },
   upside: {
-    label: "Upside",
-    assumptions: {
-      billableHeadcount: 44,
-      utilizationPct: 0.8,
-      averageBillRate: 205,
-      pipelineConversionPct: 0.38,
-      deliveryCostPct: 0.5,
-      sgaPct: 0.19,
-    },
+    averageBillRate: 15,
+    utilizationPct: 0.05,
+    avgFullyLoadedCostPerConsultant: -10_000,
+    pipelineConversionPct: 0.1,
+    sgaPct: -0.03,
   },
   downside: {
-    label: "Downside",
-    assumptions: {
-      billableHeadcount: 36,
-      utilizationPct: 0.6,
-      averageBillRate: 170,
-      pipelineConversionPct: 0.16,
-      deliveryCostPct: 0.6,
-      sgaPct: 0.26,
-    },
+    averageBillRate: -15,
+    utilizationPct: -0.08,
+    avgFullyLoadedCostPerConsultant: 20_000,
+    pipelineConversionPct: -0.22,
+    sgaPct: 0.08,
   },
 };
+
+/**
+ * Base + this scenario's signed delta table, each driver clamped to its own
+ * slider bounds. A zero-delta table returns Base unchanged for every
+ * scenario.
+ */
+export function applyConsultingScenario(
+  base: ConsultingAssumptions,
+  scenario: ConsultingScenarioKey
+): ConsultingAssumptions {
+  if (scenario === "base") return base;
+  const delta = CONSULTING_SCENARIO_DELTAS[scenario];
+  const out: ConsultingAssumptions = { ...base };
+  (Object.keys(delta) as ConsultingDriverKey[]).forEach((key) => {
+    out[key] = clampToDriverBounds(key, base[key] + (delta[key] ?? 0));
+  });
+  return out;
+}
 
 export type ConsultingMonthResult = {
   month: number;
@@ -116,26 +190,28 @@ export type ConsultingForecastResult = {
 /**
  * A services firm's revenue isn't a growth curve off a starting customer
  * base like SaaS — it's driven each month by how much billable capacity
- * actually gets utilized. Utilization is capped by how much new pipeline
- * converts into signed work: pipelineConversionPct below the benchmark
- * leaves staff on the bench even at the entered target utilization, above
- * it the full target is achievable. With headcount and target utilization
- * held flat across the window, revenue and margins are flat month to
- * month — only cash moves, accumulating (or draining) monthly EBITDA.
+ * actually gets utilized, where achieved utilization is target utilization
+ * adjusted (not multiplied) by how pipeline conversion compares to a
+ * reference rate — see computeAchievedUtilization above. Delivery cost is
+ * headcount x avg fully-loaded cost per consultant — an absolute cost that
+ * moves EBITDA and project margin but never touches net revenue or
+ * utilization, since it's a cost line, not a capacity or pricing input.
+ * With every driver held flat across the window, revenue and margins are
+ * flat month to month — only cash moves, accumulating (or draining)
+ * monthly EBITDA.
  */
 export function runConsultingForecast(
   assumptions: ConsultingAssumptions,
   baseline: ConsultingCompanyBaseline = meridianBaseline
 ): ConsultingForecastResult {
   const capacityHours = assumptions.billableHeadcount * STANDARD_BILLABLE_HOURS_PER_MONTH;
-  const achievedUtilization = Math.min(
+  const achievedUtilization = computeAchievedUtilization(
     assumptions.utilizationPct,
-    assumptions.utilizationPct *
-      (assumptions.pipelineConversionPct / PIPELINE_CONVERSION_BENCHMARK)
+    assumptions.pipelineConversionPct
   );
   const billedHours = capacityHours * achievedUtilization;
   const netRevenue = billedHours * assumptions.averageBillRate;
-  const deliveryCost = netRevenue * assumptions.deliveryCostPct;
+  const deliveryCost = (assumptions.billableHeadcount * assumptions.avgFullyLoadedCostPerConsultant) / 12;
   const projectMargin = netRevenue - deliveryCost;
   const projectMarginPct = netRevenue === 0 ? 0 : projectMargin / netRevenue;
   const sga = netRevenue * assumptions.sgaPct;
@@ -163,7 +239,7 @@ export function runConsultingForecast(
   }
 
   const last = months[months.length - 1];
-  const runwayMonths = ebitda >= 0 ? null : baseline.startingCash / -ebitda;
+  const runwayMonths = ebitda >= 0 ? null : Math.max(0, baseline.startingCash / -ebitda);
 
   return {
     months,
@@ -181,8 +257,7 @@ export type ConsultingTrend = TrendStatus;
 // Net revenue is flat month-to-month under fixed drivers (see
 // runConsultingForecast), so this will almost always read "Flat" for a
 // single scenario — it becomes meaningful when comparing two different
-// driver settings' month-1 vs month-12 net revenue is otherwise identical
-// by construction; kept for interface symmetry with the other industries
+// driver settings; kept for interface symmetry with the other industries
 // and for a future month-over-month growth driver.
 export function classifyConsultingTrend(result: ConsultingForecastResult): ConsultingTrend {
   const first = result.months[0].netRevenue;
@@ -297,6 +372,13 @@ export function explainConsultingDecision(
   return reasons;
 }
 
+export function classifyConsultingCash(
+  endingCash: number,
+  baseline: ConsultingCompanyBaseline = meridianBaseline
+): CashStatus {
+  return classifyCashRatio(endingCash, baseline.startingCash);
+}
+
 /**
  * Key Risk / Next Action for the CFO Commentary panel. Two tiers, same
  * structure as the SaaS engine's equivalent: Tier 1 covers metrics
@@ -318,7 +400,10 @@ export function buildConsultingRiskAndAction(
   const marginPct = (result.endingEBITDAMargin * 100).toFixed(1);
 
   let keyRiskPhrase: string;
-  if (runwayStatus === "Critical") {
+  if (cashStatus === "Depleted") {
+    keyRiskPhrase =
+      "Cash has gone negative at these assumptions — the firm has run out of money within the window.";
+  } else if (runwayStatus === "Critical") {
     keyRiskPhrase =
       "Runway has fallen below 12 months — cash exhaustion is the dominant risk if burn doesn't change.";
   } else if (cashStatus === "Low") {
@@ -356,33 +441,6 @@ export function buildConsultingRiskAndAction(
   return { keyRiskPhrase, nextActionPhrase: nextActionPhrase[decision] };
 }
 
-export function classifyConsultingCash(
-  endingCash: number,
-  baseline: ConsultingCompanyBaseline = meridianBaseline
-): CashStatus {
-  return classifyCashRatio(endingCash, baseline.startingCash);
-}
-
-export type ConsultingDriverKey = keyof ConsultingAssumptions;
-
-export const consultingDriverLabels: Record<ConsultingDriverKey, string> = {
-  billableHeadcount: "Billable Headcount",
-  utilizationPct: "Utilization",
-  averageBillRate: "Average Bill Rate",
-  pipelineConversionPct: "Pipeline Conversion",
-  deliveryCostPct: "Delivery Cost %",
-  sgaPct: "SG&A %",
-};
-
-export const CONSULTING_DRIVER_KEYS: ConsultingDriverKey[] = [
-  "billableHeadcount",
-  "utilizationPct",
-  "averageBillRate",
-  "pipelineConversionPct",
-  "deliveryCostPct",
-  "sgaPct",
-];
-
 export type ConsultingSensitivityMetric = "ebitda" | "netRevenue" | "cash";
 
 function consultingMetricValue(
@@ -405,6 +463,8 @@ export type ConsultingSensitivityRow = {
   impact: number;
 };
 
+const SENSITIVITY_KEYS: ConsultingDriverKey[] = CONSULTING_DRIVERS.map((d) => d.key);
+
 /**
  * Same "+10% on each driver, one at a time" sensitivity approach as the
  * SaaS engine, generalized to whichever metric is requested — mirrors
@@ -419,11 +479,11 @@ export function runConsultingSensitivityByMetric(
   const baseResult = runConsultingForecast(assumptions, baseline);
   const baseValue = consultingMetricValue(baseResult, metric);
 
-  const rows = CONSULTING_DRIVER_KEYS.map((key) => {
+  const rows = SENSITIVITY_KEYS.map((key) => {
     const bumped: ConsultingAssumptions = { ...assumptions, [key]: assumptions[key] * 1.1 };
     const bumpedResult = runConsultingForecast(bumped, baseline);
     const impact = consultingMetricValue(bumpedResult, metric) - baseValue;
-    return { key, label: consultingDriverLabels[key], impact };
+    return { key, label: CONSULTING_DRIVERS.find((d) => d.key === key)!.label, impact };
   });
 
   return rows.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));

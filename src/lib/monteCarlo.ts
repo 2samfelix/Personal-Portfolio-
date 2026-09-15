@@ -1,4 +1,5 @@
 import {
+  SAAS_DRIVERS,
   runSaaSForecast,
   type SaaSAssumptions,
   type SaaSCompanyBaseline,
@@ -10,31 +11,32 @@ import {
 // scenarios, never a replacement for them.
 
 type RandomizedDriverKey =
+  | "avgMrrPerCustomer"
   | "monthlyGrowthRate"
   | "monthlyChurnRate"
-  | "monthlyExpansionRate"
-  | "monthlyContractionRate"
-  | "pricingChangePct"
+  | "cac"
   | "grossMarginPct";
 
+const driverBounds = new Map(SAAS_DRIVERS.map((d) => [d.key, [d.min, d.max] as const]));
+
 // Each driver is jittered as a normal distribution centered on the current
-// slider value, with the stated standard deviation, then clamped to the same
-// bounds as that driver's slider so a sample can never leave the space the
-// UI itself can express. Headcount and S&M spend are held fixed — the brief
-// scopes randomization to growth, churn, expansion, contraction, pricing,
-// and gross margin only.
+// slider value, with the stated standard deviation, then clamped to that
+// driver's own slider bounds (sourced from SAAS_DRIVERS, not duplicated
+// here) so a sample can never leave the space the UI itself can express.
+// startingCustomers is held fixed — it's the company's starting point
+// today, not a forward-looking uncertainty to sample around, consistent
+// with how it's also excluded from the Upside/Downside scenario deltas.
 export const MONTE_CARLO_DISTRIBUTIONS: {
   key: RandomizedDriverKey;
   label: string;
   stdDev: number;
   bounds: readonly [number, number];
 }[] = [
-  { key: "monthlyGrowthRate", label: "Customer Growth", stdDev: 0.02, bounds: [0, 0.15] },
-  { key: "monthlyChurnRate", label: "Churn", stdDev: 0.008, bounds: [0, 0.06] },
-  { key: "monthlyExpansionRate", label: "Expansion", stdDev: 0.008, bounds: [0, 0.05] },
-  { key: "monthlyContractionRate", label: "Contraction", stdDev: 0.008, bounds: [0, 0.05] },
-  { key: "pricingChangePct", label: "Pricing", stdDev: 0.015, bounds: [-0.05, 0.1] },
-  { key: "grossMarginPct", label: "Gross Margin", stdDev: 0.03, bounds: [0.5, 0.95] },
+  { key: "avgMrrPerCustomer", label: "Avg MRR per Customer", stdDev: 20, bounds: driverBounds.get("avgMrrPerCustomer")! },
+  { key: "monthlyGrowthRate", label: "Customer Growth", stdDev: 0.02, bounds: driverBounds.get("monthlyGrowthRate")! },
+  { key: "monthlyChurnRate", label: "Churn", stdDev: 0.008, bounds: driverBounds.get("monthlyChurnRate")! },
+  { key: "cac", label: "Customer CAC", stdDev: 500, bounds: driverBounds.get("cac")! },
+  { key: "grossMarginPct", label: "Gross Margin", stdDev: 0.03, bounds: driverBounds.get("grossMarginPct")! },
 ];
 
 export type MonteCarloSample = {

@@ -48,12 +48,16 @@ export function classifyMargin(margin: number): MarginStatus {
   return "MateriallyUnprofitable";
 }
 
-export type CashStatus = "Strong" | "Adequate" | "Low";
+export type CashStatus = "Strong" | "Adequate" | "Low" | "Depleted";
 
 // Thresholds, ending cash relative to starting cash: >=90% = Strong,
-// 50-90% = Adequate, <50% = Low.
+// 50-90% = Adequate, 0-50% = Low, <0% (negative cash) = Depleted. The old
+// 3-tier version had no floor below "Low," so a thin-but-positive balance
+// and a deeply negative one got the same label — a real gap the QA pass
+// flagged and deliberately left alone as out of scope at the time.
 export function classifyCashRatio(endingCash: number, startingCash: number): CashStatus {
   const pctOfStart = startingCash === 0 ? 0 : endingCash / startingCash;
+  if (endingCash < 0) return "Depleted";
   if (pctOfStart >= 0.9) return "Strong";
   if (pctOfStart >= 0.5) return "Adequate";
   return "Low";
@@ -69,6 +73,21 @@ export function classifyRunway(runwayMonths: number | null): RunwayStatus {
   if (runwayMonths >= 12) return "Watch";
   return "Critical";
 }
+
+// Driver-config contract every industry's driver list conforms to. The UI
+// renders sliders by mapping over an industry's exported driver array —
+// never by hardcoding a slider list in a component — so adding, removing,
+// or re-bounding a driver is a model-layer-only edit.
+export type DriverUnit = "count" | "currency" | "percent";
+
+export type DriverConfig<K extends string = string> = {
+  key: K;
+  label: string;
+  unit: DriverUnit;
+  min: number; // in raw model units (e.g. 0.15 for 15%, or 3000 for $3,000)
+  max: number;
+  step: number; // in raw model units
+};
 
 export type TrendStatus = "Growing" | "Flat" | "Contracting";
 

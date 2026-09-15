@@ -4,8 +4,12 @@ import { useEffect, useId, useMemo, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import Link from "next/link";
 import {
+  FIXED_HEADCOUNT,
   AVG_FULLY_LOADED_COST_PER_EMPLOYEE,
   FIXED_GA_MONTHLY,
+  SAAS_BASE_DEFAULTS,
+  SAAS_DRIVERS,
+  applySaaSScenario,
   buildCfoCommentaryData,
   classifyArrTrend,
   classifyCash,
@@ -13,14 +17,11 @@ import {
   classifyMargin,
   classifyNRR,
   classifyRunway,
-  compareToBase,
   decideStance,
-  diffFromBase,
   explainDecision,
   northstarBaseline,
   runSaaSForecast,
   runSaaSSensitivityByMetric,
-  scenarioPresets,
   type ArrTrend,
   type CashStatus,
   type Decision,
@@ -32,19 +33,19 @@ import {
   type SaaSCompanyBaseline,
   type SaaSForecastResult,
   type SaaSMonthResult,
-  type ScenarioKey,
-  type SensitivityDriverKey,
   type SensitivityMetric,
 } from "@/lib/models/saas";
 import { parseCompanyCsv, type CsvRow } from "@/lib/csvImport";
 import { runMonteCarloSimulation, type MonteCarloResult } from "@/lib/monteCarlo";
 import {
-  PIPELINE_CONVERSION_BENCHMARK,
+  CONSULTING_BASE_DEFAULTS,
+  CONSULTING_DRIVERS,
+  REFERENCE_CONVERSION,
   STANDARD_BILLABLE_HOURS_PER_MONTH,
+  applyConsultingScenario,
   buildConsultingRiskAndAction,
   classifyConsultingCash,
   classifyUtilization,
-  consultingScenarioPresets,
   decideConsultingStance,
   explainConsultingDecision,
   meridianBaseline,
@@ -52,11 +53,12 @@ import {
   runConsultingSensitivityByMetric,
   type ConsultingAssumptions,
   type ConsultingForecastResult,
-  type ConsultingScenarioKey,
   type ConsultingSensitivityMetric,
-  type UtilizationStatus,
 } from "@/lib/models/consulting";
 import {
+  REAL_ESTATE_BASE_DEFAULTS,
+  REAL_ESTATE_DRIVERS,
+  applyRealEstateScenario,
   buildRealEstateRiskAndAction,
   classifyDebtCoverage,
   classifyOccupancy,
@@ -65,16 +67,14 @@ import {
   decideRealEstateStance,
   explainRealEstateDecision,
   harborViewBaseline,
-  realEstateScenarioPresets,
   runRealEstateForecast,
   runRealEstateSensitivityByMetric,
   type DebtCoverageStatus,
-  type OccupancyStatus,
   type RealEstateAssumptions,
   type RealEstateForecastResult,
-  type RealEstateScenarioKey,
   type RealEstateSensitivityMetric,
 } from "@/lib/models/realEstate";
+import type { DriverConfig } from "@/lib/models/shared";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
 
 type Industry = "saas" | "consulting" | "realEstate";
@@ -85,28 +85,32 @@ const INDUSTRY_LABELS: Record<Industry, string> = {
   realEstate: "Real Estate",
 };
 
-// Same bounds as the Drivers sliders below — a decoded share link or a
-// loaded save is only ever applied if every field is a finite number inside
-// its slider's own range, so a malformed/tampered URL can't feed the engine
-// something the UI itself could never produce.
-const ASSUMPTIONS_VALIDATION_BOUNDS: Record<keyof SaaSAssumptions, readonly [number, number]> = {
-  monthlyGrowthRate: [0, 0.15],
-  monthlyChurnRate: [0, 0.06],
-  pricingChangePct: [-0.05, 0.1],
-  grossMarginPct: [0.5, 0.95],
-  headcount: [15, 50],
-  annualSalesMarketing: [300_000, 1_500_000],
-  monthlyExpansionRate: [0, 0.05],
-  monthlyContractionRate: [0, 0.05],
+// The scenario selector always has exactly these 3 options. Base is
+// whatever the sliders currently say; Upside/Downside are Base plus each
+// industry's own signed delta table (see the model layer). Structurally
+// identical to each industry's own ScenarioKey export, so passing this type
+// where an industry-specific one is expected type-checks without a cast.
+type ScenarioKey = "base" | "upside" | "downside";
+const SCENARIO_KEYS: ScenarioKey[] = ["base", "upside", "downside"];
+const SCENARIO_LABELS: Record<ScenarioKey, string> = {
+  base: "Base",
+  upside: "Upside",
+  downside: "Downside",
 };
+
+// Sourced directly from SAAS_DRIVERS so a decoded share link or a loaded
+// save is only ever applied if every field is a finite number inside its
+// slider's own range — a malformed/tampered URL can't feed the engine
+// something the UI itself could never produce.
+const SAAS_ASSUMPTIONS_BOUNDS = new Map(SAAS_DRIVERS.map((d) => [d.key, [d.min, d.max] as const]));
 
 function isValidAssumptions(value: unknown): value is SaaSAssumptions {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return (Object.keys(ASSUMPTIONS_VALIDATION_BOUNDS) as (keyof SaaSAssumptions)[]).every((key) => {
-    const v = record[key];
+  return SAAS_DRIVERS.every((driver) => {
+    const v = record[driver.key];
     if (typeof v !== "number" || !Number.isFinite(v)) return false;
-    const [min, max] = ASSUMPTIONS_VALIDATION_BOUNDS[key];
+    const [min, max] = SAAS_ASSUMPTIONS_BOUNDS.get(driver.key)!;
     return v >= min && v <= max;
   });
 }
@@ -145,8 +149,6 @@ function loadSavedScenarios(): SavedScenario[] {
     return [];
   }
 }
-
-const SCENARIO_KEYS: ScenarioKey[] = ["base", "upside", "downside"];
 
 const SENSITIVITY_TABS: { key: SensitivityMetric; label: string }[] = [
   { key: "ebitda", label: "EBITDA" },
@@ -292,6 +294,7 @@ const CASH_TONE: Record<CashStatus, BadgeTone> = {
   Strong: "good",
   Adequate: "neutral",
   Low: "bad",
+  Depleted: "bad",
 };
 const RUNWAY_TONE: Record<RunwayStatus, BadgeTone> = {
   Safe: "good",
@@ -368,26 +371,41 @@ function KpiCard({
   );
 }
 
-// Formats a raw assumption value the way its slider displays it, for reuse
-// in the comparison table's "What changed vs Base?" panel.
-function formatAssumptionValue(key: SensitivityDriverKey, value: number): string {
-  switch (key) {
-    case "monthlyGrowthRate":
-    case "monthlyChurnRate":
-    case "monthlyExpansionRate":
-    case "monthlyContractionRate":
-      return formatPercent(value, 1);
-    case "pricingChangePct":
-      return `${value >= 0 ? "+" : ""}${formatPercent(value, 1)}`;
-    case "grossMarginPct":
-      return formatPercent(value, 0);
-    case "headcount":
-      return `${Math.round(value)}`;
-    case "annualSalesMarketing":
-      return formatCurrencyCompact(value);
-    default:
-      return `${value}`;
+// Generic formatter for any industry's driver value, based on the driver
+// config's declared unit — used by DriverSlider below so a slider's display
+// text is derived from the same config that defines its bounds, never
+// hardcoded per driver.
+function formatDriverValue(driver: DriverConfig<string>, rawValue: number): string {
+  if (driver.unit === "percent") {
+    const decimals = driver.step >= 0.01 ? 0 : driver.step >= 0.001 ? 1 : 2;
+    return `${(rawValue * 100).toFixed(decimals)}%`;
   }
+  if (driver.unit === "currency") {
+    return driver.max >= 1_000_000 ? formatCurrencyCompact(rawValue) : formatCurrency(rawValue);
+  }
+  return Math.round(rawValue).toLocaleString();
+}
+
+function DriverSlider<K extends string>({
+  driver,
+  value,
+  onChange,
+}: {
+  driver: DriverConfig<K>;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <SliderField
+      label={driver.label}
+      value={value}
+      onChange={onChange}
+      min={driver.min}
+      max={driver.max}
+      step={driver.step}
+      display={formatDriverValue(driver, value)}
+    />
+  );
 }
 
 const CHART_WIDTH = 640;
@@ -418,25 +436,16 @@ type ChartSeries = {
   dash?: string;
   swatchClass: string;
   months: SaaSMonthResult[];
-  emphasize?: boolean;
-};
-
-const CURRENT_SERIES_STYLE = {
-  label: "Current",
-  stroke: "#2a2820",
-  swatchClass: "bg-charcoal",
 };
 
 function ForecastChart({
   seriesByScenario,
-  currentMonths,
   metric,
   ariaLabel,
   zeroFloor = true,
   valueFormatter = formatCurrencyCompact,
 }: {
   seriesByScenario: Record<ScenarioKey, SaaSForecastResult>;
-  currentMonths?: SaaSMonthResult[];
   metric: ChartMetric;
   ariaLabel: string;
   // Dollar metrics (MRR, Cash) anchor the y-axis at $0 by default. A ratio
@@ -447,22 +456,17 @@ function ForecastChart({
 }) {
   const [hoverMonth, setHoverMonth] = useState<number | null>(null);
 
-  // The three canonical scenarios always render; "Current" is appended only
-  // once the live assumptions diverge from Base, and always uses the same
-  // engine output (`currentMonths`) the KPI cards and banner already use —
-  // never a separate calculation.
+  // All three scenarios always render, regardless of which one is
+  // currently selected to feed the KPI cards/badges/commentary — Base is
+  // one of these three lines (whatever the sliders say), never a separate
+  // "Current" overlay.
   const series: ChartSeries[] = useMemo(() => {
-    const fixed = SCENARIO_KEYS.map((key) => ({
+    return SCENARIO_KEYS.map((key) => ({
       key,
       months: seriesByScenario[key].months,
       ...SERIES_STYLE[key],
     }));
-    if (!currentMonths) return fixed;
-    return [
-      ...fixed,
-      { key: "current", months: currentMonths, ...CURRENT_SERIES_STYLE, emphasize: true },
-    ];
-  }, [seriesByScenario, currentMonths]);
+  }, [seriesByScenario]);
 
   const { minValue, maxValue } = useMemo(() => {
     const all = series.flatMap((s) => s.months.map((m) => m[metric]));
@@ -575,29 +579,13 @@ function ForecastChart({
               points={points}
               fill="none"
               stroke={s.stroke}
-              strokeWidth={s.emphasize ? 3 : 2}
+              strokeWidth={2}
               strokeDasharray={s.dash}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           );
         })}
-
-        {/* "Current" gets a small marker at each month so it reads as the
-            live, point-in-time case rather than another fixed scenario. */}
-        {series
-          .filter((s) => s.emphasize)
-          .flatMap((s) =>
-            s.months.map((m) => (
-              <circle
-                key={`${s.key}-${m.month}`}
-                cx={monthX(m.month)}
-                cy={valueY(m[metric], minValue, maxValue)}
-                r={2.5}
-                fill={s.stroke}
-              />
-            ))
-          )}
 
         {/* Direct end labels — a cream halo (paintOrder stroke) keeps the
             label legible where a line's own dashes pass close behind it. */}
@@ -837,27 +825,17 @@ function runwayPhrase(runwayMonths: number | null): string {
     : `has ${runwayMonths.toFixed(1)} months of runway`;
 }
 
-const COMPARISON_COLUMN_LABEL: Record<ScenarioKey | "custom", string> = {
-  base: "Base",
-  upside: "Upside",
-  downside: "Downside",
-  custom: "Custom",
-};
-
 function ScenarioComparisonTable({
   scenarioResults,
-  activeResult,
   activeColumn,
 }: {
   scenarioResults: Record<ScenarioKey, SaaSForecastResult>;
-  activeResult: SaaSForecastResult;
-  activeColumn: ScenarioKey | "custom";
+  activeColumn: ScenarioKey;
 }) {
-  const columns: { key: ScenarioKey | "custom"; result: SaaSForecastResult }[] = [
+  const columns: { key: ScenarioKey; result: SaaSForecastResult }[] = [
     { key: "base", result: scenarioResults.base },
     { key: "upside", result: scenarioResults.upside },
     { key: "downside", result: scenarioResults.downside },
-    ...(activeColumn === "custom" ? [{ key: "custom" as const, result: activeResult }] : []),
   ];
 
   const rows: { label: string; format: (r: SaaSForecastResult) => string }[] = [
@@ -880,7 +858,7 @@ function ScenarioComparisonTable({
                   col.key === activeColumn ? "bg-forest/10 text-forest" : ""
                 }`}
               >
-                {COMPARISON_COLUMN_LABEL[col.key]}
+                {SCENARIO_LABELS[col.key]}
               </th>
             ))}
           </tr>
@@ -1195,9 +1173,14 @@ export default function FpaDecisionLab() {
   // loses what you'd tuned.
   const [industry, setIndustry] = useState<Industry>("saas");
 
-  const [assumptions, setAssumptions] = useState<SaaSAssumptions>(
-    scenarioPresets.base.assumptions
-  );
+  // `assumptions` IS Base — whatever the sliders currently say. Upside and
+  // Downside are always Base plus this industry's own signed delta table
+  // (see SAAS_SCENARIO_DELTAS), recomputed live as the sliders move. The
+  // scenario selector below only controls which of the three feeds the KPI
+  // cards/badges/commentary — it never rewrites the sliders, and there is
+  // no separate "Custom" case since Base already is the live, editable one.
+  const [assumptions, setAssumptions] = useState<SaaSAssumptions>(SAAS_BASE_DEFAULTS);
+  const [activeScenario, setActiveScenario] = useState<ScenarioKey>("base");
   const [sensitivityTab, setSensitivityTab] = useState<SensitivityMetric>("ebitda");
 
   // CSV import — a custom baseline threaded through the same
@@ -1209,8 +1192,8 @@ export default function FpaDecisionLab() {
   const [csvPreviewRows, setCsvPreviewRows] = useState<CsvRow[] | null>(null);
   const activeBaseline = customBaseline ?? northstarBaseline;
 
-  // Save / Load / Share — saved scenarios are user-named assumption sets,
-  // kept structurally separate from the fixed Base/Upside/Downside presets.
+  // Save / Load / Share — saved scenarios are user-named Base assumption
+  // sets, kept structurally separate from the fixed Upside/Downside deltas.
   const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([]);
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [saveNameDraft, setSaveNameDraft] = useState("");
@@ -1226,17 +1209,13 @@ export default function FpaDecisionLab() {
       const decoded = decodeAssumptions(shared);
       // A malformed or tampered share link is ignored silently rather than
       // fed to the engine or shown as an error — the app just falls back
-      // to the default Base scenario.
+      // to the default Base values.
       if (decoded) setAssumptions(decoded);
     }
   }, []);
 
   const set = <K extends keyof SaaSAssumptions>(key: K) => (value: number) =>
     setAssumptions((prev) => ({ ...prev, [key]: value }));
-
-  const applyPreset = (key: ScenarioKey) => {
-    setAssumptions(scenarioPresets[key].assumptions);
-  };
 
   const handleCsvUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1272,7 +1251,7 @@ export default function FpaDecisionLab() {
     setCsvError(null);
     setCsvWarnings([]);
     setCsvPreviewRows(null);
-    setAssumptions(scenarioPresets.base.assumptions);
+    setAssumptions(SAAS_BASE_DEFAULTS);
   };
 
   const saveScenario = () => {
@@ -1315,9 +1294,10 @@ export default function FpaDecisionLab() {
   };
 
   // Monte Carlo — an optional, explicitly-labeled complement to the
-  // deterministic scenarios above, never a replacement for them. Runs only
-  // on demand (never on every slider tick) since each run is hundreds of
-  // forecasts.
+  // deterministic scenarios above, never a replacement for them. Always
+  // samples around Base (the live sliders), regardless of which scenario
+  // tab is selected for the KPI cards. Runs only on demand (never on every
+  // slider tick) since each run is hundreds of forecasts.
   const [mcSimCount, setMcSimCount] = useState<500 | 1000>(500);
   const [mcResult, setMcResult] = useState<MonteCarloResult | null>(null);
   const [mcRunning, setMcRunning] = useState(false);
@@ -1341,29 +1321,32 @@ export default function FpaDecisionLab() {
     setMcRunning(false);
   };
 
-  // The three canonical scenario forecasts always drive both charts and the
-  // comparison table, so they stay a stable reference regardless of slider
-  // tweaks below. They forecast forward from whichever baseline is active —
-  // the sample company, or an uploaded one.
+  // All three scenarios always drive the charts and the comparison table
+  // regardless of which one is selected below. Upside/Downside are Base
+  // plus this industry's own signed, directionally-aware delta table, each
+  // driver clamped to its own slider bounds — if every delta were zero, all
+  // three would collapse onto Base exactly (verified in the model layer).
   const scenarioResults = useMemo(
     () => ({
-      base: runSaaSForecast(scenarioPresets.base.assumptions, activeBaseline),
-      upside: runSaaSForecast(scenarioPresets.upside.assumptions, activeBaseline),
-      downside: runSaaSForecast(scenarioPresets.downside.assumptions, activeBaseline),
+      base: runSaaSForecast(assumptions, activeBaseline),
+      upside: runSaaSForecast(applySaaSScenario(assumptions, "upside"), activeBaseline),
+      downside: runSaaSForecast(applySaaSScenario(assumptions, "downside"), activeBaseline),
     }),
-    [activeBaseline]
-  );
-
-  // The currently tunable assumptions drive the KPI cards, banner,
-  // commentary, and sensitivity panel.
-  const activeResult = useMemo(
-    () => runSaaSForecast(assumptions, activeBaseline),
     [assumptions, activeBaseline]
   );
+
+  // Whichever scenario is selected drives the KPI cards, banner,
+  // commentary, and sensitivity panel — the sliders keep editing Base
+  // either way.
+  const activeAssumptions = useMemo(
+    () => applySaaSScenario(assumptions, activeScenario),
+    [assumptions, activeScenario]
+  );
+  const activeResult = scenarioResults[activeScenario];
   const activeMonth12 = activeResult.months[activeResult.months.length - 1];
   const sensitivity = useMemo(
-    () => runSaaSSensitivityByMetric(assumptions, sensitivityTab),
-    [assumptions, sensitivityTab]
+    () => runSaaSSensitivityByMetric(activeAssumptions, sensitivityTab, activeBaseline),
+    [activeAssumptions, sensitivityTab, activeBaseline]
   );
   const decision = decideStance(
     activeResult.runwayMonths,
@@ -1373,43 +1356,18 @@ export default function FpaDecisionLab() {
     () => explainDecision(activeResult, decision),
     [activeResult, decision]
   );
-
-  // Matched purely by value against the current assumptions — not by click
-  // history — so dragging a slider back to a preset's exact values is
-  // recognized automatically, per spec.
-  const matchedPresetKey = useMemo(
-    () =>
-      SCENARIO_KEYS.find(
-        (key) => JSON.stringify(assumptions) === JSON.stringify(scenarioPresets[key].assumptions)
-      ) ?? null,
-    [assumptions]
-  );
-  const isCustomized = matchedPresetKey === null;
-  const activeColumn: ScenarioKey | "custom" = matchedPresetKey ?? "custom";
-  const scenarioStatusLabel = matchedPresetKey
-    ? scenarioPresets[matchedPresetKey].label
-    : "Custom";
-
-  const isBaseCase = matchedPresetKey === "base";
-  const baseChanges = useMemo(
-    () => (isBaseCase ? [] : diffFromBase(assumptions)),
-    [assumptions, isBaseCase]
-  );
-  const baseImpact = useMemo(
-    () => compareToBase(activeResult, scenarioResults.base),
-    [activeResult, scenarioResults]
-  );
+  const scenarioStatusLabel = SCENARIO_LABELS[activeScenario];
 
   const arrTrend = classifyArrTrend(activeResult);
   const marginStatus = classifyMargin(activeResult.endingEBITDAMargin);
-  const cashStatus = classifyCash(activeResult.endingCash);
+  const cashStatus = classifyCash(activeResult.endingCash, activeBaseline);
   const runwayStatus = classifyRunway(activeResult.runwayMonths);
   const nrrStatus = classifyNRR(activeResult.endingNRR);
   const ltvCacStatus = classifyLtvToCac(activeResult.ltvToCac);
 
   const cfoCommentaryData = useMemo(
-    () => buildCfoCommentaryData(activeResult),
-    [activeResult]
+    () => buildCfoCommentaryData(activeResult, activeBaseline),
+    [activeResult, activeBaseline]
   );
   const cfoCommentary = {
     performance: `ARR reaches ${formatCurrencyCompact(cfoCommentaryData.endingARR)}, ${
@@ -1444,9 +1402,12 @@ export default function FpaDecisionLab() {
   };
 
   // --- Consulting & Services ---
+  // Same architecture as SaaS above: `consultingAssumptions` IS Base;
+  // Upside/Downside are always Base plus CONSULTING_SCENARIO_DELTAS.
   const [consultingAssumptions, setConsultingAssumptions] = useState<ConsultingAssumptions>(
-    consultingScenarioPresets.base.assumptions
+    CONSULTING_BASE_DEFAULTS
   );
+  const [consultingActiveScenario, setConsultingActiveScenario] = useState<ScenarioKey>("base");
   const [consultingSensitivityTab, setConsultingSensitivityTab] =
     useState<ConsultingSensitivityMetric>("ebitda");
 
@@ -1455,48 +1416,39 @@ export default function FpaDecisionLab() {
     (value: number) =>
       setConsultingAssumptions((prev) => ({ ...prev, [key]: value }));
 
-  const applyConsultingPreset = (key: ConsultingScenarioKey) => {
-    setConsultingAssumptions(consultingScenarioPresets[key].assumptions);
-  };
+  const resetConsultingToBase = () => setConsultingAssumptions(CONSULTING_BASE_DEFAULTS);
 
   const consultingScenarioResults = useMemo(
     () => ({
-      base: runConsultingForecast(consultingScenarioPresets.base.assumptions, meridianBaseline),
+      base: runConsultingForecast(consultingAssumptions, meridianBaseline),
       upside: runConsultingForecast(
-        consultingScenarioPresets.upside.assumptions,
+        applyConsultingScenario(consultingAssumptions, "upside"),
         meridianBaseline
       ),
       downside: runConsultingForecast(
-        consultingScenarioPresets.downside.assumptions,
+        applyConsultingScenario(consultingAssumptions, "downside"),
         meridianBaseline
       ),
     }),
-    []
-  );
-  const consultingResult = useMemo(
-    () => runConsultingForecast(consultingAssumptions, meridianBaseline),
     [consultingAssumptions]
   );
+  const consultingActiveAssumptions = useMemo(
+    () => applyConsultingScenario(consultingAssumptions, consultingActiveScenario),
+    [consultingAssumptions, consultingActiveScenario]
+  );
+  const consultingResult = consultingScenarioResults[consultingActiveScenario];
   const consultingSensitivity = useMemo(
     () =>
       runConsultingSensitivityByMetric(
-        consultingAssumptions,
+        consultingActiveAssumptions,
         meridianBaseline,
         consultingSensitivityTab
       ),
-    [consultingAssumptions, consultingSensitivityTab]
+    [consultingActiveAssumptions, consultingSensitivityTab]
   );
   const consultingDecision = decideConsultingStance(consultingResult);
   const consultingDecisionReasons = explainConsultingDecision(consultingResult, consultingDecision);
-  const consultingMatchedPresetKey =
-    (["base", "upside", "downside"] as ConsultingScenarioKey[]).find(
-      (key) =>
-        JSON.stringify(consultingAssumptions) ===
-        JSON.stringify(consultingScenarioPresets[key].assumptions)
-    ) ?? null;
-  const consultingScenarioStatusLabel = consultingMatchedPresetKey
-    ? consultingScenarioPresets[consultingMatchedPresetKey].label
-    : "Custom";
+  const consultingScenarioStatusLabel = SCENARIO_LABELS[consultingActiveScenario];
   const consultingUtilizationStatus = classifyUtilization(consultingResult.endingUtilization);
   const consultingMarginStatus = classifyMargin(consultingResult.endingEBITDAMargin);
   const consultingCashStatus = classifyConsultingCash(consultingResult.endingCash, meridianBaseline);
@@ -1507,9 +1459,12 @@ export default function FpaDecisionLab() {
   );
 
   // --- Real Estate ---
+  // Same architecture again: `realEstateAssumptions` IS Base;
+  // Upside/Downside are always Base plus REAL_ESTATE_SCENARIO_DELTAS.
   const [realEstateAssumptions, setRealEstateAssumptions] = useState<RealEstateAssumptions>(
-    realEstateScenarioPresets.base.assumptions
+    REAL_ESTATE_BASE_DEFAULTS
   );
+  const [realEstateActiveScenario, setRealEstateActiveScenario] = useState<ScenarioKey>("base");
   const [realEstateSensitivityTab, setRealEstateSensitivityTab] =
     useState<RealEstateSensitivityMetric>("noi");
 
@@ -1518,61 +1473,52 @@ export default function FpaDecisionLab() {
     (value: number) =>
       setRealEstateAssumptions((prev) => ({ ...prev, [key]: value }));
 
-  const applyRealEstatePreset = (key: RealEstateScenarioKey) => {
-    setRealEstateAssumptions(realEstateScenarioPresets[key].assumptions);
-  };
+  const resetRealEstateToBase = () => setRealEstateAssumptions(REAL_ESTATE_BASE_DEFAULTS);
 
   const realEstateScenarioResults = useMemo(
     () => ({
-      base: runRealEstateForecast(realEstateScenarioPresets.base.assumptions, harborViewBaseline),
+      base: runRealEstateForecast(realEstateAssumptions, harborViewBaseline),
       upside: runRealEstateForecast(
-        realEstateScenarioPresets.upside.assumptions,
+        applyRealEstateScenario(realEstateAssumptions, "upside"),
         harborViewBaseline
       ),
       downside: runRealEstateForecast(
-        realEstateScenarioPresets.downside.assumptions,
+        applyRealEstateScenario(realEstateAssumptions, "downside"),
         harborViewBaseline
       ),
     }),
-    []
-  );
-  const realEstateResult = useMemo(
-    () => runRealEstateForecast(realEstateAssumptions, harborViewBaseline),
     [realEstateAssumptions]
   );
+  const realEstateActiveAssumptions = useMemo(
+    () => applyRealEstateScenario(realEstateAssumptions, realEstateActiveScenario),
+    [realEstateAssumptions, realEstateActiveScenario]
+  );
+  const realEstateResult = realEstateScenarioResults[realEstateActiveScenario];
   const realEstateSensitivity = useMemo(
     () =>
       runRealEstateSensitivityByMetric(
-        realEstateAssumptions,
+        realEstateActiveAssumptions,
         harborViewBaseline,
         realEstateSensitivityTab
       ),
-    [realEstateAssumptions, realEstateSensitivityTab]
+    [realEstateActiveAssumptions, realEstateSensitivityTab]
   );
-  const realEstateDecision = decideRealEstateStance(realEstateResult, realEstateAssumptions);
+  const realEstateDecision = decideRealEstateStance(realEstateResult, realEstateActiveAssumptions);
   const realEstateDecisionReasons = explainRealEstateDecision(
     realEstateResult,
-    realEstateAssumptions,
+    realEstateActiveAssumptions,
     realEstateDecision
   );
-  const realEstateMatchedPresetKey =
-    (["base", "upside", "downside"] as RealEstateScenarioKey[]).find(
-      (key) =>
-        JSON.stringify(realEstateAssumptions) ===
-        JSON.stringify(realEstateScenarioPresets[key].assumptions)
-    ) ?? null;
-  const realEstateScenarioStatusLabel = realEstateMatchedPresetKey
-    ? realEstateScenarioPresets[realEstateMatchedPresetKey].label
-    : "Custom";
-  const realEstateOccupancyStatus = classifyOccupancy(realEstateAssumptions.occupancyPct);
-  const realEstateDscr = debtServiceCoverageRatio(realEstateResult, realEstateAssumptions);
+  const realEstateScenarioStatusLabel = SCENARIO_LABELS[realEstateActiveScenario];
+  const realEstateOccupancyStatus = classifyOccupancy(realEstateActiveAssumptions.occupancyPct);
+  const realEstateDscr = debtServiceCoverageRatio(realEstateResult, realEstateActiveAssumptions);
   const realEstateDscrStatus = classifyDebtCoverage(realEstateDscr);
   const realEstateCashStatus = classifyRealEstateCash(realEstateResult.endingCash, harborViewBaseline);
   const realEstateRunwayStatus = classifyRunway(realEstateResult.runwayMonths);
   const realEstateMarginStatus = classifyMargin(realEstateResult.endingFreeCashFlowMargin);
   const realEstateRiskAndAction = useMemo(
-    () => buildRealEstateRiskAndAction(realEstateResult, realEstateAssumptions),
-    [realEstateResult, realEstateAssumptions]
+    () => buildRealEstateRiskAndAction(realEstateResult, realEstateActiveAssumptions),
+    [realEstateResult, realEstateActiveAssumptions]
   );
 
   return (
@@ -1650,20 +1596,14 @@ export default function FpaDecisionLab() {
               <>
             <div className="mb-1 flex items-center justify-between px-1 pb-2">
               <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
-              <span
-                className={`text-xs font-semibold ${
-                  isCustomized ? "text-brass" : "text-forest"
-                }`}
-              >
-                {scenarioStatusLabel}
-              </span>
+              <span className="text-xs font-semibold text-forest">{scenarioStatusLabel}</span>
             </div>
             <button
               type="button"
-              onClick={() => applyPreset("base")}
+              onClick={() => setAssumptions(SAAS_BASE_DEFAULTS)}
               className="mb-3 w-full rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
             >
-              Reset to Base
+              Reset to Defaults
             </button>
 
             <div className="mb-3 grid grid-cols-3 gap-1.5">
@@ -1775,105 +1715,45 @@ export default function FpaDecisionLab() {
                   <button
                     key={key}
                     type="button"
-                    onClick={() => applyPreset(key)}
+                    onClick={() => setActiveScenario(key)}
+                    aria-pressed={activeScenario === key}
                     className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
-                      matchedPresetKey === key
+                      activeScenario === key
                         ? "bg-forest text-cream"
                         : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
                     }`}
                   >
-                    {scenarioPresets[key].label}
+                    {SCENARIO_LABELS[key]}
                   </button>
                 ))}
               </div>
+              <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                Upside/Downside apply this industry&apos;s own signed delta
+                to whatever the Drivers below currently say — they don&apos;t
+                move the sliders. All three always draw on every chart;
+                picking one here only changes which case feeds the KPI
+                cards, badges, and commentary.
+              </p>
             </AccordionSection>
 
-            <AccordionSection title="Drivers" badge={<SampleBadge />}>
+            <AccordionSection title="Drivers" badge={<SampleBadge />} defaultOpen>
               <div className="flex flex-col gap-5">
-                <SliderField
-                  label="Monthly Customer Growth Rate"
-                  value={assumptions.monthlyGrowthRate * 100}
-                  onChange={(v) => set("monthlyGrowthRate")(v / 100)}
-                  min={0}
-                  max={15}
-                  step={0.5}
-                  display={formatPercent(assumptions.monthlyGrowthRate)}
-                />
-                <SliderField
-                  label="Monthly Churn Rate"
-                  value={assumptions.monthlyChurnRate * 100}
-                  onChange={(v) => set("monthlyChurnRate")(v / 100)}
-                  min={0}
-                  max={6}
-                  step={0.1}
-                  display={formatPercent(assumptions.monthlyChurnRate)}
-                />
-                <SliderField
-                  label="Pricing Change"
-                  value={assumptions.pricingChangePct * 100}
-                  onChange={(v) => set("pricingChangePct")(v / 100)}
-                  min={-5}
-                  max={10}
-                  step={0.5}
-                  display={`${assumptions.pricingChangePct >= 0 ? "+" : ""}${formatPercent(
-                    assumptions.pricingChangePct
-                  )}`}
-                />
-                <SliderField
-                  label="Gross Margin"
-                  value={assumptions.grossMarginPct * 100}
-                  onChange={(v) => set("grossMarginPct")(v / 100)}
-                  min={50}
-                  max={95}
-                  step={1}
-                  display={formatPercent(assumptions.grossMarginPct, 0)}
-                />
-                <SliderField
-                  label="Headcount"
-                  value={assumptions.headcount}
-                  onChange={set("headcount")}
-                  min={15}
-                  max={50}
-                  step={1}
-                  display={`${assumptions.headcount} heads`}
-                />
-                <SliderField
-                  label="Annual Sales & Marketing Spend"
-                  value={assumptions.annualSalesMarketing}
-                  onChange={set("annualSalesMarketing")}
-                  min={300_000}
-                  max={1_500_000}
-                  step={25_000}
-                  display={formatCurrencyCompact(assumptions.annualSalesMarketing)}
-                />
-                <SliderField
-                  label="Monthly Expansion Rate"
-                  value={assumptions.monthlyExpansionRate * 100}
-                  onChange={(v) => set("monthlyExpansionRate")(v / 100)}
-                  min={0}
-                  max={5}
-                  step={0.1}
-                  display={formatPercent(assumptions.monthlyExpansionRate, 1)}
-                />
-                <SliderField
-                  label="Monthly Contraction Rate"
-                  value={assumptions.monthlyContractionRate * 100}
-                  onChange={(v) => set("monthlyContractionRate")(v / 100)}
-                  min={0}
-                  max={5}
-                  step={0.1}
-                  display={formatPercent(assumptions.monthlyContractionRate, 1)}
-                />
+                {SAAS_DRIVERS.map((driver) => (
+                  <DriverSlider
+                    key={driver.key}
+                    driver={driver}
+                    value={assumptions[driver.key]}
+                    onChange={set(driver.key)}
+                  />
+                ))}
               </div>
             </AccordionSection>
 
             <AccordionSection title="Model Assumptions">
               <dl className="flex flex-col gap-2 text-xs">
                 {[
-                  ["Starting ARR", formatCurrencyCompact(activeBaseline.startingARR)],
-                  ["Starting Customers", activeBaseline.startingCustomers.toLocaleString()],
                   ["Starting Cash", formatCurrencyCompact(activeBaseline.startingCash)],
-                  ["Starting ARPU", `${formatCurrency(activeBaseline.annualArpu)}/yr`],
+                  ["Fixed Headcount", `${FIXED_HEADCOUNT} heads`],
                   [
                     "Avg. Employee Cost",
                     `${formatCurrencyCompact(AVG_FULLY_LOADED_COST_PER_EMPLOYEE)}/yr`,
@@ -1888,8 +1768,8 @@ export default function FpaDecisionLab() {
               </dl>
               <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
                 {customBaseline
-                  ? "Starting point derived from your uploaded CSV. Avg. employee cost and fixed G&A stay fixed for this demo."
-                  : "Fixed for this demo — not editable."}
+                  ? "Starting cash derived from your uploaded CSV. Headcount, employee cost, and G&A stay fixed model constants for this demo — not sliders."
+                  : "Fixed model constants for this demo — not sliders. Starting Customers and Avg MRR per Customer are drivers above, not fixed facts."}
               </p>
             </AccordionSection>
 
@@ -1991,97 +1871,52 @@ export default function FpaDecisionLab() {
               <>
                 <div className="mb-1 flex items-center justify-between px-1 pb-2">
                   <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
-                  <span
-                    className={`text-xs font-semibold ${
-                      consultingMatchedPresetKey === null ? "text-brass" : "text-forest"
-                    }`}
-                  >
+                  <span className="text-xs font-semibold text-forest">
                     {consultingScenarioStatusLabel}
                   </span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => applyConsultingPreset("base")}
+                  onClick={resetConsultingToBase}
                   className="mb-3 w-full rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
                 >
-                  Reset to Base
+                  Reset to Defaults
                 </button>
 
                 <AccordionSection title="Scenario" defaultOpen>
                   <div className="flex flex-col gap-2">
-                    {(["base", "upside", "downside"] as ConsultingScenarioKey[]).map((key) => (
+                    {SCENARIO_KEYS.map((key) => (
                       <button
                         key={key}
                         type="button"
-                        onClick={() => applyConsultingPreset(key)}
+                        onClick={() => setConsultingActiveScenario(key)}
+                        aria-pressed={consultingActiveScenario === key}
                         className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
-                          consultingMatchedPresetKey === key
+                          consultingActiveScenario === key
                             ? "bg-forest text-cream"
                             : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
                         }`}
                       >
-                        {consultingScenarioPresets[key].label}
+                        {SCENARIO_LABELS[key]}
                       </button>
                     ))}
                   </div>
+                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                    Upside/Downside apply this industry&apos;s own signed
+                    delta to whatever the Drivers below currently say.
+                  </p>
                 </AccordionSection>
 
                 <AccordionSection title="Drivers" badge={<SampleBadge />} defaultOpen>
                   <div className="flex flex-col gap-5">
-                    <SliderField
-                      label="Billable Headcount"
-                      value={consultingAssumptions.billableHeadcount}
-                      onChange={setConsulting("billableHeadcount")}
-                      min={10}
-                      max={80}
-                      step={1}
-                      display={`${consultingAssumptions.billableHeadcount} heads`}
-                    />
-                    <SliderField
-                      label="Utilization"
-                      value={consultingAssumptions.utilizationPct * 100}
-                      onChange={(v) => setConsulting("utilizationPct")(v / 100)}
-                      min={40}
-                      max={95}
-                      step={1}
-                      display={formatPercent(consultingAssumptions.utilizationPct, 0)}
-                    />
-                    <SliderField
-                      label="Average Bill Rate"
-                      value={consultingAssumptions.averageBillRate}
-                      onChange={setConsulting("averageBillRate")}
-                      min={100}
-                      max={350}
-                      step={5}
-                      display={`${formatCurrency(consultingAssumptions.averageBillRate)}/hr`}
-                    />
-                    <SliderField
-                      label="Pipeline Conversion"
-                      value={consultingAssumptions.pipelineConversionPct * 100}
-                      onChange={(v) => setConsulting("pipelineConversionPct")(v / 100)}
-                      min={5}
-                      max={60}
-                      step={1}
-                      display={formatPercent(consultingAssumptions.pipelineConversionPct, 0)}
-                    />
-                    <SliderField
-                      label="Delivery Cost %"
-                      value={consultingAssumptions.deliveryCostPct * 100}
-                      onChange={(v) => setConsulting("deliveryCostPct")(v / 100)}
-                      min={30}
-                      max={75}
-                      step={1}
-                      display={formatPercent(consultingAssumptions.deliveryCostPct, 0)}
-                    />
-                    <SliderField
-                      label="SG&A %"
-                      value={consultingAssumptions.sgaPct * 100}
-                      onChange={(v) => setConsulting("sgaPct")(v / 100)}
-                      min={10}
-                      max={40}
-                      step={1}
-                      display={formatPercent(consultingAssumptions.sgaPct, 0)}
-                    />
+                    {CONSULTING_DRIVERS.map((driver) => (
+                      <DriverSlider
+                        key={driver.key}
+                        driver={driver}
+                        value={consultingAssumptions[driver.key]}
+                        onChange={setConsulting(driver.key)}
+                      />
+                    ))}
                   </div>
                 </AccordionSection>
 
@@ -2095,8 +1930,8 @@ export default function FpaDecisionLab() {
                         `${STANDARD_BILLABLE_HOURS_PER_MONTH} hrs/consultant`,
                       ],
                       [
-                        "Pipeline Conversion Benchmark",
-                        formatPercent(PIPELINE_CONVERSION_BENCHMARK, 0),
+                        "Pipeline Conversion Reference",
+                        formatPercent(REFERENCE_CONVERSION, 0),
                       ],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between gap-2">
@@ -2106,7 +1941,7 @@ export default function FpaDecisionLab() {
                     ))}
                   </dl>
                   <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
-                    Fixed for this demo — not editable.
+                    Fixed model constants for this demo — not sliders.
                   </p>
                 </AccordionSection>
               </>
@@ -2116,88 +1951,52 @@ export default function FpaDecisionLab() {
               <>
                 <div className="mb-1 flex items-center justify-between px-1 pb-2">
                   <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
-                  <span
-                    className={`text-xs font-semibold ${
-                      realEstateMatchedPresetKey === null ? "text-brass" : "text-forest"
-                    }`}
-                  >
+                  <span className="text-xs font-semibold text-forest">
                     {realEstateScenarioStatusLabel}
                   </span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => applyRealEstatePreset("base")}
+                  onClick={resetRealEstateToBase}
                   className="mb-3 w-full rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
                 >
-                  Reset to Base
+                  Reset to Defaults
                 </button>
 
                 <AccordionSection title="Scenario" defaultOpen>
                   <div className="flex flex-col gap-2">
-                    {(["base", "upside", "downside"] as RealEstateScenarioKey[]).map((key) => (
+                    {SCENARIO_KEYS.map((key) => (
                       <button
                         key={key}
                         type="button"
-                        onClick={() => applyRealEstatePreset(key)}
+                        onClick={() => setRealEstateActiveScenario(key)}
+                        aria-pressed={realEstateActiveScenario === key}
                         className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
-                          realEstateMatchedPresetKey === key
+                          realEstateActiveScenario === key
                             ? "bg-forest text-cream"
                             : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
                         }`}
                       >
-                        {realEstateScenarioPresets[key].label}
+                        {SCENARIO_LABELS[key]}
                       </button>
                     ))}
                   </div>
+                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                    Upside/Downside apply this industry&apos;s own signed
+                    delta to whatever the Drivers below currently say.
+                  </p>
                 </AccordionSection>
 
                 <AccordionSection title="Drivers" badge={<SampleBadge />} defaultOpen>
                   <div className="flex flex-col gap-5">
-                    <SliderField
-                      label="Occupancy"
-                      value={realEstateAssumptions.occupancyPct * 100}
-                      onChange={(v) => setRealEstate("occupancyPct")(v / 100)}
-                      min={50}
-                      max={100}
-                      step={1}
-                      display={formatPercent(realEstateAssumptions.occupancyPct, 0)}
-                    />
-                    <SliderField
-                      label="Average Rent"
-                      value={realEstateAssumptions.averageMonthlyRent}
-                      onChange={setRealEstate("averageMonthlyRent")}
-                      min={1000}
-                      max={3500}
-                      step={25}
-                      display={`${formatCurrency(realEstateAssumptions.averageMonthlyRent)}/mo`}
-                    />
-                    <SliderField
-                      label="Operating Expense %"
-                      value={realEstateAssumptions.operatingExpensePct * 100}
-                      onChange={(v) => setRealEstate("operatingExpensePct")(v / 100)}
-                      min={25}
-                      max={65}
-                      step={1}
-                      display={formatPercent(realEstateAssumptions.operatingExpensePct, 0)}
-                    />
-                    <SliderField
-                      label="Annual Debt Service"
-                      value={realEstateAssumptions.annualDebtService}
-                      onChange={setRealEstate("annualDebtService")}
-                      min={500_000}
-                      max={4_000_000}
-                      step={50_000}
-                      display={formatCurrencyCompact(realEstateAssumptions.annualDebtService)}
-                    />
-                    <SliderField
-                      label="Cap Rate"
-                      value={realEstateAssumptions.capRatePct * 100}
-                      onChange={(v) => setRealEstate("capRatePct")(v / 100)}
-                      min={3}
-                      max={10}
-                      step={0.1}
-                      display={formatPercent(realEstateAssumptions.capRatePct, 1)}
-                    />
+                    {REAL_ESTATE_DRIVERS.map((driver) => (
+                      <DriverSlider
+                        key={driver.key}
+                        driver={driver}
+                        value={realEstateAssumptions[driver.key]}
+                        onChange={setRealEstate(driver.key)}
+                      />
+                    ))}
                   </div>
                 </AccordionSection>
 
@@ -2205,7 +2004,6 @@ export default function FpaDecisionLab() {
                   <dl className="flex flex-col gap-2 text-xs">
                     {[
                       ["Portfolio", harborViewBaseline.name],
-                      ["Total Units", harborViewBaseline.totalUnits.toLocaleString()],
                       ["Starting Cash", formatCurrencyCompact(harborViewBaseline.startingCash)],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between gap-2">
@@ -2324,15 +2122,14 @@ export default function FpaDecisionLab() {
                 12-Month MRR Forecast
               </h2>
               <p className="mt-1 text-xs leading-5 text-charcoal-soft">
-                Base / Upside / Downside stay fixed. A bold{" "}
-                <span className="font-semibold text-charcoal">Current</span>{" "}
-                line appears once you move a driver.
+                All three scenarios always render. Base moves live with the
+                Drivers below; Upside/Downside apply this industry&apos;s
+                signed delta on top of it.
               </p>
               <ForecastChart
                 seriesByScenario={scenarioResults}
-                currentMonths={isBaseCase ? undefined : activeResult.months}
                 metric="mrr"
-                ariaLabel="12-month MRR forecast under Base, Upside, and Downside scenarios, plus your current custom case"
+                ariaLabel="12-month MRR forecast under Base, Upside, and Downside scenarios"
               />
             </section>
 
@@ -2360,11 +2157,10 @@ export default function FpaDecisionLab() {
               <div className="mx-auto mt-2 max-w-lg">
                 <ForecastChart
                   seriesByScenario={scenarioResults}
-                  currentMonths={isBaseCase ? undefined : activeResult.months}
                   metric="nrr"
                   zeroFloor={false}
                   valueFormatter={(v) => formatPercent(v, 1)}
-                  ariaLabel="12-month net revenue retention trend under Base, Upside, and Downside scenarios, plus your current custom case"
+                  ariaLabel="12-month net revenue retention trend under Base, Upside, and Downside scenarios"
                 />
               </div>
             </section>
@@ -2381,9 +2177,8 @@ export default function FpaDecisionLab() {
               </p>
               <ForecastChart
                 seriesByScenario={scenarioResults}
-                currentMonths={isBaseCase ? undefined : activeResult.months}
                 metric="cash"
-                ariaLabel="12-month cash balance forecast under Base, Upside, and Downside scenarios, plus your current custom case"
+                ariaLabel="12-month cash balance forecast under Base, Upside, and Downside scenarios"
               />
               <div className="mt-3 flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border border-forest/15 bg-white px-4 py-3">
                 <div>
@@ -2423,55 +2218,10 @@ export default function FpaDecisionLab() {
               <div className="mt-3">
                 <ScenarioComparisonTable
                   scenarioResults={scenarioResults}
-                  activeResult={activeResult}
-                  activeColumn={activeColumn}
+                  activeColumn={activeScenario}
                 />
               </div>
             </section>
-
-            {/* What changed vs Base? */}
-            {!isBaseCase && baseChanges.length > 0 && (
-              <section className="border-t border-forest/10 pt-8">
-                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                  What Changed vs Base?
-                </h2>
-                <div className="mt-3 rounded-xl border border-forest/15 bg-white p-4">
-                  <ul className="flex flex-col gap-1.5">
-                    {baseChanges.map((change) => (
-                      <li
-                        key={change.key}
-                        className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
-                      >
-                        <span className="font-semibold text-charcoal">{change.label}</span>:{" "}
-                        {formatAssumptionValue(change.key, change.fromValue)} &rarr;{" "}
-                        {formatAssumptionValue(change.key, change.toValue)}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-4 grid grid-cols-1 gap-2 border-t border-forest/10 pt-4 sm:grid-cols-3">
-                    <div className="text-sm">
-                      <span className="text-charcoal-soft">Ending ARR: </span>
-                      <span className="font-semibold text-charcoal">
-                        {formatSignedCompact(baseImpact.arrDelta)}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-charcoal-soft">EBITDA Margin: </span>
-                      <span className="font-semibold text-charcoal">
-                        {baseImpact.marginDeltaPts >= 0 ? "+" : ""}
-                        {baseImpact.marginDeltaPts.toFixed(1)} pts
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-charcoal-soft">Ending Cash: </span>
-                      <span className="font-semibold text-charcoal">
-                        {formatSignedCompact(baseImpact.cashDelta)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
 
             {/* Top Drivers Sensitivity */}
             <section className="border-t border-forest/10 pt-8">
@@ -2793,12 +2543,11 @@ export default function FpaDecisionLab() {
                     />
                   </div>
                   <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
-                    Achieved utilization = target utilization, capped by
-                    pipeline conversion relative to a{" "}
-                    {formatPercent(PIPELINE_CONVERSION_BENCHMARK, 0)} benchmark
-                    needed to keep the bench fully booked — below that
-                    benchmark, insufficient signed work leaves staff on the
-                    bench even at the target rate.
+                    Achieved utilization = target utilization, adjusted around
+                    a {formatPercent(REFERENCE_CONVERSION, 0)} reference
+                    pipeline conversion rate — stronger conversion lifts
+                    achieved utilization toward or above target, weaker
+                    conversion pulls it below and leaves staff on the bench.
                   </p>
                 </section>
 
@@ -2832,18 +2581,16 @@ export default function FpaDecisionLab() {
                       <thead>
                         <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
                           <th className="px-4 py-3 font-semibold">Metric</th>
-                          {(["base", "upside", "downside"] as ConsultingScenarioKey[]).map(
-                            (key) => (
-                              <th
-                                key={key}
-                                className={`px-4 py-3 font-semibold ${
-                                  consultingMatchedPresetKey === key ? "bg-forest/10 text-forest" : ""
-                                }`}
-                              >
-                                {consultingScenarioPresets[key].label}
-                              </th>
-                            )
-                          )}
+                          {SCENARIO_KEYS.map((key) => (
+                            <th
+                              key={key}
+                              className={`px-4 py-3 font-semibold ${
+                                consultingActiveScenario === key ? "bg-forest/10 text-forest" : ""
+                              }`}
+                            >
+                              {SCENARIO_LABELS[key]}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
@@ -2871,20 +2618,18 @@ export default function FpaDecisionLab() {
                         ].map((row) => (
                           <tr key={row.label} className="border-b border-forest/5 last:border-0">
                             <td className="px-4 py-3 font-semibold text-charcoal">{row.label}</td>
-                            {(["base", "upside", "downside"] as ConsultingScenarioKey[]).map(
-                              (key) => (
-                                <td
-                                  key={key}
-                                  className={`px-4 py-3 text-charcoal-soft ${
-                                    consultingMatchedPresetKey === key
-                                      ? "bg-forest/5 font-semibold text-charcoal"
-                                      : ""
-                                  }`}
-                                >
-                                  {row.format(consultingScenarioResults[key])}
-                                </td>
-                              )
-                            )}
+                            {SCENARIO_KEYS.map((key) => (
+                              <td
+                                key={key}
+                                className={`px-4 py-3 text-charcoal-soft ${
+                                  consultingActiveScenario === key
+                                    ? "bg-forest/5 font-semibold text-charcoal"
+                                    : ""
+                                }`}
+                              >
+                                {row.format(consultingScenarioResults[key])}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
@@ -2982,7 +2727,7 @@ export default function FpaDecisionLab() {
                       Net revenue runs at{" "}
                       {formatCurrencyCompact(consultingResult.endingNetRevenueAnnualized)}/yr on{" "}
                       {formatPercent(consultingResult.endingUtilization, 0)} achieved utilization
-                      across {consultingAssumptions.billableHeadcount} billable consultants.
+                      across {consultingActiveAssumptions.billableHeadcount} billable consultants.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
                       <span className="font-semibold text-brass">Profitability: </span>
@@ -3000,7 +2745,7 @@ export default function FpaDecisionLab() {
                       <span className="font-semibold text-brass">Utilization: </span>
                       Achieved utilization is{" "}
                       {formatPercent(consultingResult.endingUtilization, 0)} against a{" "}
-                      {formatPercent(consultingAssumptions.utilizationPct, 0)} target —{" "}
+                      {formatPercent(consultingActiveAssumptions.utilizationPct, 0)} target —{" "}
                       {consultingUtilizationStatus === "Healthy"
                         ? "pipeline conversion is comfortably keeping the bench booked"
                         : consultingUtilizationStatus === "Watch"
@@ -3116,7 +2861,7 @@ export default function FpaDecisionLab() {
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                     <KpiCard
                       label="Occupancy"
-                      value={formatPercent(realEstateAssumptions.occupancyPct, 0)}
+                      value={formatPercent(realEstateActiveAssumptions.occupancyPct, 0)}
                       badge={realEstateOccupancyStatus}
                       tone={
                         realEstateOccupancyStatus === "Healthy"
@@ -3176,20 +2921,18 @@ export default function FpaDecisionLab() {
                       <thead>
                         <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
                           <th className="px-4 py-3 font-semibold">Metric</th>
-                          {(["base", "upside", "downside"] as RealEstateScenarioKey[]).map(
-                            (key) => (
-                              <th
-                                key={key}
-                                className={`px-4 py-3 font-semibold ${
-                                  realEstateMatchedPresetKey === key
-                                    ? "bg-forest/10 text-forest"
-                                    : ""
-                                }`}
-                              >
-                                {realEstateScenarioPresets[key].label}
-                              </th>
-                            )
-                          )}
+                          {SCENARIO_KEYS.map((key) => (
+                            <th
+                              key={key}
+                              className={`px-4 py-3 font-semibold ${
+                                realEstateActiveScenario === key
+                                  ? "bg-forest/10 text-forest"
+                                  : ""
+                              }`}
+                            >
+                              {SCENARIO_LABELS[key]}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
@@ -3217,20 +2960,18 @@ export default function FpaDecisionLab() {
                         ].map((row) => (
                           <tr key={row.label} className="border-b border-forest/5 last:border-0">
                             <td className="px-4 py-3 font-semibold text-charcoal">{row.label}</td>
-                            {(["base", "upside", "downside"] as RealEstateScenarioKey[]).map(
-                              (key) => (
-                                <td
-                                  key={key}
-                                  className={`px-4 py-3 text-charcoal-soft ${
-                                    realEstateMatchedPresetKey === key
-                                      ? "bg-forest/5 font-semibold text-charcoal"
-                                      : ""
-                                  }`}
-                                >
-                                  {row.format(realEstateScenarioResults[key])}
-                                </td>
-                              )
-                            )}
+                            {SCENARIO_KEYS.map((key) => (
+                              <td
+                                key={key}
+                                className={`px-4 py-3 text-charcoal-soft ${
+                                  realEstateActiveScenario === key
+                                    ? "bg-forest/5 font-semibold text-charcoal"
+                                    : ""
+                                }`}
+                              >
+                                {row.format(realEstateScenarioResults[key])}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
@@ -3330,8 +3071,8 @@ export default function FpaDecisionLab() {
                       <span className="font-semibold text-brass">Performance: </span>
                       Rental revenue runs at{" "}
                       {formatCurrencyCompact(realEstateResult.endingRentalRevenueAnnualized)}/yr at{" "}
-                      {formatPercent(realEstateAssumptions.occupancyPct, 0)} occupancy across{" "}
-                      {harborViewBaseline.totalUnits} units.
+                      {formatPercent(realEstateActiveAssumptions.occupancyPct, 0)} occupancy across{" "}
+                      {realEstateActiveAssumptions.totalUnits} units.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
                       <span className="font-semibold text-brass">Profitability: </span>

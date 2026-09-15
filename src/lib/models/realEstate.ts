@@ -12,6 +12,7 @@ import {
   classifyTrend,
   type CashStatus,
   type Decision,
+  type DriverConfig,
   type MarginStatus,
   type RunwayStatus,
   type TrendStatus,
@@ -19,62 +20,104 @@ import {
 
 export type RealEstateCompanyBaseline = {
   name: string;
-  totalUnits: number;
   startingCash: number;
 };
 
-// Fictional property portfolio used to seed the demo.
+// Deliberately modest, same reasoning as the other two industries: Base is
+// FCF-positive and never touches this cushion, but a small cushion is what
+// makes Downside's Critical-runway/Depleted-cash branches reachable at all.
+export const STARTING_CASH = 400_000;
+
 export const harborViewBaseline: RealEstateCompanyBaseline = {
   name: "Harborview Multifamily Portfolio",
-  totalUnits: 220,
-  startingCash: 900_000,
+  startingCash: STARTING_CASH,
 };
 
 export type RealEstateAssumptions = {
-  occupancyPct: number; // e.g. 0.93 = 93% of units occupied
+  totalUnits: number; // portfolio size — a starting fact, not a forward assumption
   averageMonthlyRent: number; // $ per occupied unit per month
-  operatingExpensePct: number; // % of rental revenue spent on operating expenses
+  occupancyPct: number; // e.g. 0.92 = 92% of units occupied
+  operatingExpensePct: number; // % of effective gross income (occupancy-adjusted rental revenue)
   annualDebtService: number; // $/year principal + interest on the portfolio's debt
   capRatePct: number; // used only to value the asset, not to compute cash flow
 };
 
+export type RealEstateDriverKey = keyof RealEstateAssumptions;
+
+// The 6 Real Estate drivers — sliders are rendered by mapping over this
+// array; there is no separate hardcoded slider list.
+export const REAL_ESTATE_DRIVERS: DriverConfig<RealEstateDriverKey>[] = [
+  { key: "totalUnits", label: "Number of Units", unit: "count", min: 20, max: 1000, step: 10 },
+  { key: "averageMonthlyRent", label: "Avg Monthly Rent per Unit", unit: "currency", min: 500, max: 5_000, step: 25 },
+  { key: "occupancyPct", label: "Occupancy %", unit: "percent", min: 0.4, max: 1.0, step: 0.01 },
+  { key: "operatingExpensePct", label: "Operating Expense Ratio %", unit: "percent", min: 0.2, max: 0.7, step: 0.01 },
+  { key: "annualDebtService", label: "Annual Debt Service", unit: "currency", min: 0, max: 10_000_000, step: 50_000 },
+  { key: "capRatePct", label: "Cap Rate %", unit: "percent", min: 0.03, max: 0.12, step: 0.001 },
+];
+
+const DRIVER_BOUNDS = new Map(REAL_ESTATE_DRIVERS.map((d) => [d.key, d]));
+
+function clampToDriverBounds(key: RealEstateDriverKey, value: number): number {
+  const driver = DRIVER_BOUNDS.get(key)!;
+  return Math.min(driver.max, Math.max(driver.min, value));
+}
+
 export type RealEstateScenarioKey = "base" | "upside" | "downside";
 
-export const realEstateScenarioPresets: Record<
-  RealEstateScenarioKey,
-  { label: string; assumptions: RealEstateAssumptions }
+// Base is whatever the sliders currently say — these are only the
+// starting/default values shown on first load.
+export const REAL_ESTATE_BASE_DEFAULTS: RealEstateAssumptions = {
+  totalUnits: 220,
+  averageMonthlyRent: 1_850,
+  occupancyPct: 0.92,
+  operatingExpensePct: 0.42,
+  annualDebtService: 1_950_000,
+  capRatePct: 0.055,
+};
+
+// Signed, directionally-aware deltas: rent/occupancy are "higher is
+// better" (up in Upside, down in Downside); operating expense ratio and
+// cap rate are "higher is worse" (down in Upside, up in Downside — a
+// higher cap rate reflects a less favorable market and lowers the implied
+// valuation for the same NOI). totalUnits and annualDebtService are held
+// flat (delta 0 both directions): portfolio size and existing debt service
+// are contractual/structural facts, not forward-looking assumptions a
+// scenario should stress.
+export const REAL_ESTATE_SCENARIO_DELTAS: Record<
+  Exclude<RealEstateScenarioKey, "base">,
+  Partial<Record<RealEstateDriverKey, number>>
 > = {
-  base: {
-    label: "Base",
-    assumptions: {
-      occupancyPct: 0.92,
-      averageMonthlyRent: 1_850,
-      operatingExpensePct: 0.42,
-      annualDebtService: 2_400_000,
-      capRatePct: 0.055,
-    },
-  },
   upside: {
-    label: "Upside",
-    assumptions: {
-      occupancyPct: 0.97,
-      averageMonthlyRent: 2_000,
-      operatingExpensePct: 0.37,
-      annualDebtService: 2_400_000,
-      capRatePct: 0.05,
-    },
+    averageMonthlyRent: 150,
+    occupancyPct: 0.03,
+    operatingExpensePct: -0.03,
+    capRatePct: -0.005,
   },
   downside: {
-    label: "Downside",
-    assumptions: {
-      occupancyPct: 0.82,
-      averageMonthlyRent: 1_700,
-      operatingExpensePct: 0.49,
-      annualDebtService: 2_400_000,
-      capRatePct: 0.065,
-    },
+    averageMonthlyRent: -200,
+    occupancyPct: -0.17,
+    operatingExpensePct: 0.13,
+    capRatePct: 0.01,
   },
 };
+
+/**
+ * Base + this scenario's signed delta table, each driver clamped to its own
+ * slider bounds. A zero-delta table returns Base unchanged for every
+ * scenario.
+ */
+export function applyRealEstateScenario(
+  base: RealEstateAssumptions,
+  scenario: RealEstateScenarioKey
+): RealEstateAssumptions {
+  if (scenario === "base") return base;
+  const delta = REAL_ESTATE_SCENARIO_DELTAS[scenario];
+  const out: RealEstateAssumptions = { ...base };
+  (Object.keys(delta) as RealEstateDriverKey[]).forEach((key) => {
+    out[key] = clampToDriverBounds(key, base[key] + (delta[key] ?? 0));
+  });
+  return out;
+}
 
 export type RealEstateMonthResult = {
   month: number;
@@ -95,8 +138,7 @@ export type RealEstateForecastResult = {
   endingNOIMargin: number;
   endingFreeCashFlowAnnualized: number;
   // Free cash flow (after debt service) as a % of rental revenue — the
-  // portfolio's analog to an EBITDA margin, and what feeds decideStance()
-  // below alongside runway.
+  // portfolio's analog to an EBITDA margin.
   endingFreeCashFlowMargin: number;
   endingCash: number;
   runwayMonths: number | null;
@@ -106,17 +148,18 @@ export type RealEstateForecastResult = {
 /**
  * A property's cash flow isn't a growth curve off a starting customer base
  * or a pipeline of billable work — it's occupancy x rent producing rental
- * revenue, minus operating expenses (NOI), minus debt service (free cash
- * flow). Cap rate never enters the cash-flow math; it only capitalizes NOI
- * into an implied asset valuation, a separate output. With occupancy and
- * rent held flat across the window, monthly cash flow is flat — only cash
- * itself moves, accumulating (or draining) monthly free cash flow.
+ * revenue (effective gross income), minus operating expenses (NOI), minus
+ * debt service (free cash flow). Cap rate never enters the cash-flow math;
+ * it only capitalizes NOI into an implied asset valuation, a separate
+ * output. With occupancy and rent held flat across the window, monthly
+ * cash flow is flat — only cash itself moves, accumulating (or draining)
+ * monthly free cash flow.
  */
 export function runRealEstateForecast(
   assumptions: RealEstateAssumptions,
   baseline: RealEstateCompanyBaseline = harborViewBaseline
 ): RealEstateForecastResult {
-  const occupiedUnits = baseline.totalUnits * assumptions.occupancyPct;
+  const occupiedUnits = assumptions.totalUnits * assumptions.occupancyPct;
   const rentalRevenue = occupiedUnits * assumptions.averageMonthlyRent;
   const operatingExpenses = rentalRevenue * assumptions.operatingExpensePct;
   const noi = rentalRevenue - operatingExpenses;
@@ -142,7 +185,7 @@ export function runRealEstateForecast(
   }
 
   const last = months[months.length - 1];
-  const runwayMonths = freeCashFlow >= 0 ? null : baseline.startingCash / -freeCashFlow;
+  const runwayMonths = freeCashFlow >= 0 ? null : Math.max(0, baseline.startingCash / -freeCashFlow);
   const annualizedNOI = noi * 12;
 
   return {
@@ -303,6 +346,13 @@ export function explainRealEstateDecision(
   return reasons;
 }
 
+export function classifyRealEstateCash(
+  endingCash: number,
+  baseline: RealEstateCompanyBaseline = harborViewBaseline
+): CashStatus {
+  return classifyCashRatio(endingCash, baseline.startingCash);
+}
+
 /**
  * Key Risk / Next Action for the CFO Commentary panel. Two tiers, same
  * structure as the SaaS and Consulting engines' equivalents: Tier 1 covers
@@ -326,7 +376,10 @@ export function buildRealEstateRiskAndAction(
   const marginPct = (result.endingFreeCashFlowMargin * 100).toFixed(1);
 
   let keyRiskPhrase: string;
-  if (runwayStatus === "Critical") {
+  if (cashStatus === "Depleted") {
+    keyRiskPhrase =
+      "Cash has gone negative at these assumptions — the portfolio has run out of money within the window.";
+  } else if (runwayStatus === "Critical") {
     keyRiskPhrase =
       "Runway has fallen below 12 months — cash exhaustion is the dominant risk if free cash flow doesn't improve.";
   } else if (cashStatus === "Low") {
@@ -362,31 +415,6 @@ export function buildRealEstateRiskAndAction(
   return { keyRiskPhrase, nextActionPhrase: nextActionPhrase[decision] };
 }
 
-export function classifyRealEstateCash(
-  endingCash: number,
-  baseline: RealEstateCompanyBaseline = harborViewBaseline
-): CashStatus {
-  return classifyCashRatio(endingCash, baseline.startingCash);
-}
-
-export type RealEstateDriverKey = keyof RealEstateAssumptions;
-
-export const realEstateDriverLabels: Record<RealEstateDriverKey, string> = {
-  occupancyPct: "Occupancy",
-  averageMonthlyRent: "Average Rent",
-  operatingExpensePct: "Operating Expense %",
-  annualDebtService: "Annual Debt Service",
-  capRatePct: "Cap Rate",
-};
-
-export const REAL_ESTATE_DRIVER_KEYS: RealEstateDriverKey[] = [
-  "occupancyPct",
-  "averageMonthlyRent",
-  "operatingExpensePct",
-  "annualDebtService",
-  "capRatePct",
-];
-
 export type RealEstateSensitivityMetric = "noi" | "freeCashFlow" | "cash" | "valuation";
 
 function realEstateMetricValue(
@@ -411,14 +439,11 @@ export type RealEstateSensitivityRow = {
   impact: number;
 };
 
+const SENSITIVITY_KEYS: RealEstateDriverKey[] = REAL_ESTATE_DRIVERS.map((d) => d.key);
+
 /**
  * Same "+10% on each driver, one at a time" sensitivity approach as the
- * other two industries, generalized to whichever metric is requested — a
- * higher debt service or cap rate is a headwind, so those two drivers are
- * bumped in the direction that actually stresses the portfolio (debt
- * service up increases cost; cap rate up lowers the implied valuation for
- * the same NOI) rather than uniformly "+10%" on every driver regardless of
- * which direction is adverse.
+ * other two industries, generalized to whichever metric is requested.
  */
 export function runRealEstateSensitivityByMetric(
   assumptions: RealEstateAssumptions,
@@ -428,11 +453,11 @@ export function runRealEstateSensitivityByMetric(
   const baseResult = runRealEstateForecast(assumptions, baseline);
   const baseValue = realEstateMetricValue(baseResult, metric);
 
-  const rows = REAL_ESTATE_DRIVER_KEYS.map((key) => {
+  const rows = SENSITIVITY_KEYS.map((key) => {
     const bumped: RealEstateAssumptions = { ...assumptions, [key]: assumptions[key] * 1.1 };
     const bumpedResult = runRealEstateForecast(bumped, baseline);
     const impact = realEstateMetricValue(bumpedResult, metric) - baseValue;
-    return { key, label: realEstateDriverLabels[key], impact };
+    return { key, label: REAL_ESTATE_DRIVERS.find((d) => d.key === key)!.label, impact };
   });
 
   return rows.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));

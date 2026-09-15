@@ -1,49 +1,36 @@
-import type { SaaSAssumptions, SaaSCompanyBaseline } from "@/lib/models/saas";
+import { SAAS_DRIVERS, type SaaSAssumptions, type SaaSCompanyBaseline } from "@/lib/models/saas";
 
 // Documented CSV schema for the FP&A Decision Lab's company-data import.
 // Required columns establish the baseline the engine forecasts forward
-// from; optional columns let the importer infer starting assumptions from
-// the trend between the last two rows. Column order doesn't matter, but
-// names must match exactly (case-insensitive).
+// from; the optional column lets the importer infer a growth/churn/CAC
+// trend from the last two rows. Column order doesn't matter, but names
+// must match exactly (case-insensitive). Extra/unrecognized columns
+// (including ones from an older version of this schema) are ignored, not
+// rejected — only column COUNT per row must match the file's own header.
 export const CSV_REQUIRED_COLUMNS = [
   "month",
   "customers",
   "mrr",
   "cash",
-  "headcount",
   "sales_marketing_spend",
 ] as const;
 
-export const CSV_OPTIONAL_COLUMNS = [
-  "churned_customers",
-  "expansion_mrr",
-  "contraction_mrr",
-  "new_mrr",
-] as const;
+export const CSV_OPTIONAL_COLUMNS = ["churned_customers"] as const;
 
 export type CsvRow = {
   month: number;
   customers: number;
   mrr: number;
   cash: number;
-  headcount: number;
   salesMarketingSpend: number; // monthly, per row
   churnedCustomers?: number;
-  expansionMrr?: number;
-  contractionMrr?: number;
-  newMrr?: number;
 };
 
-// Matches the min/max on the Drivers sliders in FpaDecisionLab.tsx — kept
-// here so a derived value never lands outside what the slider can express.
-const ASSUMPTION_BOUNDS = {
-  monthlyGrowthRate: [0, 0.15] as const,
-  monthlyChurnRate: [0, 0.06] as const,
-  monthlyExpansionRate: [0, 0.05] as const,
-  monthlyContractionRate: [0, 0.05] as const,
-  headcount: [15, 50] as const,
-  annualSalesMarketing: [300_000, 1_500_000] as const,
-};
+// Sourced directly from the SaaS model's own driver config (SAAS_DRIVERS)
+// so a derived value can never land outside what the slider can express,
+// and so a future change to a driver's bounds never needs a second edit
+// here — this file has no bounds of its own.
+const driverBounds = new Map(SAAS_DRIVERS.map((d) => [d.key, [d.min, d.max] as const]));
 
 function clamp(value: number, [min, max]: readonly [number, number]): number {
   return Math.min(max, Math.max(min, value));
@@ -64,11 +51,11 @@ export type CsvParseResult =
  * files outright (missing columns, wrong column count, non-numeric or
  * negative values in required fields) rather than silently substituting
  * zeros or defaults. On success, derives a new company baseline from the
- * last row and — only where the optional columns and at least two rows
- * make it possible — a starting point for the growth/churn/expansion/
- * contraction sliders from the trend between the last two rows. Anything
- * that can't be derived is left untouched and reported as a warning, never
- * guessed.
+ * last row (starting cash) plus starting customers and avg MRR per
+ * customer, and — only where the optional churned_customers column and at
+ * least two rows make it possible — a growth/churn/CAC trend from the last
+ * two rows. Anything that can't be derived is left untouched and reported
+ * as a warning, never guessed.
  */
 export function parseCompanyCsv(text: string): CsvParseResult {
   const lines = text
@@ -120,7 +107,6 @@ export function parseCompanyCsv(text: string): CsvParseResult {
     const customers = requiredNum("customers");
     const mrr = requiredNum("mrr");
     const cash = requiredNum("cash");
-    const headcount = requiredNum("headcount");
     const salesMarketingSpend = requiredNum("sales_marketing_spend");
 
     if (
@@ -128,7 +114,6 @@ export function parseCompanyCsv(text: string): CsvParseResult {
       customers === null ||
       mrr === null ||
       cash === null ||
-      headcount === null ||
       salesMarketingSpend === null
     ) {
       return {
@@ -136,7 +121,7 @@ export function parseCompanyCsv(text: string): CsvParseResult {
         error: `Row ${i + 1} is missing a value, or has a non-numeric value, in a required column.`,
       };
     }
-    if (customers < 0 || mrr < 0 || cash < 0 || headcount < 0 || salesMarketingSpend < 0) {
+    if (customers < 0 || mrr < 0 || cash < 0 || salesMarketingSpend < 0) {
       return {
         ok: false,
         error: `Row ${i + 1} has a negative value in a column that must be zero or greater.`,
@@ -148,36 +133,29 @@ export function parseCompanyCsv(text: string): CsvParseResult {
       customers,
       mrr,
       cash,
-      headcount,
       salesMarketingSpend,
       churnedCustomers: optionalNum("churned_customers"),
-      expansionMrr: optionalNum("expansion_mrr"),
-      contractionMrr: optionalNum("contraction_mrr"),
-      newMrr: optionalNum("new_mrr"),
     });
   }
 
   const last = rows[rows.length - 1];
   const derivedBaseline: SaaSCompanyBaseline = {
     name: "Imported Company",
-    startingARR: last.mrr * 12,
-    startingCustomers: last.customers,
-    annualArpu: last.customers === 0 ? 0 : (last.mrr * 12) / last.customers,
     startingCash: last.cash,
   };
 
   const warnings: string[] = [];
   const derivedAssumptions: Partial<SaaSAssumptions> = {
-    headcount: Math.round(clamp(last.headcount, ASSUMPTION_BOUNDS.headcount)),
-    annualSalesMarketing: clamp(
-      last.salesMarketingSpend * 12,
-      ASSUMPTION_BOUNDS.annualSalesMarketing
+    startingCustomers: Math.round(clamp(last.customers, driverBounds.get("startingCustomers")!)),
+    avgMrrPerCustomer: clamp(
+      last.customers === 0 ? 0 : last.mrr / last.customers,
+      driverBounds.get("avgMrrPerCustomer")!
     ),
   };
 
   if (rows.length < 2) {
     warnings.push(
-      "Only one data row was provided — growth, churn, expansion, and contraction rates could not be derived from a trend; the currently selected preset's rates were kept."
+      "Only one data row was provided — growth, churn, and CAC could not be derived from a trend; the current sliders were kept."
     );
   } else {
     const prev = rows[rows.length - 2];
@@ -185,37 +163,29 @@ export function parseCompanyCsv(text: string): CsvParseResult {
     if (prev.customers > 0 && last.churnedCustomers !== undefined) {
       const churnRate = clamp(
         last.churnedCustomers / prev.customers,
-        ASSUMPTION_BOUNDS.monthlyChurnRate
+        driverBounds.get("monthlyChurnRate")!
       );
       const impliedNewCustomers = last.customers - prev.customers + last.churnedCustomers;
       const growthRate = clamp(
         impliedNewCustomers / prev.customers,
-        ASSUMPTION_BOUNDS.monthlyGrowthRate
+        driverBounds.get("monthlyGrowthRate")!
       );
       derivedAssumptions.monthlyChurnRate = churnRate;
       derivedAssumptions.monthlyGrowthRate = growthRate;
-    } else {
-      warnings.push(
-        "No churned_customers value on the last row — growth and churn rates were not derived; the currently selected preset's rates were kept."
-      );
-    }
 
-    if (
-      prev.mrr > 0 &&
-      last.expansionMrr !== undefined &&
-      last.contractionMrr !== undefined
-    ) {
-      derivedAssumptions.monthlyExpansionRate = clamp(
-        last.expansionMrr / prev.mrr,
-        ASSUMPTION_BOUNDS.monthlyExpansionRate
-      );
-      derivedAssumptions.monthlyContractionRate = clamp(
-        last.contractionMrr / prev.mrr,
-        ASSUMPTION_BOUNDS.monthlyContractionRate
-      );
+      if (impliedNewCustomers > 0) {
+        derivedAssumptions.cac = clamp(
+          last.salesMarketingSpend / impliedNewCustomers,
+          driverBounds.get("cac")!
+        );
+      } else {
+        warnings.push(
+          "Implied new customers for the last row was zero or negative — CAC could not be derived from spend; the current CAC slider was kept."
+        );
+      }
     } else {
       warnings.push(
-        "No expansion_mrr/contraction_mrr values on the last row — expansion and contraction rates were not derived; the currently selected preset's rates were kept."
+        "No churned_customers value on the last row — growth, churn, and CAC were not derived; the current sliders were kept."
       );
     }
   }
