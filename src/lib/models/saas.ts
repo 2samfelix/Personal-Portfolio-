@@ -11,7 +11,6 @@ import {
   classifyRunway as sharedClassifyRunway,
   classifyTrend,
   decideStance as sharedDecideStance,
-  formatPct,
   formatUsdCompact,
   type BadgeTone,
   type CashStatus as SharedCashStatus,
@@ -182,13 +181,22 @@ export type SaaSForecastResult = {
   endingEBITDAMargin: number; // ending-month EBITDA / ending-month revenue
   endingCash: number;
   runwayMonths: number | null; // null = cash-flow positive at ending run-rate
-  // Month 12's NRR — the figure shown as the "NRR" KPI in the UI.
+  // ANNUALIZED net revenue retention — the figure shown as the "NRR" KPI in
+  // the UI, and the one classifyNRR's 90%/100%/110% bands are calibrated
+  // against. Computed by compounding month 12's monthly retention rate
+  // (SaaSMonthResult.nrr, still a per-month figure) over 12 months:
+  // monthlyNRR^12. Reporting the raw monthly figure against these bands
+  // would understate retention health by construction — e.g. a 99% monthly
+  // rate compounds to ~88.6% annually, which reads as Weak, not Watch, and
+  // the two numbers mean genuinely different things even though they look
+  // similar. Prompt 3 fixed this; it was wrong before.
   endingNRR: number;
-  // Mean of the 12 monthly NRR values. Under this model, NRR is driven
-  // entirely by the (constant) expansion/contraction rates and the churn
-  // driver, so it is mathematically identical to endingNRR every month —
-  // both are exposed so a future version with time-varying retention rates
-  // doesn't need a new field.
+  // Mean of the 12 monthly NRR values, annualized the same way as
+  // endingNRR. Under this model, expansion/contraction are fixed constants
+  // and only churn (fixed per scenario) drives NRR, so every month's
+  // monthly rate is identical and this is mathematically the same value as
+  // endingNRR — both are exposed so a future version with time-varying
+  // retention rates doesn't need a new field.
   averageNRR: number;
   // Customer Acquisition Cost — a direct driver now (see SaaSAssumptions),
   // not derived from spend / customers. Echoed back here so every place
@@ -296,7 +304,12 @@ export function runSaaSForecast(
   const endingEBITDAMargin = last.mrr === 0 ? 0 : last.ebitda / last.mrr;
   const runwayMonths =
     last.ebitda >= 0 ? null : Math.max(0, last.cash / Math.abs(last.ebitda));
-  const averageNRR = months.reduce((sum, m) => sum + m.nrr, 0) / months.length;
+  const monthlyAverageNRR = months.reduce((sum, m) => sum + m.nrr, 0) / months.length;
+  // Compound the monthly rate over 12 months to match the annual
+  // convention classifyNRR's bands assume — see the doc comment on
+  // SaaSForecastResult.endingNRR.
+  const annualizedEndingNRR = Math.pow(last.nrr, 12);
+  const annualizedAverageNRR = Math.pow(monthlyAverageNRR, 12);
 
   const cac = assumptions.cac;
   const ltv =
@@ -312,8 +325,8 @@ export function runSaaSForecast(
     endingEBITDAMargin,
     endingCash: last.cash,
     runwayMonths,
-    endingNRR: last.nrr,
-    averageNRR,
+    endingNRR: annualizedEndingNRR,
+    averageNRR: annualizedAverageNRR,
     cac,
     ltv,
     ltvToCac,
@@ -442,13 +455,6 @@ const ARR_TREND_TONE: Record<ArrTrend, BadgeTone> = {
   Contracting: "bad",
 };
 
-const NRR_STATUS_TONE: Record<NRRStatus, BadgeTone> = {
-  Strong: "good",
-  Healthy: "good",
-  Watch: "neutral",
-  Weak: "bad",
-};
-
 const RUNWAY_STATUS_TONE: Record<RunwayStatus, BadgeTone> = {
   Safe: "good",
   "Self-funded": "good",
@@ -457,11 +463,18 @@ const RUNWAY_STATUS_TONE: Record<RunwayStatus, BadgeTone> = {
 };
 
 /**
- * The three SaaS charts (exactly these, in this order — see SAAS_DRIVERS
- * for the equivalent contract on sliders). Each chart's badge reuses an
- * existing classify* threshold (never a new band invented for the
- * presentation layer), and its alert line is derived from that same
- * classification value, so the two can never disagree.
+ * The two SaaS line charts (exactly these, in this order — see
+ * SAAS_DRIVERS for the equivalent contract on sliders). Net revenue
+ * retention isn't part of this array: it's reported as a KPI card (see
+ * Prompt 3's writeup) rather than a line chart, since a defensible
+ * month-over-month driver for it inside THIS model couldn't be justified
+ * without manufacturing one — see buildCfoCommentaryData's nrrPhrase for
+ * where it still appears. The restored MRR Bridge waterfall sits between
+ * these two in the UI; it isn't config-driven like this array since it
+ * shows one month's bridge, not a 3-scenario line series. Each chart's
+ * badge reuses an existing classify* threshold (never a new band invented
+ * for the presentation layer), and its alert line is derived from that
+ * same classification value, so the two can never disagree.
  */
 export const SAAS_CHARTS: ChartConfig<SaaSForecastResult, SaaSAssumptions>[] = [
   {
@@ -502,36 +515,6 @@ export const SAAS_CHARTS: ChartConfig<SaaSForecastResult, SaaSAssumptions>[] = [
     },
     explainer:
       "Monthly recurring revenue (MRR) is the subscription revenue run-rate at a point in time. A healthy SaaS business grows MRR faster than it loses it to churn; a declining line means customer losses are outpacing new sales and expansion within the existing base.",
-  },
-  {
-    key: "nrr",
-    chartLabel: "Net Revenue Retention",
-    statLabel: "NRR",
-    valueFormat: { kind: "percent", digits: 1 },
-    ariaLabel: "12-month net revenue retention trend under Base, Upside, and Downside scenarios",
-    getSeries: (result) => result.months.map((m) => m.nrr),
-    getCaption: (result, assumptions) => {
-      const status = classifyNRR(result.endingNRR);
-      const tone = NRR_STATUS_TONE[status];
-      const churnPct = formatPct(assumptions.monthlyChurnRate, 1);
-      const nrrPct = formatPct(result.endingNRR, 1);
-
-      let alertLead: string;
-      let alertExplanation: string;
-      if (status === "Strong" || status === "Healthy") {
-        alertLead = status === "Strong" ? "Net revenue retention is strong." : "Net revenue retention is healthy.";
-        alertExplanation = `NRR sits at ${nrrPct} against the existing customer base — the fixed expansion assumption is outweighing a ${churnPct} monthly churn rate and contraction.`;
-      } else if (status === "Watch") {
-        alertLead = "Net revenue retention is in a watch band.";
-        alertExplanation = `NRR sits at ${nrrPct} against the existing customer base — a ${churnPct} monthly churn rate is currently outweighing the fixed expansion assumption, though not by a wide margin.`;
-      } else {
-        alertLead = "Net revenue retention is weak.";
-        alertExplanation = `NRR sits at ${nrrPct} against the existing customer base — a ${churnPct} monthly churn rate is eroding it faster than the fixed expansion assumption can offset.`;
-      }
-      return { badge: { label: status, tone }, alertTone: tone, alertLead, alertExplanation };
-    },
-    explainer:
-      "Net revenue retention (NRR) measures revenue kept from the existing customer base alone — expansion and contraction within that base, net of churn, excluding new logos. Above 100% means the existing base is growing on its own; below 100% means churn and contraction are shrinking it even before counting new sales.",
   },
   {
     key: "cashRunway",

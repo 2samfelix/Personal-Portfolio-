@@ -61,6 +61,11 @@ export const STANDARD_BILLABLE_HOURS_PER_MONTH = 160; // ~40 hrs/week x 4 weeks
 //     the relationship stays plausible even at very low conversion.
 // Example: 75% target, 40% conversion -> (0.40-0.30) x 0.5 = +0.05 (under
 // the +0.10 cap) -> 80% achieved: modestly ABOVE target, not 30%.
+//
+// As of Prompt 3, this formula computes the RAMP DESTINATION, not a single
+// flat value: achieved utilization starts at CURRENT_UTILIZATION and
+// converges toward this destination over the window (see
+// runConsultingForecast) — the formula itself is unchanged.
 export const REFERENCE_CONVERSION = 0.3; // conversion rate at which achieved = target
 export const CONVERSION_SENSITIVITY = 0.5; // achieved-utilization shift per point of conversion deviation
 export const CONVERSION_MAX_LIFT = 0.1; // cap on how far strong conversion can lift achieved above target
@@ -83,9 +88,9 @@ export function computeAchievedUtilization(
 }
 
 export type ConsultingAssumptions = {
-  billableHeadcount: number; // consultants, held constant across the 12-month window
+  billableHeadcount: number; // consultants TODAY — a starting fact; headcount then ramps from here, see time dynamics below
   averageBillRate: number; // $ per billable hour
-  utilizationPct: number; // TARGET utilization, e.g. 0.75 = 75% — achieved utilization is derived, see above
+  utilizationPct: number; // TARGET utilization, e.g. 0.75 = 75% — feeds the ramp destination, see above
   avgFullyLoadedCostPerConsultant: number; // $ / consultant / year — delivery cost = headcount x this, independent of revenue
   pipelineConversionPct: number; // % of generated pipeline that converts to signed, billable work
   sgaPct: number; // % of net revenue spent on sales, marketing, and G&A overhead
@@ -96,7 +101,7 @@ export type ConsultingDriverKey = keyof ConsultingAssumptions;
 // The 6 Consulting drivers — sliders are rendered by mapping over this
 // array; there is no separate hardcoded slider list.
 export const CONSULTING_DRIVERS: DriverConfig<ConsultingDriverKey>[] = [
-  { key: "billableHeadcount", label: "Billable Headcount", unit: "count", min: 10, max: 100, step: 1 },
+  { key: "billableHeadcount", label: "Billable Headcount (Starting)", unit: "count", min: 10, max: 100, step: 1 },
   { key: "averageBillRate", label: "Avg Bill Rate", unit: "currency", min: 80, max: 400, step: 5 },
   { key: "utilizationPct", label: "Target Utilization %", unit: "percent", min: 0.3, max: 0.95, step: 0.01 },
   { key: "avgFullyLoadedCostPerConsultant", label: "Avg Fully-Loaded Cost per Consultant", unit: "currency", min: 60_000, max: 300_000, step: 5_000 },
@@ -111,6 +116,10 @@ function clampToDriverBounds(key: ConsultingDriverKey, value: number): number {
   return Math.min(driver.max, Math.max(driver.min, value));
 }
 
+function clampRange(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 export type ConsultingScenarioKey = "base" | "upside" | "downside";
 
 // Base is whatever the sliders currently say — these are only the
@@ -120,7 +129,7 @@ export const CONSULTING_BASE_DEFAULTS: ConsultingAssumptions = {
   averageBillRate: 185,
   utilizationPct: 0.75,
   avgFullyLoadedCostPerConsultant: 150_000,
-  pipelineConversionPct: 0.32,
+  pipelineConversionPct: 0.335,
   sgaPct: 0.25,
 };
 
@@ -128,7 +137,8 @@ export const CONSULTING_BASE_DEFAULTS: ConsultingAssumptions = {
 // conversion are "higher is better" (up in Upside, down in Downside);
 // fully-loaded cost per consultant and SG&A % are "higher is worse" (down
 // in Upside, up in Downside). billableHeadcount is a starting fact (delta
-// 0 both directions), not a scenario lever.
+// 0 both directions), not a scenario lever — its forward *growth* is
+// governed by the separate ramp constants below instead.
 export const CONSULTING_SCENARIO_DELTAS: Record<
   Exclude<ConsultingScenarioKey, "base">,
   Partial<Record<ConsultingDriverKey, number>>
@@ -167,11 +177,86 @@ export function applyConsultingScenario(
   return out;
 }
 
+// --- Time dynamics (Prompt 3) ---
+// Two mechanisms plus a lag give the firm genuine month-over-month
+// behavior instead of the same month repeated 12 times. All are documented
+// model constants, not sliders — the industry stays at exactly 6 drivers.
+//
+// 1. Utilization ramp: computeAchievedUtilization() above still computes
+//    where achieved utilization is HEADED (the target, adjusted by
+//    pipeline conversion) — it's now a destination, not the value itself.
+//    Achieved utilization starts at CURRENT_UTILIZATION and closes the
+//    remaining gap to that destination asymptotically, the same
+//    "fixed fraction of the remaining gap every month" shape as Real
+//    Estate's occupancy lease-up. When the destination sits BELOW today's
+//    utilization (a stressed Downside), the same formula produces
+//    utilization declining toward it instead of rising.
+// 2. Headcount ramp: billable headcount grows (or, in a stalled Downside,
+//    shrinks) at a modest compounding monthly rate from the driver's
+//    starting value, independent of utilization — a second, additive
+//    source of net-revenue movement.
+// 3. Bookings-to-revenue lag: a signed engagement doesn't become billed
+//    revenue the instant pipeline conversion happens — staffing and
+//    onboarding take time. BOOKING_LAG_MONTHS documents that delay: net
+//    revenue in month m bills at month (m - lag)'s utilization level, not
+//    the current month's. The Utilization Trend chart still shows the true,
+//    unlagged ramp; only revenue (and everything downstream of it) lags.
+export const CURRENT_UTILIZATION = 0.65; // achieved utilization today, before ramping toward the pipeline-adjusted destination
+export const BASE_UTIL_RAMP_SPEED = 0.3; // fraction of the remaining gap to destination closed each month
+export const BASE_HEADCOUNT_MONTHLY_GROWTH = 0.006; // modest monthly headcount growth, independent of utilization
+export const BOOKING_LAG_MONTHS = 1; // months between pipeline conversion and recognized billable revenue
+
+const MIN_UTIL_RAMP_SPEED = 0.05;
+const MAX_UTIL_RAMP_SPEED = 0.6;
+const MIN_HEADCOUNT_MONTHLY_GROWTH = -0.02;
+const MAX_HEADCOUNT_MONTHLY_GROWTH = 0.02;
+
+export type ConsultingRampConstants = {
+  utilRampSpeed: number;
+  headcountMonthlyGrowth: number;
+};
+
+// Signed, directionally-aware, same "Base + delta, clamped" architecture as
+// the driver deltas above: Upside ramps utilization toward its (higher)
+// destination faster and grows headcount faster; Downside stalls the
+// utilization ramp (which, combined with a destination already pulled down
+// by the utilizationPct/pipelineConversionPct deltas, becomes a slide
+// rather than a rise) and shrinks headcount via attrition without backfill.
+export const CONSULTING_RAMP_DELTAS: Record<Exclude<ConsultingScenarioKey, "base">, ConsultingRampConstants> = {
+  upside: { utilRampSpeed: 0.15, headcountMonthlyGrowth: 0.006 },
+  downside: { utilRampSpeed: -0.2, headcountMonthlyGrowth: -0.01 },
+};
+
+/**
+ * Base ramp constants + this scenario's signed delta, each clamped to its
+ * own range — mirrors applyConsultingScenario's "Base + delta, clamped"
+ * shape for the 2 new non-slider time-dynamics constants. A zero-delta
+ * table (both this one and CONSULTING_SCENARIO_DELTAS) collapses all three
+ * scenarios back to identical output.
+ */
+export function consultingRampConstantsForScenario(scenario: ConsultingScenarioKey): ConsultingRampConstants {
+  const base: ConsultingRampConstants = {
+    utilRampSpeed: BASE_UTIL_RAMP_SPEED,
+    headcountMonthlyGrowth: BASE_HEADCOUNT_MONTHLY_GROWTH,
+  };
+  if (scenario === "base") return base;
+  const delta = CONSULTING_RAMP_DELTAS[scenario];
+  return {
+    utilRampSpeed: clampRange(base.utilRampSpeed + delta.utilRampSpeed, MIN_UTIL_RAMP_SPEED, MAX_UTIL_RAMP_SPEED),
+    headcountMonthlyGrowth: clampRange(
+      base.headcountMonthlyGrowth + delta.headcountMonthlyGrowth,
+      MIN_HEADCOUNT_MONTHLY_GROWTH,
+      MAX_HEADCOUNT_MONTHLY_GROWTH
+    ),
+  };
+}
+
 export type ConsultingMonthResult = {
   month: number;
+  headcount: number; // this month's ramped billable headcount
   capacityHours: number;
-  achievedUtilization: number; // fraction actually realized this month, pipeline-adjusted
-  billedHours: number;
+  achievedUtilization: number; // this month's TRUE ramped utilization (unlagged) — what the Utilization Trend chart shows
+  billedHours: number; // capacity x the LAGGED utilization that actually converts to billed hours this month
   netRevenue: number;
   deliveryCost: number;
   projectMargin: number;
@@ -195,40 +280,57 @@ export type ConsultingForecastResult = {
 /**
  * A services firm's revenue isn't a growth curve off a starting customer
  * base like SaaS — it's driven each month by how much billable capacity
- * actually gets utilized, where achieved utilization is target utilization
- * adjusted (not multiplied) by how pipeline conversion compares to a
- * reference rate — see computeAchievedUtilization above. Delivery cost is
+ * actually gets utilized. Achieved utilization now RAMPS from
+ * CURRENT_UTILIZATION toward the pipeline-adjusted destination
+ * computeAchievedUtilization() returns (asymptotic convergence, same shape
+ * as Real Estate's occupancy lease-up); billable headcount ramps
+ * separately and additively from the driver's starting value; and net
+ * revenue bills off utilization from BOOKING_LAG_MONTHS ago, not the
+ * current month's, reflecting real staffing/onboarding lag between a
+ * signed engagement and recognized revenue. Delivery cost is this month's
  * headcount x avg fully-loaded cost per consultant — an absolute cost that
  * moves EBITDA and project margin but never touches net revenue or
  * utilization, since it's a cost line, not a capacity or pricing input.
- * With every driver held flat across the window, revenue and margins are
- * flat month to month — only cash moves, accumulating (or draining)
- * monthly EBITDA.
  */
 export function runConsultingForecast(
   assumptions: ConsultingAssumptions,
-  baseline: ConsultingCompanyBaseline = meridianBaseline
+  baseline: ConsultingCompanyBaseline = meridianBaseline,
+  scenario: ConsultingScenarioKey = "base"
 ): ConsultingForecastResult {
-  const capacityHours = assumptions.billableHeadcount * STANDARD_BILLABLE_HOURS_PER_MONTH;
-  const achievedUtilization = computeAchievedUtilization(
+  const ramp = consultingRampConstantsForScenario(scenario);
+  const destinationUtilization = computeAchievedUtilization(
     assumptions.utilizationPct,
     assumptions.pipelineConversionPct
   );
-  const billedHours = capacityHours * achievedUtilization;
-  const netRevenue = billedHours * assumptions.averageBillRate;
-  const deliveryCost = (assumptions.billableHeadcount * assumptions.avgFullyLoadedCostPerConsultant) / 12;
-  const projectMargin = netRevenue - deliveryCost;
-  const projectMarginPct = netRevenue === 0 ? 0 : projectMargin / netRevenue;
-  const sga = netRevenue * assumptions.sgaPct;
-  const ebitda = projectMargin - sga;
-  const ebitdaMargin = netRevenue === 0 ? 0 : ebitda / netRevenue;
+  const utilizationGap0 = CURRENT_UTILIZATION - destinationUtilization;
 
-  const months: ConsultingMonthResult[] = [];
+  // m<=0 is "before the forecast window" — pretend utilization was already
+  // at today's starting level, so the lag has something to reference in
+  // month 1 rather than needing a special case.
+  const utilAt = (m: number): number =>
+    m <= 0 ? CURRENT_UTILIZATION : destinationUtilization + utilizationGap0 * Math.pow(1 - ramp.utilRampSpeed, m);
+
   let cash = baseline.startingCash;
+  const months: ConsultingMonthResult[] = [];
+
   for (let month = 1; month <= 12; month++) {
+    const headcount = assumptions.billableHeadcount * Math.pow(1 + ramp.headcountMonthlyGrowth, month);
+    const capacityHours = headcount * STANDARD_BILLABLE_HOURS_PER_MONTH;
+    const achievedUtilization = utilAt(month);
+    const billedUtilization = utilAt(month - BOOKING_LAG_MONTHS);
+    const billedHours = capacityHours * billedUtilization;
+    const netRevenue = billedHours * assumptions.averageBillRate;
+    const deliveryCost = (headcount * assumptions.avgFullyLoadedCostPerConsultant) / 12;
+    const projectMargin = netRevenue - deliveryCost;
+    const projectMarginPct = netRevenue === 0 ? 0 : projectMargin / netRevenue;
+    const sga = netRevenue * assumptions.sgaPct;
+    const ebitda = projectMargin - sga;
+    const ebitdaMargin = netRevenue === 0 ? 0 : ebitda / netRevenue;
+
     cash += ebitda;
     months.push({
       month,
+      headcount,
       capacityHours,
       achievedUtilization,
       billedHours,
@@ -244,14 +346,14 @@ export function runConsultingForecast(
   }
 
   const last = months[months.length - 1];
-  const runwayMonths = ebitda >= 0 ? null : Math.max(0, baseline.startingCash / -ebitda);
+  const runwayMonths = last.ebitda >= 0 ? null : Math.max(0, baseline.startingCash / -last.ebitda);
 
   return {
     months,
-    endingNetRevenueAnnualized: netRevenue * 12,
-    endingUtilization: achievedUtilization,
-    endingProjectMarginPct: projectMarginPct,
-    endingEBITDAMargin: ebitdaMargin,
+    endingNetRevenueAnnualized: last.netRevenue * 12,
+    endingUtilization: last.achievedUtilization,
+    endingProjectMarginPct: last.projectMarginPct,
+    endingEBITDAMargin: last.ebitdaMargin,
     endingCash: last.cash,
     runwayMonths,
   };
@@ -259,11 +361,10 @@ export function runConsultingForecast(
 
 export type ConsultingTrend = TrendStatus;
 
-// Net revenue is flat month-to-month under fixed drivers (see
-// runConsultingForecast), so this will almost always read "Flat" for a
-// single scenario — it becomes meaningful when comparing two different
-// driver settings; kept for interface symmetry with the other industries
-// and for a future month-over-month growth driver.
+// Net revenue trend across the window — now genuinely meaningful once the
+// utilization ramp, headcount ramp, and bookings lag are real
+// month-over-month dynamics (Prompt 3), not the flat repeat it was before.
+// This is the badge source for the Net Revenue chart.
 export function classifyConsultingTrend(result: ConsultingForecastResult): ConsultingTrend {
   const first = result.months[0].netRevenue;
   const last = result.months[result.months.length - 1].netRevenue;
@@ -297,14 +398,18 @@ const MARGIN_STATUS_TONE: Record<MarginStatus, BadgeTone> = {
   MateriallyUnprofitable: "bad",
 };
 
+const TREND_TONE: Record<ConsultingTrend, BadgeTone> = {
+  Growing: "good",
+  Flat: "neutral",
+  Contracting: "bad",
+};
+
 /**
- * The three Consulting charts (exactly these, in this order). Net revenue
- * and margin are flat month-to-month under fixed drivers (see
- * runConsultingForecast) — badging on trend would read "Flat" for every
- * scenario regardless of how severe Downside is, so instead each chart
- * badges on the health classifier that actually explains its level:
- * utilization (the firm's real capacity constraint) drives both billed
- * revenue and utilization itself, and margin drives the EBITDA chart.
+ * The three Consulting charts (exactly these, in this order). Now that the
+ * utilization ramp, headcount ramp, and bookings lag give every one of
+ * these a genuine month-over-month slope (Prompt 3), Net Revenue badges on
+ * its own trend rather than borrowing utilization's band — utilization and
+ * EBITDA margin already badged on their own metric and are unchanged.
  */
 export const CONSULTING_CHARTS: ChartConfig<ConsultingForecastResult, ConsultingAssumptions>[] = [
   {
@@ -315,27 +420,28 @@ export const CONSULTING_CHARTS: ChartConfig<ConsultingForecastResult, Consulting
     ariaLabel: "12-month net revenue under Base, Upside, and Downside scenarios",
     getSeries: (result) => result.months.map((m) => m.netRevenue),
     getCaption: (result) => {
-      const utilStatus = classifyUtilization(result.endingUtilization);
-      const tone = UTILIZATION_STATUS_TONE[utilStatus];
-      const monthlyRevenue = result.months[0].netRevenue;
-      const utilPct = formatPct(result.endingUtilization, 0);
+      const trend = classifyConsultingTrend(result);
+      const tone = TREND_TONE[trend];
+      const first = result.months[0].netRevenue;
+      const last = result.months[result.months.length - 1].netRevenue;
+      const pctChange = first === 0 ? 0 : ((last - first) / first) * 100;
 
       let alertLead: string;
       let alertExplanation: string;
-      if (utilStatus === "Healthy") {
-        alertLead = "Net revenue is well-supported.";
-        alertExplanation = `Monthly net revenue runs at ${formatUsdCompact(monthlyRevenue)}, on ${utilPct} achieved utilization — pipeline conversion is comfortably keeping billable capacity booked.`;
-      } else if (utilStatus === "Watch") {
-        alertLead = "Net revenue is below full capacity.";
-        alertExplanation = `Monthly net revenue runs at ${formatUsdCompact(monthlyRevenue)}, on ${utilPct} achieved utilization — pipeline conversion is only partially keeping billable capacity booked, leaving some revenue on the table.`;
+      if (trend === "Growing") {
+        alertLead = "Net revenue is growing.";
+        alertExplanation = `Monthly net revenue rose to ${formatUsdCompact(last)} by Month 12, up ${pctChange.toFixed(1)}% from ${formatUsdCompact(first)}, as achieved utilization ramps toward its pipeline-adjusted destination and headcount grows.`;
+      } else if (trend === "Flat") {
+        alertLead = "Net revenue is roughly flat.";
+        alertExplanation = `Monthly net revenue is little changed at ${formatUsdCompact(last)}, versus ${formatUsdCompact(first)} at the start of the window — utilization is already close to its ramp destination.`;
       } else {
-        alertLead = "Net revenue is capacity-constrained.";
-        alertExplanation = `Monthly net revenue runs at ${formatUsdCompact(monthlyRevenue)}, on just ${utilPct} achieved utilization — insufficient pipeline conversion is leaving significant billable capacity on the bench, unbilled.`;
+        alertLead = "Net revenue is declining.";
+        alertExplanation = `Monthly net revenue fell to ${formatUsdCompact(last)} by Month 12, down ${Math.abs(pctChange).toFixed(1)}% from ${formatUsdCompact(first)}, as achieved utilization ramps down toward a weaker pipeline-adjusted destination.`;
       }
-      return { badge: { label: utilStatus, tone }, alertTone: tone, alertLead, alertExplanation };
+      return { badge: { label: trend, tone }, alertTone: tone, alertLead, alertExplanation };
     },
     explainer:
-      "Net revenue is billed hours (capacity x achieved utilization) times the average bill rate. Because drivers are held constant across the window, revenue doesn't grow or shrink month to month here — it's a level set by how much of the firm's capacity pipeline conversion is actually keeping booked.",
+      "Net revenue is billed hours (capacity x achieved utilization, lagged by the bookings-to-revenue delay) times the average bill rate. It moves month to month as utilization ramps toward its pipeline-adjusted destination and as headcount grows or shrinks.",
   },
   {
     key: "utilizationTrend",
@@ -355,18 +461,18 @@ export const CONSULTING_CHARTS: ChartConfig<ConsultingForecastResult, Consulting
       let alertExplanation: string;
       if (status === "Healthy") {
         alertLead = "Utilization is healthy.";
-        alertExplanation = `Achieved utilization is ${utilPct} against a ${targetPct} target, at ${conversionPct} pipeline conversion — comfortably keeping the bench booked.`;
+        alertExplanation = `Achieved utilization ramps to ${utilPct} by Month 12 against a ${targetPct} target, at ${conversionPct} pipeline conversion — comfortably keeping the bench booked.`;
       } else if (status === "Watch") {
         alertLead = "Utilization is below target.";
-        alertExplanation = `Achieved utilization is ${utilPct} against a ${targetPct} target — ${conversionPct} pipeline conversion is only partially keeping the bench booked.`;
+        alertExplanation = `Achieved utilization ramps to ${utilPct} by Month 12 against a ${targetPct} target — ${conversionPct} pipeline conversion is only partially keeping the bench booked.`;
       } else {
         alertLead = "Utilization is weak.";
-        alertExplanation = `Achieved utilization is ${utilPct} against a ${targetPct} target — ${conversionPct} pipeline conversion is insufficient to keep the bench booked, leaving significant bench time.`;
+        alertExplanation = `Achieved utilization ramps to just ${utilPct} by Month 12 against a ${targetPct} target — ${conversionPct} pipeline conversion is insufficient to keep the bench booked, leaving significant bench time.`;
       }
       return { badge: { label: status, tone }, alertTone: tone, alertLead, alertExplanation };
     },
     explainer:
-      "Achieved utilization is the share of billable capacity actually billed, after pipeline conversion adjusts target utilization up or down (see the Model Assumptions panel for the formula). Above ~75% is healthy; below ~60% means significant bench time the firm is already paying delivery cost for.",
+      "Achieved utilization ramps from today's level toward a destination set by target utilization, adjusted by pipeline conversion (see the Model Assumptions panel for the formula) — a stronger or weaker pipeline changes where it's headed, not just where it started. Above ~75% is healthy; below ~60% means significant bench time the firm is already paying delivery cost for.",
   },
   {
     key: "ebitdaMarginTrend",
@@ -384,21 +490,21 @@ export const CONSULTING_CHARTS: ChartConfig<ConsultingForecastResult, Consulting
       let alertExplanation: string;
       if (status === "Strong" || status === "Profitable") {
         alertLead = `EBITDA margin is ${status === "Strong" ? "strong" : "solidly positive"}.`;
-        alertExplanation = `EBITDA margin runs at ${marginPct} — delivery cost and SG&A leave a comfortable profit after billed revenue.`;
+        alertExplanation = `EBITDA margin ends the window at ${marginPct} — delivery cost and SG&A leave a comfortable profit after billed revenue, as utilization and headcount ramp up.`;
       } else if (status === "NearBreakeven") {
         alertLead = "EBITDA margin is only modestly positive.";
-        alertExplanation = `EBITDA margin runs at ${marginPct}, just above breakeven — delivery cost and SG&A leave little cushion.`;
+        alertExplanation = `EBITDA margin ends the window at ${marginPct}, just above breakeven — delivery cost and SG&A leave little cushion.`;
       } else if (status === "ApproachingBreakeven") {
         alertLead = "EBITDA margin is still negative.";
-        alertExplanation = `EBITDA margin runs at ${marginPct}, approaching breakeven — delivery cost and SG&A aren't yet covered by billed revenue, though the gap is closing.`;
+        alertExplanation = `EBITDA margin ends the window at ${marginPct}, approaching breakeven — delivery cost and SG&A aren't yet covered by billed revenue, though the gap is closing.`;
       } else {
         alertLead = "EBITDA margin is materially negative.";
-        alertExplanation = `EBITDA margin runs at ${marginPct} — delivery cost and SG&A aren't supported by billed revenue at this scale.`;
+        alertExplanation = `EBITDA margin ends the window at ${marginPct} — delivery cost and SG&A aren't supported by billed revenue at this scale, as utilization ramps down.`;
       }
       return { badge: { label: MARGIN_STATUS_LABEL[status], tone }, alertTone: tone, alertLead, alertExplanation };
     },
     explainer:
-      "EBITDA margin here is project margin (net revenue minus delivery cost) minus SG&A, as a share of net revenue. It's the firm's bottom-line operating profitability after both the cost of delivering the work and the overhead of selling and running the firm.",
+      "EBITDA margin here is project margin (net revenue minus delivery cost) minus SG&A, as a share of net revenue. It moves month to month as net revenue ramps against delivery cost, which grows with headcount independent of utilization — margin expands (or compresses) as those two forces converge or diverge.",
   },
 ];
 
@@ -593,7 +699,9 @@ const SENSITIVITY_KEYS: ConsultingDriverKey[] = CONSULTING_DRIVERS.map((d) => d.
  * Same "+10% on each driver, one at a time" sensitivity approach as the
  * SaaS engine, generalized to whichever metric is requested — mirrors
  * runSaaSSensitivityByMetric's shape so the UI's sensitivity panel can stay
- * one generic component across industries.
+ * one generic component across industries. Runs at the Base scenario's ramp
+ * pace regardless of which scenario is active — sensitivity isolates each
+ * SLIDER's impact, not the ramp constants.
  */
 export function runConsultingSensitivityByMetric(
   assumptions: ConsultingAssumptions,

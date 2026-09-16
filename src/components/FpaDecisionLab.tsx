@@ -35,14 +35,19 @@ import {
   type SaaSAssumptions,
   type SaaSCompanyBaseline,
   type SaaSForecastResult,
+  type SaaSMonthResult,
   type SensitivityMetric,
 } from "@/lib/models/saas";
 import { parseCompanyCsv, type CsvRow } from "@/lib/csvImport";
 import { runMonteCarloSimulation, type MonteCarloResult } from "@/lib/monteCarlo";
 import {
+  BASE_HEADCOUNT_MONTHLY_GROWTH,
+  BASE_UTIL_RAMP_SPEED,
+  BOOKING_LAG_MONTHS,
   CONSULTING_BASE_DEFAULTS,
   CONSULTING_CHARTS,
   CONSULTING_DRIVERS,
+  CURRENT_UTILIZATION,
   REFERENCE_CONVERSION,
   STANDARD_BILLABLE_HOURS_PER_MONTH,
   applyConsultingScenario,
@@ -59,6 +64,10 @@ import {
   type ConsultingSensitivityMetric,
 } from "@/lib/models/consulting";
 import {
+  BASE_ANNUAL_RENT_ESCALATION,
+  BASE_LEASE_UP_SPEED,
+  BASE_OPEX_MONTHLY_INFLATION,
+  CURRENT_OCCUPANCY,
   REAL_ESTATE_BASE_DEFAULTS,
   REAL_ESTATE_CHARTS,
   REAL_ESTATE_DRIVERS,
@@ -742,6 +751,140 @@ function GenericForecastChart({
   );
 }
 
+const BRIDGE_WIDTH = 640;
+const BRIDGE_HEIGHT = 220;
+const BRIDGE_PAD_LEFT = 52;
+const BRIDGE_PAD_RIGHT = 16;
+const BRIDGE_PAD_TOP = 24;
+const BRIDGE_PAD_BOTTOM = 34;
+
+type BridgeStep = {
+  label: string;
+  value: number; // signed: positive for New/Expansion, negative for Contraction/Churned
+  kind: "anchor" | "add" | "subtract";
+};
+
+/**
+ * Month-12 MRR bridge as a compact waterfall: two solid "anchor" bars
+ * (Beginning, Ending) with floating bars in between showing exactly how one
+ * becomes the other. Every value is read straight off the engine's month-12
+ * SaaSMonthResult — no recomputation here. Restored in Prompt 3 after being
+ * cut in Prompt 2's "only these charts" pass — that instruction was
+ * stricter than intended; the beginning/new/expansion/contraction/churned
+ * figures still exist and still power the retention story, so this is its
+ * natural visual companion.
+ */
+function MrrBridgeChart({ month }: { month: SaaSMonthResult }) {
+  const steps: BridgeStep[] = [
+    { label: "Beginning", value: month.beginningMRR, kind: "anchor" },
+    { label: "New", value: month.newMRR, kind: "add" },
+    { label: "Expansion", value: month.expansionMRR, kind: "add" },
+    { label: "Contraction", value: -month.contractionMRR, kind: "subtract" },
+    { label: "Churned", value: -month.churnedMRR, kind: "subtract" },
+    { label: "Ending", value: month.mrr, kind: "anchor" },
+  ];
+
+  let running = 0;
+  const positioned = steps.map((step) => {
+    if (step.kind === "anchor") {
+      running = step.value;
+      return { ...step, from: 0, to: step.value };
+    }
+    const from = running;
+    running = running + step.value;
+    return { ...step, from: Math.min(from, running), to: Math.max(from, running) };
+  });
+
+  const maxValue = Math.max(...positioned.map((p) => p.to)) * 1.2;
+  const innerWidth = BRIDGE_WIDTH - BRIDGE_PAD_LEFT - BRIDGE_PAD_RIGHT;
+  const innerHeight = BRIDGE_HEIGHT - BRIDGE_PAD_TOP - BRIDGE_PAD_BOTTOM;
+  const colWidth = innerWidth / steps.length;
+  const barWidth = colWidth * 0.55;
+
+  const y = (v: number) =>
+    BRIDGE_PAD_TOP + innerHeight * (1 - (maxValue === 0 ? 0 : v / maxValue));
+
+  const fillFor = (kind: BridgeStep["kind"]) =>
+    kind === "anchor" ? "#2a2820" : kind === "add" ? "#1e3a2b" : "#a1462f";
+
+  return (
+    <div className="mt-2">
+      <svg
+        viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`}
+        className="w-full"
+        role="img"
+        aria-label={`Month 12 MRR bridge: beginning ${formatCurrency(
+          month.beginningMRR
+        )}, plus new ${formatCurrency(month.newMRR)}, plus expansion ${formatCurrency(
+          month.expansionMRR
+        )}, minus contraction ${formatCurrency(
+          month.contractionMRR
+        )}, minus churned ${formatCurrency(month.churnedMRR)}, equals ending ${formatCurrency(
+          month.mrr
+        )}`}
+      >
+        <line
+          x1={BRIDGE_PAD_LEFT}
+          x2={BRIDGE_WIDTH - BRIDGE_PAD_RIGHT}
+          y1={y(0)}
+          y2={y(0)}
+          stroke="#1e3a2b"
+          strokeOpacity={0.15}
+        />
+        {positioned.map((step, i) => {
+          const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
+          const yTop = y(step.to);
+          const yBottom = y(step.from);
+          const height = Math.max(1.5, yBottom - yTop);
+          return (
+            <g key={step.label}>
+              <rect
+                x={x}
+                y={yTop}
+                width={barWidth}
+                height={height}
+                fill={fillFor(step.kind)}
+                rx={2}
+              />
+              <text
+                x={x + barWidth / 2}
+                y={yTop - 6}
+                textAnchor="middle"
+                fontSize={10}
+                fontWeight={700}
+                fill="#2a2820"
+              >
+                {step.kind === "anchor"
+                  ? formatCurrencyCompact(step.value)
+                  : formatSignedCompact(step.kind === "subtract" ? -Math.abs(step.value) : step.value)}
+              </text>
+              <text
+                x={x + barWidth / 2}
+                y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 18}
+                textAnchor="middle"
+                className="fill-charcoal-soft text-[10px]"
+              >
+                {step.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="mt-2 flex flex-wrap gap-4">
+        <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
+          <span className="h-2.5 w-2.5 rounded-full bg-charcoal" /> Beginning / Ending
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
+          <span className="h-2.5 w-2.5 rounded-full bg-forest" /> Adds MRR
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
+          <span className="h-2.5 w-2.5 rounded-full bg-rust" /> Removes MRR
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // A chart declares what KIND of number it shows (currency vs. percent, and
 // at what precision) as data — the model layer's ChartValueFormat — never
 // a formatting function itself, keeping the model files free of
@@ -1074,6 +1217,7 @@ export default function FpaDecisionLab() {
     [assumptions, activeScenario]
   );
   const activeResult = scenarioResults[activeScenario];
+  const activeMonth12 = activeResult.months[activeResult.months.length - 1];
   const sensitivity = useMemo(
     () => runSaaSSensitivityByMetric(activeAssumptions, sensitivityTab, activeBaseline),
     [activeAssumptions, sensitivityTab, activeBaseline]
@@ -1118,7 +1262,7 @@ export default function FpaDecisionLab() {
           )} remains ${cfoCommentaryData.cashHealthPhrase}, with ${cfoCommentaryData.runwayMonths.toFixed(
             1
           )} months of runway.`,
-    retention: `Net revenue retention is ${formatPercent(
+    retention: `Annualized net revenue retention is ${formatPercent(
       cfoCommentaryData.endingNRR
     )}, ${cfoCommentaryData.nrrPhrase}. Revenue growth this year has been driven ${
       cfoCommentaryData.growthDriverPhrase
@@ -1150,14 +1294,16 @@ export default function FpaDecisionLab() {
 
   const consultingScenarioResults = useMemo(
     () => ({
-      base: runConsultingForecast(consultingAssumptions, meridianBaseline),
+      base: runConsultingForecast(consultingAssumptions, meridianBaseline, "base"),
       upside: runConsultingForecast(
         applyConsultingScenario(consultingAssumptions, "upside"),
-        meridianBaseline
+        meridianBaseline,
+        "upside"
       ),
       downside: runConsultingForecast(
         applyConsultingScenario(consultingAssumptions, "downside"),
-        meridianBaseline
+        meridianBaseline,
+        "downside"
       ),
     }),
     [consultingAssumptions]
@@ -1207,14 +1353,16 @@ export default function FpaDecisionLab() {
 
   const realEstateScenarioResults = useMemo(
     () => ({
-      base: runRealEstateForecast(realEstateAssumptions, harborViewBaseline),
+      base: runRealEstateForecast(realEstateAssumptions, harborViewBaseline, "base"),
       upside: runRealEstateForecast(
         applyRealEstateScenario(realEstateAssumptions, "upside"),
-        harborViewBaseline
+        harborViewBaseline,
+        "upside"
       ),
       downside: runRealEstateForecast(
         applyRealEstateScenario(realEstateAssumptions, "downside"),
-        harborViewBaseline
+        harborViewBaseline,
+        "downside"
       ),
     }),
     [realEstateAssumptions]
@@ -1240,7 +1388,9 @@ export default function FpaDecisionLab() {
     realEstateDecision
   );
   const realEstateScenarioStatusLabel = SCENARIO_LABELS[realEstateActiveScenario];
-  const realEstateOccupancyStatus = classifyOccupancy(realEstateActiveAssumptions.occupancyPct);
+  const realEstateEndingOccupancy =
+    realEstateResult.months[realEstateResult.months.length - 1].occupancyPct;
+  const realEstateOccupancyStatus = classifyOccupancy(realEstateEndingOccupancy);
   const realEstateDscr = debtServiceCoverageRatio(realEstateResult, realEstateActiveAssumptions);
   const realEstateDscrStatus = classifyDebtCoverage(realEstateDscr);
   const realEstateCashStatus = classifyRealEstateCash(realEstateResult.endingCash, harborViewBaseline);
@@ -1665,6 +1815,19 @@ export default function FpaDecisionLab() {
                         "Pipeline Conversion Reference",
                         formatPercent(REFERENCE_CONVERSION, 0),
                       ],
+                      ["Utilization Today", formatPercent(CURRENT_UTILIZATION, 0)],
+                      [
+                        "Utilization Ramp Speed",
+                        `${formatPercent(BASE_UTIL_RAMP_SPEED, 0)}/mo of remaining gap`,
+                      ],
+                      [
+                        "Headcount Growth",
+                        `${formatPercent(BASE_HEADCOUNT_MONTHLY_GROWTH, 1)}/mo`,
+                      ],
+                      [
+                        "Bookings-to-Revenue Lag",
+                        `${BOOKING_LAG_MONTHS} month${BOOKING_LAG_MONTHS === 1 ? "" : "s"}`,
+                      ],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between gap-2">
                         <dt className="text-charcoal-soft">{label}</dt>
@@ -1674,6 +1837,9 @@ export default function FpaDecisionLab() {
                   </dl>
                   <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
                     Fixed model constants for this demo — not sliders.
+                    Utilization ramp speed and headcount growth carry their
+                    own signed deltas per scenario (Upside ramps/hires
+                    faster, Downside stalls or shrinks) shown here at Base.
                   </p>
                 </AccordionSection>
               </>
@@ -1737,6 +1903,13 @@ export default function FpaDecisionLab() {
                     {[
                       ["Portfolio", harborViewBaseline.name],
                       ["Starting Cash", formatCurrencyCompact(harborViewBaseline.startingCash)],
+                      ["Occupancy Today", formatPercent(CURRENT_OCCUPANCY, 0)],
+                      [
+                        "Lease-Up Speed",
+                        `${formatPercent(BASE_LEASE_UP_SPEED, 0)}/mo of remaining gap`,
+                      ],
+                      ["Rent Escalation", `${formatPercent(BASE_ANNUAL_RENT_ESCALATION, 1)}/yr`],
+                      ["Opex Inflation", `${formatPercent(BASE_OPEX_MONTHLY_INFLATION, 2)}/mo`],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between gap-2">
                         <dt className="text-charcoal-soft">{label}</dt>
@@ -1746,7 +1919,11 @@ export default function FpaDecisionLab() {
                   </dl>
                   <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
                     Fixed for this demo — not editable. Cap rate values the
-                    portfolio; it never enters the cash-flow math.
+                    portfolio; it never enters the cash-flow math. Occupancy
+                    leases up (or slides) from today&apos;s level toward the
+                    Occupancy % driver&apos;s stabilized target; lease-up
+                    speed, rent escalation, and opex inflation carry their
+                    own signed deltas per scenario, shown here at Base.
                   </p>
                 </AccordionSection>
               </>
@@ -1822,7 +1999,7 @@ export default function FpaDecisionLab() {
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <KpiCard
-                  label="NRR"
+                  label="NRR (Annual)"
                   value={formatPercent(activeResult.endingNRR)}
                   badge={nrrStatus}
                   tone={NRR_TONE[nrrStatus]}
@@ -1835,30 +2012,57 @@ export default function FpaDecisionLab() {
                 />
               </div>
               <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
-                CAC {formatCurrency(activeResult.cac)}{" "}
-                (blended: ALL annual S&amp;M spend ÷ new customers acquired
-                over the year — the model has one combined S&amp;M line, so
-                this includes retention/expansion-oriented spend too, not
-                only acquisition-specific cost, which can understate true
-                acquisition CAC) · LTV {formatCurrency(activeResult.ltv)}{" "}
-                (gross-margin-adjusted monthly ARPU ÷ monthly logo churn
-                rate — churn is monthly and used directly, so 1 ÷ monthly
-                churn is the expected customer lifetime in months; nothing
-                is annualized).
+                NRR is annualized (monthly retention rate compounded over 12
+                months) to match the 90–110% bands above, which are an
+                annual convention · CAC {formatCurrency(activeResult.cac)}{" "}
+                (a direct driver — S&amp;M spend is derived as CAC x new
+                customers acquired, so it&apos;s pure acquisition spend by
+                construction, with no retention or expansion spend blended
+                in) · LTV {formatCurrency(activeResult.ltv)} (gross-margin-adjusted
+                monthly ARPU ÷ monthly logo churn rate, a standard
+                conservative convention — it excludes the model&apos;s net
+                MRR expansion, so it understates LTV/CAC relative to a
+                net-revenue-churn basis).
               </p>
             </section>
 
-            {/* Chart set — exactly the three SaaS charts, config-driven from
-                SAAS_CHARTS (model layer). Adding, removing, or reordering a
-                chart is a model-layer-only edit; this just maps over it. */}
-            {SAAS_CHARTS.map((chart, i) => (
+            {/* Chart set — the SaaS line charts config-driven from
+                SAAS_CHARTS (model layer); adding, removing, or reordering
+                one of these is a model-layer-only edit. The MRR Bridge
+                waterfall sits between MRR Growth and Cash Runway — it
+                isn't config-driven like the line charts since it shows one
+                month's bridge, not a 3-scenario series, but the figures it
+                reads (beginning/new/expansion/contraction/churned MRR)
+                come from the same engine output. */}
+            {SAAS_CHARTS.slice(0, 1).map((chart) => (
               <ChartSection
                 key={chart.key}
                 chart={chart}
                 scenarioResults={scenarioResults}
                 activeResult={activeResult}
                 activeAssumptions={activeAssumptions}
-                first={i === 0}
+                first
+              />
+            ))}
+
+            <section className="border-t border-forest/10 pt-8">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                MRR Bridge — Month 12
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+                How Beginning MRR becomes Ending MRR in the final forecast
+                month: Beginning + New + Expansion − Contraction − Churned.
+              </p>
+              <MrrBridgeChart month={activeMonth12} />
+            </section>
+
+            {SAAS_CHARTS.slice(1).map((chart) => (
+              <ChartSection
+                key={chart.key}
+                chart={chart}
+                scenarioResults={scenarioResults}
+                activeResult={activeResult}
+                activeAssumptions={activeAssumptions}
               />
             ))}
 
@@ -2195,11 +2399,16 @@ export default function FpaDecisionLab() {
                     />
                   </div>
                   <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
-                    Achieved utilization = target utilization, adjusted around
-                    a {formatPercent(REFERENCE_CONVERSION, 0)} reference
-                    pipeline conversion rate — stronger conversion lifts
-                    achieved utilization toward or above target, weaker
-                    conversion pulls it below and leaves staff on the bench.
+                    Achieved utilization ramps toward a destination set by
+                    target utilization, adjusted around a{" "}
+                    {formatPercent(REFERENCE_CONVERSION, 0)} reference
+                    pipeline conversion rate — stronger conversion lifts the
+                    destination toward or above target, weaker conversion
+                    pulls it below and leaves staff on the bench. Net
+                    revenue bills off utilization from {BOOKING_LAG_MONTHS}{" "}
+                    month{BOOKING_LAG_MONTHS === 1 ? "" : "s"} earlier than
+                    the current month, reflecting staffing/onboarding lag
+                    between a signed engagement and recognized revenue.
                   </p>
                 </section>
 
@@ -2505,8 +2714,8 @@ export default function FpaDecisionLab() {
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                     <KpiCard
-                      label="Occupancy"
-                      value={formatPercent(realEstateActiveAssumptions.occupancyPct, 0)}
+                      label="Occupancy (Month 12)"
+                      value={formatPercent(realEstateEndingOccupancy, 0)}
                       badge={realEstateOccupancyStatus}
                       tone={
                         realEstateOccupancyStatus === "Healthy"
@@ -2709,7 +2918,7 @@ export default function FpaDecisionLab() {
                       <span className="font-semibold text-brass">Performance: </span>
                       Rental revenue runs at{" "}
                       {formatCurrencyCompact(realEstateResult.endingRentalRevenueAnnualized)}/yr at{" "}
-                      {formatPercent(realEstateActiveAssumptions.occupancyPct, 0)} occupancy across{" "}
+                      {formatPercent(realEstateEndingOccupancy, 0)} occupancy (Month 12) across{" "}
                       {realEstateActiveAssumptions.totalUnits} units.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
@@ -2745,25 +2954,6 @@ export default function FpaDecisionLab() {
                 </section>
               </>
             )}
-
-            {/* Planned, not built */}
-            <section className="border-t border-forest/10 pt-8">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-                Planned — Not In This Version
-              </h2>
-              <ul className="mt-3 flex flex-col gap-1.5">
-                {["AI-generated commentary"].map(
-                  (item) => (
-                    <li
-                      key={item}
-                      className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
-                    >
-                      {item}
-                    </li>
-                  )
-                )}
-              </ul>
-            </section>
           </div>
         </div>
       </div>
