@@ -38,7 +38,7 @@ import {
   type SaaSMonthResult,
   type SensitivityMetric,
 } from "@/lib/models/saas";
-import { parseCompanyCsv, type CsvRow } from "@/lib/csvImport";
+import { CSV_OPTIONAL_COLUMNS, CSV_REQUIRED_COLUMNS, parseCompanyCsv, type CsvRow } from "@/lib/csvImport";
 import { runMonteCarloSimulation, type MonteCarloResult } from "@/lib/monteCarlo";
 import {
   BASE_HEADCOUNT_MONTHLY_GROWTH,
@@ -235,15 +235,27 @@ function AccordionSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
+  const toggle = () => setOpen((o) => !o);
 
   return (
     <div className="border-b border-forest/10 py-3 last:border-0">
-      <button
-        type="button"
+      {/* A real <button> can't contain another <button> (invalid HTML,
+          triggers a hydration mismatch) — the badge slot sometimes holds
+          an interactive InfoTip button, so the toggle itself is a
+          keyboard-accessible div instead. */}
+      <div
+        role="button"
+        tabIndex={0}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 text-left"
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+        className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
       >
         <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
           {title}
@@ -261,7 +273,7 @@ function AccordionSection({
         >
           <path d="M5 7.5l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-      </button>
+      </div>
       <div
         id={panelId}
         className={`grid transition-[grid-template-rows] duration-200 ease-out ${
@@ -271,6 +283,37 @@ function AccordionSection({
         <div className="overflow-hidden">{children}</div>
       </div>
     </div>
+  );
+}
+
+// Small "i" affordance for methodology notes that shouldn't sit
+// permanently in the always-visible sidebar (e.g. how scenario deltas
+// work) — click to reveal, click again (or click elsewhere) to dismiss.
+function InfoTip({ text, label }: { text: string; label: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        aria-expanded={open}
+        aria-label={label}
+        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-forest/30 text-[10px] font-bold leading-none text-forest/70 transition-colors hover:bg-forest/10"
+      >
+        i
+      </button>
+      {open && (
+        <div
+          role="note"
+          className="absolute left-0 top-6 z-10 w-64 rounded-lg border border-forest/15 bg-white p-3 text-[11px] font-normal normal-case leading-4 tracking-normal text-charcoal-soft shadow-lg"
+        >
+          {text}
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -344,16 +387,81 @@ const REAL_ESTATE_MARGIN_PHRASE: Record<MarginStatus, string> = {
   MateriallyUnprofitable: "materially free-cash-flow negative after debt service",
 };
 
+const VS_BASE_TEXT_CLASS: Record<BadgeTone, string> = {
+  good: "text-forest",
+  neutral: "text-charcoal-soft",
+  bad: "text-rust",
+};
+
+// Percent change of `current` vs `base` for a KPI card's "vs Base" line —
+// display only, computed from the same numbers already on screen, never a
+// new calculation. Returns null when a meaningful percent doesn't exist
+// (a null runway on either side, or a zero base to divide by).
+function vsBaseChange(
+  current: number | null,
+  base: number | null
+): { text: string; tone: BadgeTone } | null {
+  if (current === null || base === null) return null;
+  if (!Number.isFinite(current) || !Number.isFinite(base) || base === 0) return null;
+  const changePct = ((current - base) / Math.abs(base)) * 100;
+  const arrow = changePct > 0.05 ? "↑" : changePct < -0.05 ? "↓" : "→";
+  const tone: BadgeTone = changePct > 0.05 ? "good" : changePct < -0.05 ? "bad" : "neutral";
+  return { text: `${arrow} ${Math.abs(changePct).toFixed(1)}% vs Base`, tone };
+}
+
+// Percentage-POINT change (not relative %) for KPI cards whose value is
+// itself already a percentage (a margin, a rate, NRR) — relative % change
+// blows up into meaningless numbers whenever base sits near zero (e.g. a
+// margin swinging from +5.6% to -29.3% is a "-623% vs Base" relative
+// change, which reads as a bug even though the arithmetic is right). "pt"
+// matches the same convention the chart caption deltas already use.
+function vsBasePointChange(
+  current: number | null,
+  base: number | null
+): { text: string; tone: BadgeTone } | null {
+  if (current === null || base === null) return null;
+  if (!Number.isFinite(current) || !Number.isFinite(base)) return null;
+  const deltaPts = (current - base) * 100;
+  const arrow = deltaPts > 0.05 ? "↑" : deltaPts < -0.05 ? "↓" : "→";
+  const tone: BadgeTone = deltaPts > 0.05 ? "good" : deltaPts < -0.05 ? "bad" : "neutral";
+  return { text: `${arrow} ${Math.abs(deltaPts).toFixed(1)}pt vs Base`, tone };
+}
+
+// Wraps vsBaseChange with the one rule every KPI card follows: on the Base
+// scenario itself, there's nothing to compare Base against, so the line is
+// omitted rather than showing a trivial "→ 0.0% vs Base" on every card.
+function vsBaseFor(
+  current: number | null,
+  base: number | null,
+  activeScenario: ScenarioKey
+): { text: string; tone: BadgeTone } | null {
+  if (activeScenario === "base") return null;
+  return vsBaseChange(current, base);
+}
+
+// Same rule as vsBaseFor, using the point-change variant for KPI cards
+// whose value is already a percentage.
+function vsBasePointFor(
+  current: number | null,
+  base: number | null,
+  activeScenario: ScenarioKey
+): { text: string; tone: BadgeTone } | null {
+  if (activeScenario === "base") return null;
+  return vsBasePointChange(current, base);
+}
+
 function KpiCard({
   label,
   value,
   badge,
   tone,
+  vsBase,
 }: {
   label: string;
   value: string;
   badge: string;
   tone: BadgeTone;
+  vsBase?: { text: string; tone: BadgeTone } | null;
 }) {
   return (
     <div className="flex flex-col gap-1 rounded-xl border border-forest/15 bg-white p-3">
@@ -368,6 +476,11 @@ function KpiCard({
       >
         {badge}
       </span>
+      {vsBase && (
+        <span className={`text-[11px] font-semibold ${VS_BASE_TEXT_CLASS[vsBase.tone]}`}>
+          {vsBase.text}
+        </span>
+      )}
     </div>
   );
 }
@@ -390,12 +503,24 @@ function formatDriverValue(driver: DriverConfig<string>, rawValue: number): stri
 function DriverSlider<K extends string>({
   driver,
   value,
+  scenarioValue,
   onChange,
 }: {
   driver: DriverConfig<K>;
   value: number;
+  // The active scenario's delta-adjusted value for this driver, so the
+  // slider row can show "Base → Scenario" instead of just Base's number
+  // while a non-Base scenario is selected — the slider still edits Base
+  // (that's what `value`/`onChange` are), this is display only. Pass
+  // undefined (or equal to `value`) on Base, or for a driver the active
+  // scenario's delta table doesn't touch.
+  scenarioValue?: number;
   onChange: (value: number) => void;
 }) {
+  const display =
+    scenarioValue !== undefined && scenarioValue !== value
+      ? `${formatDriverValue(driver, value)} → ${formatDriverValue(driver, scenarioValue)}`
+      : formatDriverValue(driver, value);
   return (
     <SliderField
       label={driver.label}
@@ -404,7 +529,7 @@ function DriverSlider<K extends string>({
       min={driver.min}
       max={driver.max}
       step={driver.step}
-      display={formatDriverValue(driver, value)}
+      display={display}
     />
   );
 }
@@ -427,6 +552,32 @@ function valueY(value: number, minValue: number, maxValue: number) {
   const ratio = range === 0 ? 0 : (value - minValue) / range;
   return PAD_TOP + innerHeight * (1 - ratio);
 }
+
+// Display-only: turns a 1-12 month index into an actual month/year label
+// running forward from the current month (e.g. index 1 -> "Sep 2026"),
+// rather than the generic "M1/M3/..." index labels. Purely presentational
+// — derives from the wall-clock date, never from any model output.
+function monthYearLabel(monthIndex: number): string {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + (monthIndex - 1));
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+// Fill color per scenario for the "area under the active line" treatment —
+// deliberately a semantic good/neutral/bad mapping (green/neutral/red)
+// rather than reusing each scenario's own line-stroke color, since the
+// fill's job is to signal "this is the selected case," colored by what
+// kind of case it is. Upside uses a brighter green than the forest token
+// used elsewhere in the UI (#1e3a2b) rather than forest itself — forest is
+// dark and desaturated enough that at the same low fill-opacity as
+// Downside's rust it read as a neutral gray wash instead of green; this
+// shade is calibrated to read as clearly green at that same opacity.
+const SCENARIO_FILL: Record<ScenarioKey, string> = {
+  base: "#5b5847",
+  upside: "#2f9e5c",
+  downside: "#a1462f",
+};
 
 
 const DECISION_STYLE: Record<Decision, string> = {
@@ -621,10 +772,19 @@ function GenericForecastChart({
   seriesByScenario,
   ariaLabel,
   valueFormatter = formatCurrencyCompact,
+  activeScenario,
+  includeZero = false,
 }: {
   seriesByScenario: Record<ScenarioKey, number[]>;
   ariaLabel: string;
   valueFormatter?: (value: number) => string;
+  // Which scenario gets the tinted area fill — display only, doesn't
+  // affect what's plotted (all three scenarios always draw).
+  activeScenario: ScenarioKey;
+  // Free Cash Flow and EBITDA Margin Trend force zero into the visible
+  // range (crossing it is meaningful); every other chart scales purely to
+  // its own data, per-industry/per-scenario, recomputed on every render.
+  includeZero?: boolean;
 }) {
   const series = SCENARIO_KEYS.map((key) => ({
     key,
@@ -633,14 +793,17 @@ function GenericForecastChart({
   }));
 
   const all = series.flatMap((s) => s.values);
-  const rawMin = Math.min(0, ...all);
-  const rawMax = Math.max(...all);
+  const dataMin = Math.min(...all);
+  const dataMax = Math.max(...all);
+  const rawMin = includeZero ? Math.min(0, dataMin) : dataMin;
+  const rawMax = includeZero ? Math.max(0, dataMax) : dataMax;
   const pad = (rawMax - rawMin) * 0.12 || Math.abs(rawMax) * 0.12 || 1;
-  const minValue = rawMin < 0 ? rawMin - pad : 0;
+  const minValue = rawMin - pad;
   const maxValue = rawMax + pad;
   const showZeroLine = minValue < 0 && maxValue > 0;
   const gridFracs = [0, 0.25, 0.5, 0.75, 1];
   const gridValues = gridFracs.map((f) => minValue + (maxValue - minValue) * f);
+  const bottomY = CHART_HEIGHT - PAD_BOTTOM;
 
   const endLabelY = (() => {
     const raw = series
@@ -652,6 +815,13 @@ function GenericForecastChart({
     }
     return Object.fromEntries(raw.map((r) => [r.key, r.y])) as Record<string, number>;
   })();
+
+  const activeSeries = series.find((s) => s.key === activeScenario)!;
+  const activeAreaPoints = [
+    `${monthX(1)},${bottomY}`,
+    ...activeSeries.values.map((v, i) => `${monthX(i + 1)},${valueY(v, minValue, maxValue)}`),
+    `${monthX(12)},${bottomY}`,
+  ].join(" ");
 
   return (
     <div className="mt-2">
@@ -694,7 +864,7 @@ function GenericForecastChart({
             {valueFormatter(v)}
           </text>
         ))}
-        {[1, 3, 6, 9, 12].map((m) => (
+        {[1, 4, 7, 10].map((m) => (
           <text
             key={m}
             x={monthX(m)}
@@ -702,9 +872,13 @@ function GenericForecastChart({
             textAnchor="middle"
             className="fill-charcoal-soft text-[10px]"
           >
-            M{m}
+            {monthYearLabel(m)}
           </text>
         ))}
+        {/* Tinted area under the active scenario only — a low-opacity
+            wash so the other two lines stay readable through it. Drawn
+            beneath the lines/markers. */}
+        <polygon points={activeAreaPoints} fill={SCENARIO_FILL[activeScenario]} fillOpacity={0.12} />
         {series.map((s) => {
           const points = s.values
             .map((v, i) => `${monthX(i + 1)},${valueY(v, minValue, maxValue)}`)
@@ -722,6 +896,17 @@ function GenericForecastChart({
             />
           );
         })}
+        {series.map((s) =>
+          s.values.map((v, i) => (
+            <circle
+              key={`${s.key}-${i}`}
+              cx={monthX(i + 1)}
+              cy={valueY(v, minValue, maxValue)}
+              r={2.5}
+              fill={s.stroke}
+            />
+          ))
+        )}
         {series.map((s) => (
           <text
             key={s.key}
@@ -968,17 +1153,25 @@ function ChartCaptionBlock<TResult, TAssumptions>({
  * one is "active" only controls what feeds the caption block, the same
  * rule every other part of this page follows.
  */
+// Two charts force zero into the visible axis range because crossing it
+// is meaningful (going cash-flow-negative, going EBITDA-negative) — every
+// other chart scales purely to its own data. Keyed by chart.key rather
+// than a new model-layer field, so this stays a presentation-only lookup.
+const CHARTS_INCLUDING_ZERO = new Set(["freeCashFlow", "ebitdaMarginTrend"]);
+
 function ChartSection<TResult, TAssumptions>({
   chart,
   scenarioResults,
   activeResult,
   activeAssumptions,
+  activeScenario,
   first = false,
 }: {
   chart: ChartConfig<TResult, TAssumptions>;
   scenarioResults: Record<ScenarioKey, TResult>;
   activeResult: TResult;
   activeAssumptions: TAssumptions;
+  activeScenario: ScenarioKey;
   first?: boolean;
 }) {
   const seriesByScenario = useMemo(
@@ -991,7 +1184,9 @@ function ChartSection<TResult, TAssumptions>({
   );
 
   return (
-    <section className={first ? undefined : "border-t border-forest/10 pt-8"}>
+    <section
+      className={`rounded-xl border border-forest/15 bg-white p-4 sm:p-6 ${first ? "" : "mt-6"}`}
+    >
       <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
         {chart.chartLabel}
       </h2>
@@ -999,6 +1194,8 @@ function ChartSection<TResult, TAssumptions>({
         seriesByScenario={seriesByScenario}
         ariaLabel={chart.ariaLabel}
         valueFormatter={(v) => formatChartValue(chart.valueFormat, v)}
+        activeScenario={activeScenario}
+        includeZero={CHARTS_INCLUDING_ZERO.has(chart.key)}
       />
       <ChartCaptionBlock chart={chart} result={activeResult} assumptions={activeAssumptions} />
     </section>
@@ -1028,14 +1225,6 @@ function CommentaryModeToggle() {
         AI-Assisted
       </span>
     </div>
-  );
-}
-
-function SampleBadge() {
-  return (
-    <span className="rounded-full bg-forest/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-forest">
-      Sample
-    </span>
   );
 }
 
@@ -1393,6 +1582,17 @@ export default function FpaDecisionLab() {
   const realEstateOccupancyStatus = classifyOccupancy(realEstateEndingOccupancy);
   const realEstateDscr = debtServiceCoverageRatio(realEstateResult, realEstateActiveAssumptions);
   const realEstateDscrStatus = classifyDebtCoverage(realEstateDscr);
+  // Base-scenario equivalents of the three derived (non-ForecastResult)
+  // values above, purely so the "vs Base" KPI lines have something to
+  // compare against for Occupancy/DSCR/Implied Valuation — Base's own
+  // assumptions are always realEstateAssumptions itself (no delta).
+  const realEstateBaseEndingOccupancy =
+    realEstateScenarioResults.base.months[realEstateScenarioResults.base.months.length - 1]
+      .occupancyPct;
+  const realEstateBaseDscr = debtServiceCoverageRatio(
+    realEstateScenarioResults.base,
+    realEstateAssumptions
+  );
   const realEstateCashStatus = classifyRealEstateCash(realEstateResult.endingCash, harborViewBaseline);
   const realEstateRunwayStatus = classifyRunway(realEstateResult.runwayMonths);
   const realEstateMarginStatus = classifyMargin(realEstateResult.endingFreeCashFlowMargin);
@@ -1474,10 +1674,6 @@ export default function FpaDecisionLab() {
 
             {industry === "saas" && (
               <>
-            <div className="mb-1 flex items-center justify-between px-1 pb-2">
-              <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
-              <span className="text-xs font-semibold text-forest">{scenarioStatusLabel}</span>
-            </div>
             <button
               type="button"
               onClick={() => setAssumptions(SAAS_BASE_DEFAULTS)}
@@ -1589,7 +1785,16 @@ export default function FpaDecisionLab() {
               </div>
             )}
 
-            <AccordionSection title="Scenario" defaultOpen>
+            <AccordionSection
+              title="Scenario"
+              defaultOpen
+              badge={
+                <InfoTip
+                  label="How scenarios work"
+                  text="Upside/Downside apply this industry's own signed delta to whatever the Drivers below currently say — they don't move the sliders. All three always draw on every chart; picking one here only changes which case feeds the KPI cards, badges, and commentary."
+                />
+              }
+            >
               <div className="flex flex-col gap-2">
                 {SCENARIO_KEYS.map((key) => (
                   <button
@@ -1607,22 +1812,16 @@ export default function FpaDecisionLab() {
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
-                Upside/Downside apply this industry&apos;s own signed delta
-                to whatever the Drivers below currently say — they don&apos;t
-                move the sliders. All three always draw on every chart;
-                picking one here only changes which case feeds the KPI
-                cards, badges, and commentary.
-              </p>
             </AccordionSection>
 
-            <AccordionSection title="Drivers" badge={<SampleBadge />} defaultOpen>
+            <AccordionSection title="Drivers" defaultOpen>
               <div className="flex flex-col gap-5">
                 {SAAS_DRIVERS.map((driver) => (
                   <DriverSlider
                     key={driver.key}
                     driver={driver}
                     value={assumptions[driver.key]}
+                    scenarioValue={activeAssumptions[driver.key]}
                     onChange={set(driver.key)}
                   />
                 ))}
@@ -1662,18 +1861,15 @@ export default function FpaDecisionLab() {
                   <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brass">
                     Imported
                   </span>
-                ) : (
-                  <SampleBadge />
-                )
+                ) : undefined
               }
             >
               <div className="flex flex-col gap-3">
                 <p className="text-[11px] leading-4 text-charcoal-soft">
                   Upload your own company&apos;s monthly data to forecast
                   forward from real numbers instead of the sample company.
-                  Required columns: month, customers, mrr, cash, headcount,
-                  sales_marketing_spend. Optional: churned_customers,
-                  expansion_mrr, contraction_mrr, new_mrr.
+                  Required columns: {CSV_REQUIRED_COLUMNS.join(", ")}.
+                  Optional: {CSV_OPTIONAL_COLUMNS.join(", ")}.
                 </p>
                 <label className="flex w-full cursor-pointer items-center justify-center rounded-lg border border-dashed border-forest/30 px-3 py-2 text-xs font-semibold text-forest transition-colors hover:bg-forest/5">
                   Upload CSV
@@ -1751,12 +1947,6 @@ export default function FpaDecisionLab() {
 
             {industry === "consulting" && (
               <>
-                <div className="mb-1 flex items-center justify-between px-1 pb-2">
-                  <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
-                  <span className="text-xs font-semibold text-forest">
-                    {consultingScenarioStatusLabel}
-                  </span>
-                </div>
                 <button
                   type="button"
                   onClick={resetConsultingToBase}
@@ -1765,7 +1955,16 @@ export default function FpaDecisionLab() {
                   Reset to Defaults
                 </button>
 
-                <AccordionSection title="Scenario" defaultOpen>
+                <AccordionSection
+                  title="Scenario"
+                  defaultOpen
+                  badge={
+                    <InfoTip
+                      label="How scenarios work"
+                      text="Upside/Downside apply this industry's own signed delta to whatever the Drivers below currently say — they don't move the sliders. All three always draw on every chart; picking one here only changes which case feeds the KPI cards, badges, and commentary."
+                    />
+                  }
+                >
                   <div className="flex flex-col gap-2">
                     {SCENARIO_KEYS.map((key) => (
                       <button
@@ -1783,19 +1982,16 @@ export default function FpaDecisionLab() {
                       </button>
                     ))}
                   </div>
-                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
-                    Upside/Downside apply this industry&apos;s own signed
-                    delta to whatever the Drivers below currently say.
-                  </p>
                 </AccordionSection>
 
-                <AccordionSection title="Drivers" badge={<SampleBadge />} defaultOpen>
+                <AccordionSection title="Drivers" defaultOpen>
                   <div className="flex flex-col gap-5">
                     {CONSULTING_DRIVERS.map((driver) => (
                       <DriverSlider
                         key={driver.key}
                         driver={driver}
                         value={consultingAssumptions[driver.key]}
+                        scenarioValue={consultingActiveAssumptions[driver.key]}
                         onChange={setConsulting(driver.key)}
                       />
                     ))}
@@ -1847,12 +2043,6 @@ export default function FpaDecisionLab() {
 
             {industry === "realEstate" && (
               <>
-                <div className="mb-1 flex items-center justify-between px-1 pb-2">
-                  <span className="text-xs font-semibold text-charcoal-soft">Scenario</span>
-                  <span className="text-xs font-semibold text-forest">
-                    {realEstateScenarioStatusLabel}
-                  </span>
-                </div>
                 <button
                   type="button"
                   onClick={resetRealEstateToBase}
@@ -1861,7 +2051,16 @@ export default function FpaDecisionLab() {
                   Reset to Defaults
                 </button>
 
-                <AccordionSection title="Scenario" defaultOpen>
+                <AccordionSection
+                  title="Scenario"
+                  defaultOpen
+                  badge={
+                    <InfoTip
+                      label="How scenarios work"
+                      text="Upside/Downside apply this industry's own signed delta to whatever the Drivers below currently say — they don't move the sliders. All three always draw on every chart; picking one here only changes which case feeds the KPI cards, badges, and commentary."
+                    />
+                  }
+                >
                   <div className="flex flex-col gap-2">
                     {SCENARIO_KEYS.map((key) => (
                       <button
@@ -1879,19 +2078,16 @@ export default function FpaDecisionLab() {
                       </button>
                     ))}
                   </div>
-                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
-                    Upside/Downside apply this industry&apos;s own signed
-                    delta to whatever the Drivers below currently say.
-                  </p>
                 </AccordionSection>
 
-                <AccordionSection title="Drivers" badge={<SampleBadge />} defaultOpen>
+                <AccordionSection title="Drivers" defaultOpen>
                   <div className="flex flex-col gap-5">
                     {REAL_ESTATE_DRIVERS.map((driver) => (
                       <DriverSlider
                         key={driver.key}
                         driver={driver}
                         value={realEstateAssumptions[driver.key]}
+                        scenarioValue={realEstateActiveAssumptions[driver.key]}
                         onChange={setRealEstate(driver.key)}
                       />
                     ))}
@@ -1977,24 +2173,36 @@ export default function FpaDecisionLab() {
                   value={formatCurrencyCompact(activeResult.endingARR)}
                   badge={arrTrend}
                   tone={ARR_TONE[arrTrend]}
+                  vsBase={vsBaseFor(activeResult.endingARR, scenarioResults.base.endingARR, activeScenario)}
                 />
                 <KpiCard
                   label="EBITDA Margin"
                   value={formatPercent(activeResult.endingEBITDAMargin)}
                   badge={MARGIN_BADGE_LABEL[marginStatus]}
                   tone={MARGIN_TONE[marginStatus]}
+                  vsBase={vsBasePointFor(
+                    activeResult.endingEBITDAMargin,
+                    scenarioResults.base.endingEBITDAMargin,
+                    activeScenario
+                  )}
                 />
                 <KpiCard
                   label="Ending Cash"
                   value={formatCurrencyCompact(activeResult.endingCash)}
                   badge={cashStatus}
                   tone={CASH_TONE[cashStatus]}
+                  vsBase={vsBaseFor(activeResult.endingCash, scenarioResults.base.endingCash, activeScenario)}
                 />
                 <KpiCard
                   label="Runway"
                   value={runwayLabel(activeResult.runwayMonths)}
                   badge={runwayStatus}
                   tone={RUNWAY_TONE[runwayStatus]}
+                  vsBase={vsBaseFor(
+                    activeResult.runwayMonths,
+                    scenarioResults.base.runwayMonths,
+                    activeScenario
+                  )}
                 />
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -2003,12 +2211,14 @@ export default function FpaDecisionLab() {
                   value={formatPercent(activeResult.endingNRR)}
                   badge={nrrStatus}
                   tone={NRR_TONE[nrrStatus]}
+                  vsBase={vsBasePointFor(activeResult.endingNRR, scenarioResults.base.endingNRR, activeScenario)}
                 />
                 <KpiCard
                   label="LTV / CAC"
                   value={`${activeResult.ltvToCac.toFixed(2)}x`}
                   badge={ltvCacStatus}
                   tone={LTV_CAC_TONE[ltvCacStatus]}
+                  vsBase={vsBaseFor(activeResult.ltvToCac, scenarioResults.base.ltvToCac, activeScenario)}
                 />
               </div>
               <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
@@ -2041,11 +2251,12 @@ export default function FpaDecisionLab() {
                 scenarioResults={scenarioResults}
                 activeResult={activeResult}
                 activeAssumptions={activeAssumptions}
+                activeScenario={activeScenario}
                 first
               />
             ))}
 
-            <section className="border-t border-forest/10 pt-8">
+            <section className="mt-6 rounded-xl border border-forest/15 bg-white p-4 sm:p-6">
               <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
                 MRR Bridge — Month 12
               </h2>
@@ -2063,6 +2274,7 @@ export default function FpaDecisionLab() {
                 scenarioResults={scenarioResults}
                 activeResult={activeResult}
                 activeAssumptions={activeAssumptions}
+                activeScenario={activeScenario}
               />
             ))}
 
@@ -2354,6 +2566,11 @@ export default function FpaDecisionLab() {
                       value={formatCurrencyCompact(consultingResult.endingNetRevenueAnnualized)}
                       badge={consultingScenarioStatusLabel}
                       tone="neutral"
+                      vsBase={vsBaseFor(
+                        consultingResult.endingNetRevenueAnnualized,
+                        consultingScenarioResults.base.endingNetRevenueAnnualized,
+                        consultingActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="Utilization"
@@ -2366,18 +2583,33 @@ export default function FpaDecisionLab() {
                             ? "neutral"
                             : "bad"
                       }
+                      vsBase={vsBasePointFor(
+                        consultingResult.endingUtilization,
+                        consultingScenarioResults.base.endingUtilization,
+                        consultingActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="Project Margin"
                       value={formatPercent(consultingResult.endingProjectMarginPct)}
                       badge={consultingScenarioStatusLabel}
                       tone="neutral"
+                      vsBase={vsBasePointFor(
+                        consultingResult.endingProjectMarginPct,
+                        consultingScenarioResults.base.endingProjectMarginPct,
+                        consultingActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="EBITDA Margin"
                       value={formatPercent(consultingResult.endingEBITDAMargin)}
                       badge={MARGIN_BADGE_LABEL[consultingMarginStatus]}
                       tone={MARGIN_TONE[consultingMarginStatus]}
+                      vsBase={vsBasePointFor(
+                        consultingResult.endingEBITDAMargin,
+                        consultingScenarioResults.base.endingEBITDAMargin,
+                        consultingActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="Ending Cash"
@@ -2390,12 +2622,22 @@ export default function FpaDecisionLab() {
                             ? "neutral"
                             : "bad"
                       }
+                      vsBase={vsBaseFor(
+                        consultingResult.endingCash,
+                        consultingScenarioResults.base.endingCash,
+                        consultingActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="Runway"
                       value={runwayLabel(consultingResult.runwayMonths)}
                       badge={consultingRunwayStatus}
                       tone={RUNWAY_TONE[consultingRunwayStatus]}
+                      vsBase={vsBaseFor(
+                        consultingResult.runwayMonths,
+                        consultingScenarioResults.base.runwayMonths,
+                        consultingActiveScenario
+                      )}
                     />
                   </div>
                   <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
@@ -2421,6 +2663,7 @@ export default function FpaDecisionLab() {
                     scenarioResults={consultingScenarioResults}
                     activeResult={consultingResult}
                     activeAssumptions={consultingActiveAssumptions}
+                    activeScenario={consultingActiveScenario}
                     first={i === 0}
                   />
                 ))}
@@ -2674,24 +2917,44 @@ export default function FpaDecisionLab() {
                       value={formatCurrencyCompact(realEstateResult.endingRentalRevenueAnnualized)}
                       badge={realEstateScenarioStatusLabel}
                       tone="neutral"
+                      vsBase={vsBaseFor(
+                        realEstateResult.endingRentalRevenueAnnualized,
+                        realEstateScenarioResults.base.endingRentalRevenueAnnualized,
+                        realEstateActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="NOI / yr"
                       value={formatCurrencyCompact(realEstateResult.endingNOIAnnualized)}
                       badge={realEstateScenarioStatusLabel}
                       tone="neutral"
+                      vsBase={vsBaseFor(
+                        realEstateResult.endingNOIAnnualized,
+                        realEstateScenarioResults.base.endingNOIAnnualized,
+                        realEstateActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="NOI Margin"
                       value={formatPercent(realEstateResult.endingNOIMargin)}
                       badge={realEstateScenarioStatusLabel}
                       tone="neutral"
+                      vsBase={vsBasePointFor(
+                        realEstateResult.endingNOIMargin,
+                        realEstateScenarioResults.base.endingNOIMargin,
+                        realEstateActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="Free Cash Flow / yr"
                       value={formatCurrencyCompact(realEstateResult.endingFreeCashFlowAnnualized)}
                       badge={realEstateRunwayStatus}
                       tone={RUNWAY_TONE[realEstateRunwayStatus]}
+                      vsBase={vsBaseFor(
+                        realEstateResult.endingFreeCashFlowAnnualized,
+                        realEstateScenarioResults.base.endingFreeCashFlowAnnualized,
+                        realEstateActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="Ending Cash"
@@ -2704,12 +2967,22 @@ export default function FpaDecisionLab() {
                             ? "neutral"
                             : "bad"
                       }
+                      vsBase={vsBaseFor(
+                        realEstateResult.endingCash,
+                        realEstateScenarioResults.base.endingCash,
+                        realEstateActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="Runway"
                       value={runwayLabel(realEstateResult.runwayMonths)}
                       badge={realEstateRunwayStatus}
                       tone={RUNWAY_TONE[realEstateRunwayStatus]}
+                      vsBase={vsBaseFor(
+                        realEstateResult.runwayMonths,
+                        realEstateScenarioResults.base.runwayMonths,
+                        realEstateActiveScenario
+                      )}
                     />
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -2724,18 +2997,29 @@ export default function FpaDecisionLab() {
                             ? "neutral"
                             : "bad"
                       }
+                      vsBase={vsBasePointFor(
+                        realEstateEndingOccupancy,
+                        realEstateBaseEndingOccupancy,
+                        realEstateActiveScenario
+                      )}
                     />
                     <KpiCard
                       label="Debt Service Coverage"
                       value={`${realEstateDscr.toFixed(2)}x`}
                       badge={realEstateDscrStatus}
                       tone={DSCR_TONE[realEstateDscrStatus]}
+                      vsBase={vsBaseFor(realEstateDscr, realEstateBaseDscr, realEstateActiveScenario)}
                     />
                     <KpiCard
                       label="Implied Valuation"
                       value={formatCurrencyCompact(realEstateResult.impliedValuation)}
                       badge="Cap Rate"
                       tone="neutral"
+                      vsBase={vsBaseFor(
+                        realEstateResult.impliedValuation,
+                        realEstateScenarioResults.base.impliedValuation,
+                        realEstateActiveScenario
+                      )}
                     />
                   </div>
                   <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
@@ -2754,6 +3038,7 @@ export default function FpaDecisionLab() {
                     scenarioResults={realEstateScenarioResults}
                     activeResult={realEstateResult}
                     activeAssumptions={realEstateActiveAssumptions}
+                    activeScenario={realEstateActiveScenario}
                     first={i === 0}
                   />
                 ))}
