@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProjectPage from "@/components/ProjectPage";
+import NikeProjectPage from "@/components/NikeProjectPage";
 import {
   flagshipProjects,
   getAdjacentProjects,
@@ -42,7 +43,11 @@ export default async function Page({
   return (
     <div className="flex flex-1 flex-col">
       <Header />
-      <ProjectPage project={project} prev={prev} next={next} />
+      {slug === "nike" ? (
+        <NikeProjectPage project={project} prev={prev} next={next} />
+      ) : (
+        <ProjectPage project={project} prev={prev} next={next} />
+      )}
       <Footer />
     </div>
   );
