@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sam Felix — Financial Modeling Portfolio",
+  title: "Sam Felix — Finance & Analytics Portfolio",
   description:
-    "Financial modeling portfolio showcasing DCF, LBO, comps, and M&A projects.",
+    "Finance and analytics portfolio showcasing financial modeling, FP&A projects, and AI-powered finance tools.",
 };
 
 export default function RootLayout({

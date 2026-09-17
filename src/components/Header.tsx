@@ -1,33 +1,39 @@
+import { siteConfig } from "@/lib/site-config";
+
+const links = [
+  { href: "#work", label: "Work" },
+  { href: "#philosophy", label: "Philosophy" },
+  { href: "#experience", label: "Experience" },
+  { href: "#expertise", label: "Expertise" },
+  { href: "#contact", label: "Contact" },
+];
+
 export default function Header() {
   return (
-    <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
-        <a
-          href="#home"
-          className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-50"
-        >
-          Sam Felix
+    <header className="sticky top-0 z-50 border-b border-forest/10 bg-cream/95 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+        <a href="#home" className="text-lg font-bold tracking-tight text-charcoal">
+          SAM <span className="text-brass">FELIX</span>
         </a>
-        <nav className="flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-400">
-          <a
-            href="#projects"
-            className="transition-colors hover:text-slate-900 dark:hover:text-slate-50"
-          >
-            Projects
-          </a>
-          <a
-            href="#about"
-            className="transition-colors hover:text-slate-900 dark:hover:text-slate-50"
-          >
-            About
-          </a>
-          <a
-            href="mailto:2samfelix@gmail.com"
-            className="rounded-full bg-slate-900 px-4 py-1.5 text-white transition-colors hover:bg-slate-700 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-200"
-          >
-            Contact
-          </a>
+        <nav className="hidden items-center gap-8 text-sm font-medium text-charcoal-soft sm:flex">
+          {links.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="transition-colors hover:text-charcoal"
+            >
+              {link.label}
+            </a>
+          ))}
         </nav>
+        <a
+          href={siteConfig.resumeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full bg-forest px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+        >
+          Resume
+        </a>
       </div>
     </header>
   );
