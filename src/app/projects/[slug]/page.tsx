@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProjectPage from "@/components/ProjectPage";
 import NikeProjectPage from "@/components/NikeProjectPage";
+import ArmProjectPage from "@/components/ArmProjectPage";
 import {
   flagshipProjects,
   getAdjacentProjects,
@@ -45,6 +46,8 @@ export default async function Page({
       <Header />
       {slug === "nike" ? (
         <NikeProjectPage project={project} prev={prev} next={next} />
+      ) : slug === "arm" ? (
+        <ArmProjectPage project={project} prev={prev} next={next} />
       ) : (
         <ProjectPage project={project} prev={prev} next={next} />
       )}
