@@ -51,10 +51,10 @@ const DELIVERABLE_DETAIL: Record<string, string> = {
 };
 
 const ANSWER =
-  "Arm priced at $51.00 against a comp-implied range of roughly $43–$45 per ADS — an 11–15% premium to the closest public comparables. In hindsight that premium was conservative, not aggressive.";
+  "No, and not close. Three independent fundamentals-based methods — the 2023 comparable-company analysis, the actual IPO transaction, and a 2026 DCF built entirely on today's actuals — cluster between $43 and $52, with the DCF landing at $51.54. The market prices Arm at $272.21, roughly 5.3x that cluster.";
 
 const TAKEAWAY =
-  "Arm's 5.34x total return since IPO decomposes into 1.67x from EPS growth and 3.20x from P/E expansion. The market re-rated the business roughly twice as much as the business grew, which means today's shares carry more re-rating risk than the IPO price did.";
+  "Arm priced at $51.00 against a comp-implied range of roughly $43–$45 per ADS — an 11–15% premium to the closest public comparables that looks conservative, not aggressive, in hindsight. Arm's 5.34x total return since IPO decomposes into 1.67x from EPS growth and 3.20x from P/E expansion: the market re-rated the business roughly twice as much as it grew, which means today's shares carry more re-rating risk than the IPO price did.";
 
 type BadgeTone = "good" | "neutral" | "bad";
 
@@ -173,8 +173,8 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
               badgeLabel="Cluster holds"
               badgeTone="neutral"
               alertLead="Five fundamentals-based methods cluster within $17 of each other."
-              alertText={`Full peer median ($35.00, IPO Valuation!E16), core IP/EDA average ($43.41, IPO Valuation!E17), peer 75th percentile ($45.22, IPO Valuation!K8), the actual IPO price ($51.00), and a 2026 fundamentals-only DCF ($51.54, DCF Valuation!B48) all land between $35 and $52. The market price, $272.21, sits ${(CURRENT_MARKET_PRICE / 51.54).toFixed(1)}x above the DCF figure and outside every comp-based range in this analysis.`}
-              explainer="The peer 75th percentile's 16.5x multiple isn't read from a live cell — the workbook's CCA!L27 percentile formula currently errors with #NAME?. The $45.22 share price survives as a preserved reference value and matches the already-published report; the 16.5x figure shown here is back-solved from that price using the same methodology as the other rows, and reproduces the report's number exactly."
+              alertText={`Full peer median ($35.00, IPO Valuation!E16), core IP/EDA average ($43.41, IPO Valuation!E17), peer 75th percentile ($45.22, CCA!L27 / IPO Valuation!B18), the actual IPO price ($51.00), and a 2026 fundamentals-only DCF ($51.54, DCF Valuation!B48) all land between $35 and $52. The market price, $272.21, sits ${(CURRENT_MARKET_PRICE / 51.54).toFixed(1)}x above the DCF figure and outside every comp-based range in this analysis.`}
+              explainer="Each comp-based method applies its own EV/Revenue multiple to Arm's FY2023A revenue, then backs into an implied share price using the IPO-date share count and net cash position."
             />
           </ChartSection>
         </div>

@@ -10,21 +10,13 @@
 // (DCF implied); DCF Valuation!B49 / Post-IPO Performance!C46 (current
 // market price).
 //
-// Data-quality note: CCA!L27/M27/N27 (the 75th-percentile EV/Revenue,
-// EV/EBITDA, and P/E formulas) return #NAME? in the live workbook — a real
-// formula bug, not a gap I introduced or am patching around. It propagates
-// to IPO Valuation!B18:G18 ("Peer 75th Percentile"), which also reads
-// #NAME? for its multiple, implied EV, and implied equity value. The
-// implied SHARE PRICE for that row, $45.22, survives independently as a
-// manually-preserved reference value in IPO Valuation!K8 and matches the
-// already-published Arm_IPO_Valuation_Strategy_Report.pdf (Section 5 table:
-// "Peer 75th percentile, 16.5x, $45.22, (11.3%)"). The 16.5x multiple shown
-// below is not read from a live cell — it's back-solved from the intact
-// $45.22 share price using the same EV/Revenue methodology as the other
-// three rows (equity value = $45.22 x 1,026.055mm shares; less net cash of
-// $2,215mm = implied EV; divided by FY2023A revenue of $2,679mm = 16.49x),
-// which reproduces 16.5x exactly and matches the report. Flagging this to
-// the user rather than silently fixing the workbook.
+// The workbook's CCA!L26:N27 percentile formulas (QUARTILE.INC) previously
+// returned #NAME?, which propagated to IPO Valuation!B18:F18 ("Peer 75th
+// Percentile"). That has since been fixed in the source workbook — both now
+// compute live. CCA!L27 returns 16.4938x, matching the already-published
+// Arm_IPO_Valuation_Strategy_Report.pdf (Section 5: "Peer 75th percentile,
+// 16.5x, $45.22, (11.3%)") once rounded to one decimal, the same precision
+// used for every other row here.
 export const FOOTBALL_FIELD: {
   label: string;
   multiple: string;
@@ -33,12 +25,7 @@ export const FOOTBALL_FIELD: {
 }[] = [
   { label: "Full Peer Median", multiple: "12.6x", price: 35.0, note: "IPO Valuation!B16, E16" },
   { label: "Core IP/EDA Average", multiple: "15.8x", price: 43.41, note: "IPO Valuation!B17, E17" },
-  {
-    label: "Peer 75th Percentile",
-    multiple: "16.5x",
-    price: 45.22,
-    note: "IPO Valuation!K8 (price only — see data-quality note; multiple back-solved, matches published report)",
-  },
+  { label: "Peer 75th Percentile", multiple: "16.5x", price: 45.22, note: "CCA!L27, IPO Valuation!B18" },
   { label: "Actual IPO", multiple: "18.7x", price: 51.0, note: "IPO Valuation!B19, E19 / IPO Snapshot!B7" },
   { label: "DCF Implied (2026)", multiple: "—", price: 51.54, note: "DCF Valuation!B48" },
 ];
