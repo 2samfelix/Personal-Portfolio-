@@ -1605,10 +1605,10 @@ export default function FpaDecisionLab() {
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
         <Link
-          href="/#builds"
+          href="/#interactive-tools"
           className="text-sm font-semibold text-forest hover:text-forest-dark"
         >
-          &larr; Back to Builds
+          &larr; Back to Interactive Tools
         </Link>
 
         {/* Hero */}
