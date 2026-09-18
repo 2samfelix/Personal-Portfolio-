@@ -182,10 +182,11 @@ export const flagshipProjects: Project[] = [
         "Growth, margin, tax-transition, and cash-flow assumptions beyond reported historicals are the author's own, clearly disclosed throughout",
       ],
       findings: [
-        "With zero synergies, the deal dilutes Microsoft's EPS by ~4.07% in Year 1 — driven by foregone interest income and new intangible amortization, not operational weakness.",
+        "The deal dilutes Microsoft's EPS by ~4.07% with zero synergies — driven by foregone interest income and new intangible amortization, not operational weakness.",
         "The EPS-neutral synergy hurdle is ~$3.637B of annual pre-tax synergies — about 48.31% of Activision's entire FY2022 revenue, a model-derived breakeven rather than a figure Microsoft has guided to.",
-        "The five-year EPS path improves steadily, from -3.10% in Year 1 to +2.33% by Year 5, as synergies ramp and intangible amortization steps down.",
+        "The five-year EPS path improves steadily, from -3.10% in Year 1 under the synergy ramp to +2.33% by Year 5, as synergies reach full run-rate and intangible amortization steps down.",
         "Microsoft's cash-generation capacity could rebuild the $61.8B of deployed liquidity in ~2.40 years under the model's forecast assumptions, with no debt-paydown story required.",
+        "Goodwill of $51,001M is roughly 68% of the $75,408M final purchase price — a statement about how much of the deal is unallocated strategic value rather than identifiable assets.",
       ],
       takeaway:
         "Financially absorbable, strategically defensible, but not compelling on near-term EPS alone — the deal is more defensible as a long-duration strategic investment than as a traditional cost-synergy transaction.",
