@@ -218,33 +218,11 @@ export const flagshipProjects: Project[] = [
 
 export const builds: Project[] = [
   {
-    slug: "ai-finance-calculator",
-    title: "AI-Assisted Finance Calculator",
-    category: "AI & Tools",
-    summary:
-      "Building an interactive web calculator that helps model loan payoff timelines, savings growth, and budget scenarios — a hands-on way to pair a finance background with front-end and AI tooling.",
-    tools: ["AI", "Calculators", "Web App"],
-    year: "2026",
-    status: "in-development",
-    icon: "🧮",
-  },
-  {
-    slug: "ai-variance-commentary-agent",
-    title: "AI Variance-Commentary Agent",
-    category: "AI Agent",
-    summary:
-      "Prototyping an AI agent that reads monthly budget-vs-actual data and drafts plain-English variance commentary — automating the kind of ad hoc reporting done day-to-day at Marketstaff.",
-    tools: ["AI Agent", "FP&A", "Automation"],
-    year: "2026",
-    status: "in-development",
-    icon: "🤖",
-  },
-  {
     slug: "driver-sensitivity-simulator",
     title: "Driver Sensitivity Simulator",
     category: "Interactive Demo",
     summary:
-      "An interactive tool that flexes revenue and cost drivers ±5% to show which assumptions move EBITDA the most — illustrative sample data, not a real case study.",
+      "Which single assumption, if it moved, would change the answer? An interactive tool that flexes revenue and cost drivers ±5% to show which assumptions move EBITDA the most — illustrative sample data, not a real case study.",
     tools: ["Sensitivity Analysis", "Interactive"],
     year: "2026",
     status: "live",
@@ -256,7 +234,7 @@ export const builds: Project[] = [
     title: "FP&A Decision Lab",
     category: "Interactive Demo",
     summary:
-      "A SaaS financial-planning simulator that projects MRR, EBITDA, and cash runway 12 months forward under Base, Upside, and Downside scenarios for a fictional company.",
+      "Given where the business is trending, what should we actually do about it? A 12-month planning tool across SaaS, Real Estate, and Consulting & Services, with Upside and Downside scenarios modeled as deltas on live driver values.",
     tools: ["FP&A", "Scenario Modeling", "Interactive"],
     year: "2026",
     status: "live",
