@@ -6,6 +6,7 @@ import {
   ACTUAL_2025_PLAYOFF_RESULT,
   ACTUAL_2025_RECORD,
   ACTUAL_2025_SEED,
+  ACTUAL_2025_WIN_TOTAL,
   DEVELOPMENT_BOOST_MAX,
   FIXED_OVERHEAD,
   FIXED_OVERHEAD_SHARE_OF_REVENUE,
@@ -17,111 +18,31 @@ import {
   SALARY_CAP,
   SALARY_FLOOR,
   SALARY_FLOOR_PCT,
-  SEED_WIN_THRESHOLDS,
   TOTAL_REVENUE,
+  buildNfcField,
   clampToDriverBounds,
   runFrontOfficeSimulation,
   type FrontOfficeAssumptions,
   type FrontOfficeDriverKey,
   type FrontOfficeResult,
+  type NfcFieldTeam,
 } from "@/lib/models/frontOffice";
 import type { BadgeTone, DriverConfig } from "@/lib/models/shared";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
 
 // ============================================================================
-// Static NFC context — [SOURCED], real final 2025-season results for the 15
-// teams this model doesn't simulate. The Packers' own row is the only live
-// one; everyone else here is a fixed, real fact, never recomputed. Sourced
-// from the 2025-26 NFL playoff bracket and each division's final regular
-// season standings (aggregated from ESPN, Pro Football Reference, and
-// division-specific reporting — no single Packers-style disclosed filing
-// exists for the other 31 clubs, so this is ordinary sports reporting, not
-// a financial disclosure).
+// NFC standings — a thin display wrapper around the model's own
+// buildNfcField(). The real 15-team field, the seeding rules, and the
+// "insert the Packers at their live win total" logic all live in
+// src/lib/models/frontOffice.ts now (not here), because the engine itself
+// needs that exact same seed to decide playoff hosting/revenue — see the
+// "One Seed, Everywhere" note in Assumptions & Limitations below. This
+// file only sorts the 16 already-seeded rows for display.
 // ============================================================================
 
-type StaticTeam = {
-  name: string;
-  division: "NFC East" | "NFC North" | "NFC South" | "NFC West";
-  wins: number; // decimal, ties = 0.5
-  record: string; // display string, e.g. "9-8" — real W-L(-T), never used for the Packers
-};
-
-// No hardcoded seed here anymore — every team's seed, including these 15,
-// is now RECOMPUTED below from real NFL seeding rules (division winners
-// take seeds 1-4 by record, the next three by record take 5-7) applied to
-// this same win-total data. That's what makes it impossible for a seed
-// number to silently drift out of sync with the record shown next to it.
-const STATIC_NFC_TEAMS: StaticTeam[] = [
-  { name: "Seattle Seahawks", division: "NFC West", wins: 14, record: "14-3" },
-  { name: "Chicago Bears", division: "NFC North", wins: 11, record: "11-6" },
-  { name: "Philadelphia Eagles", division: "NFC East", wins: 11, record: "11-6" },
-  { name: "Carolina Panthers", division: "NFC South", wins: 8, record: "8-9" },
-  { name: "Los Angeles Rams", division: "NFC West", wins: 12, record: "12-5" },
-  { name: "San Francisco 49ers", division: "NFC West", wins: 12, record: "12-5" },
-  // Green Bay Packers deliberately omitted — that row is live, driven by
-  // the simulation below, not a static fact.
-  { name: "Minnesota Vikings", division: "NFC North", wins: 9, record: "9-8" },
-  { name: "Detroit Lions", division: "NFC North", wins: 9, record: "9-8" },
-  { name: "Tampa Bay Buccaneers", division: "NFC South", wins: 8, record: "8-9" },
-  { name: "Atlanta Falcons", division: "NFC South", wins: 8, record: "8-9" },
-  { name: "New Orleans Saints", division: "NFC South", wins: 8, record: "8-9" },
-  { name: "Dallas Cowboys", division: "NFC East", wins: 7.5, record: "7-9-1" },
-  { name: "Washington Commanders", division: "NFC East", wins: 5, record: "5-12" },
-  { name: "New York Giants", division: "NFC East", wins: 4, record: "4-13" },
-  { name: "Arizona Cardinals", division: "NFC West", wins: 3, record: "3-14" },
-];
-
-type NfcTeamInput = { key: string; division: StaticTeam["division"]; wins: number };
-type NfcSeedInfo = { seed: number | null; isDivisionWinner: boolean };
-
-/**
- * Real NFL seeding rules applied to a real field: the division winner in
- * each of the four divisions (highest wins; an exact tie keeps whichever
- * team is listed first for that division above, which is always the real
- * 2025 winner, so a tie only flips the result when the live plan strictly
- * beats it) takes seeds 1-4 ordered by record, then the next three best
- * remaining records take seeds 5-7. Recomputing this over the whole field
- * — rather than looking the Packers' seed up in a win-total table — is
- * what keeps the standings self-consistent: no two teams can land on the
- * same seed, and a division winner can legitimately outrank a
- * better-record wild card, exactly as it does in the real NFL.
- */
-function computeNfcSeeding(teams: NfcTeamInput[]): Map<string, NfcSeedInfo> {
-  const byDivision = new Map<string, NfcTeamInput[]>();
-  teams.forEach((t) => {
-    const list = byDivision.get(t.division) ?? [];
-    list.push(t);
-    byDivision.set(t.division, list);
-  });
-
-  const winners: NfcTeamInput[] = [];
-  byDivision.forEach((list) => {
-    winners.push(list.reduce((best, t) => (t.wins > best.wins ? t : best), list[0]));
-  });
-  const winnerKeys = new Set(winners.map((w) => w.key));
-  const wildcardPool = teams.filter((t) => !winnerKeys.has(t.key));
-
-  const seeding = new Map<string, NfcSeedInfo>();
-  teams.forEach((t) => seeding.set(t.key, { seed: null, isDivisionWinner: false }));
-  [...winners]
-    .sort((a, b) => b.wins - a.wins)
-    .forEach((t, i) => seeding.set(t.key, { seed: i + 1, isDivisionWinner: true }));
-  [...wildcardPool]
-    .sort((a, b) => b.wins - a.wins)
-    .slice(0, 3)
-    .forEach((t, i) => seeding.set(t.key, { seed: i + 5, isDivisionWinner: false }));
-  return seeding;
-}
-
-type StandingsRow = {
-  key: string;
-  name: string;
-  division: string;
-  record: string;
-  seed: number | null;
+type StandingsRow = NfcFieldTeam & {
+  displayRecord: string;
   seedLabel: string | null;
-  isPackers: boolean;
-  isDivisionWinner: boolean;
 };
 
 function formatProjectedWins(wins: number): string {
@@ -129,41 +50,19 @@ function formatProjectedWins(wins: number): string {
 }
 
 function buildStandings(result: FrontOfficeResult): StandingsRow[] {
-  const packersInput: NfcTeamInput = { key: "packers", division: "NFC North", wins: result.wins };
-  const inputs: NfcTeamInput[] = [
-    ...STATIC_NFC_TEAMS.map((t) => ({ key: t.name, division: t.division, wins: t.wins })),
-    packersInput,
-  ];
-  const seeding = computeNfcSeeding(inputs);
-
-  const rows: StandingsRow[] = inputs.map((t) => {
-    const info = seeding.get(t.key)!;
-    const isPackers = t.key === "packers";
-    const staticTeam = STATIC_NFC_TEAMS.find((s) => s.name === t.key);
-    return {
-      key: t.key,
-      name: isPackers ? "Green Bay Packers" : t.key,
-      division: t.division,
-      record: isPackers ? formatProjectedWins(result.wins) : staticTeam!.record,
-      seed: info.seed,
-      seedLabel: info.seed !== null ? `${info.seed}${isPackers ? " (modeled)" : ""}` : null,
-      isPackers,
-      isDivisionWinner: info.isDivisionWinner,
-    };
-  });
+  const field = buildNfcField(result.wins); // always exactly 16 teams — see buildNfcField's own doc comment
+  const rows: StandingsRow[] = field.map((t) => ({
+    ...t,
+    displayRecord: t.isPackers ? formatProjectedWins(result.wins) : t.record!,
+    seedLabel: t.seed !== null ? `${t.seed}${t.isPackers ? " (modeled)" : ""}` : null,
+  }));
 
   // Playoff teams ordered by seed (1-7) — NOT by win total, since a
   // division winner can and legitimately does outrank a better-record
   // wild card (see isDivisionWinner). Non-playoff teams below the line are
   // sorted by win total, since seed doesn't apply to them.
   const playoffTeams = rows.filter((r) => r.seed !== null).sort((a, b) => a.seed! - b.seed!);
-  const nonPlayoffTeams = rows
-    .filter((r) => r.seed === null)
-    .sort((a, b) => {
-      const winsFor = (row: StandingsRow) =>
-        row.isPackers ? result.wins : STATIC_NFC_TEAMS.find((s) => s.name === row.name)!.wins;
-      return winsFor(b) - winsFor(a);
-    });
+  const nonPlayoffTeams = rows.filter((r) => r.seed === null).sort((a, b) => b.wins - a.wins);
   return [...playoffTeams, ...nonPlayoffTeams];
 }
 
@@ -305,12 +204,16 @@ function MandateTarget({
   );
 }
 
-// The playoff-line gauge: makes the ~9.5-win discontinuity visible rather
+// The playoff-line gauge: makes the win-total discontinuity visible rather
 // than letting a small slider move silently jump the record/seed/revenue.
-// Scaled 0-17 (a full regular season), with the playoff cutline read
-// directly off the model's own SEED_WIN_THRESHOLDS table (the 7-seed
-// entry) rather than a second, hand-typed copy of the same number.
-const PLAYOFF_LINE_WINS = SEED_WIN_THRESHOLDS.find((t) => t.seed === 7)!.minWins;
+// Scaled 0-17 (a full regular season). The vertical line marks the actual
+// 2025 cutline (9.5 wins, ACTUAL_2025_WIN_TOTAL) as a historical reference
+// point — it is NOT the live pass/fail rule. Pass/fail (the fill color)
+// comes from madePlayoffs, which the model derives from this plan's real
+// position in the NFC field (see buildNfcField), and that field cutoff
+// can sit a little above or below 9.5 depending on the other 15 teams'
+// fixed records — see "One Seed, Everywhere" in Assumptions below.
+const PLAYOFF_LINE_WINS = ACTUAL_2025_WIN_TOTAL;
 const GAUGE_MAX_WINS = 17;
 
 function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: boolean }) {
@@ -336,12 +239,14 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
         />
       </div>
       <div className={`mt-3 rounded-lg px-3 py-2 text-[11px] leading-4 ${ALERT_STYLE[tone]}`}>
-        The vertical line marks {PLAYOFF_LINE_WINS} wins — the model&apos;s calibrated 7-seed
-        cutline (see Assumptions). At this plan, projected wins sit{" "}
+        The vertical line marks {PLAYOFF_LINE_WINS} wins — the actual 2025 cutline (see
+        Assumptions; the live pass/fail below comes from this plan&apos;s real position in the
+        NFC field, not a fixed number). At this plan, projected wins sit{" "}
         <span className="font-semibold">
           {Math.abs(distance).toFixed(2)} wins {distance >= 0 ? "above" : "below"}
         </span>{" "}
-        that line. Crossing it is a real step change — playoff hosting revenue and the health
+        that reference line, and the plan {madePlayoffs ? "made" : "missed"} the real field.
+        Crossing the true cutoff is a real step change — playoff hosting revenue and the health
         score jump discontinuously right at the threshold, not smoothly. That is correct
         behavior, not a rendering glitch.
       </div>
@@ -473,11 +378,11 @@ export default function FrontOfficeSimulator() {
   const [marginalMetric, setMarginalMetric] = useState<MarginalMetric>("operatingResult");
 
   const result = useMemo(() => runFrontOfficeSimulation(assumptions), [assumptions]);
+  // result.playoff.seed IS the standings' seed — buildStandings below calls
+  // the same buildNfcField() the engine itself uses for playoff hosting, so
+  // there is exactly one seed number anywhere on this page. See "One Seed,
+  // Everywhere" in Assumptions & Limitations.
   const standings = useMemo(() => buildStandings(result), [result]);
-  // The Packers' seed as shown everywhere in this UI (console + standings)
-  // comes from this one recomputed field placement, never from the
-  // engine's own internal seedForWins() table — see buildStandings.
-  const packersStanding = standings.find((r) => r.isPackers)!;
   const marginalImpact = useMemo(
     () => computeMarginalImpact(assumptions, marginalMetric),
     [assumptions, marginalMetric]
@@ -540,8 +445,9 @@ export default function FrontOfficeSimulator() {
             <div className="rounded-xl border border-forest/15 bg-white p-3">
               <span className="block text-sm font-semibold text-charcoal">A playoff berth</span>
               <span className="block text-xs text-charcoal-soft">
-                Projected wins at or above {PLAYOFF_LINE_WINS} — the model&apos;s calibrated
-                7-seed line.
+                A top-7 seed in the real NFC field (see NFC Standings) — {PLAYOFF_LINE_WINS} wins
+                got the 7-seed in the actual 2025 season, though the exact cutoff for a given plan
+                depends on the other 15 teams&apos; fixed records.
               </span>
             </div>
             <div className="rounded-xl border border-forest/15 bg-white p-3">
@@ -645,15 +551,15 @@ export default function FrontOfficeSimulator() {
                 <KpiCard label="Projected Wins" value={result.wins.toFixed(2)} sub="of 17 games" />
                 <KpiCard
                   label="Seed & Result"
-                  value={packersStanding.seed !== null ? `${packersStanding.seed} Seed` : "Missed"}
+                  value={result.playoff.seed !== null ? `${result.playoff.seed} Seed` : "Missed"}
                   badge={result.playoff.result}
                   tone={playoffTone(result)}
                   sub={
-                    packersStanding.isDivisionWinner
-                      ? "NFC North Winner — field position, see Assumptions"
-                      : packersStanding.seed !== null
-                        ? "Wild Card — field position, see Assumptions"
-                        : "Field position, see Assumptions"
+                    result.playoff.isDivisionWinner
+                      ? "NFC North Winner"
+                      : result.playoff.seed !== null
+                        ? "Wild Card"
+                        : undefined
                   }
                 />
                 <KpiCard
@@ -741,7 +647,7 @@ export default function FrontOfficeSimulator() {
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-charcoal-soft">{row.division}</td>
-                      <td className="px-4 py-2.5 text-right text-charcoal-soft">{row.record}</td>
+                      <td className="px-4 py-2.5 text-right text-charcoal-soft">{row.displayRecord}</td>
                     </tr>
                   );
                 })}
@@ -955,21 +861,20 @@ export default function FrontOfficeSimulator() {
           </div>
 
           <div className="mt-6 rounded-xl border border-brass/30 bg-brass-pale/40 p-4">
-            <h3 className="text-sm font-semibold text-charcoal">
-              Two Different &ldquo;Seed&rdquo; Computations, Used for Different Things
-            </h3>
+            <h3 className="text-sm font-semibold text-charcoal">One Seed, Everywhere</h3>
             <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-              The Seed &amp; Result card and the NFC Standings table show the Packers&apos; seed
-              from the same place: this plan&apos;s projected wins inserted into the real 2025 NFC
-              field, reseeded with real NFL rules (division winners 1-4 by record, then the best
-              three remaining records take 5-7). That field position is display context — it is
-              not what the engine uses to compute playoff revenue. The Season P&amp;L&apos;s
-              playoff-revenue line and the round-by-round result phrase (&ldquo;Lost Wild Card
-              Round,&rdquo; etc.) come from the model&apos;s own simplified, single-path
-              advancement calibration committed in the model layer (documented there: strength
-              ratio against a round-by-round survival bar), which does not simulate the other 31
-              teams and can assign a different notional seed than the real-field position shown
-              here. The two are disclosed separately rather than silently forced to agree.
+              This plan&apos;s projected wins are inserted into the real 2025 NFC field and
+              reseeded with real NFL rules (division winners take seeds 1-4 by record, then the
+              best three remaining records take 5-7) by a single function committed in the model
+              layer (<code>buildNfcField</code>, <code>src/lib/models/frontOffice.ts</code>). The
+              Seed &amp; Result card, the NFC Standings table, and the Season P&amp;L&apos;s
+              playoff-revenue line all read that exact same number — there is no second,
+              independent seeding table. Only the round-by-round result phrase (&ldquo;Lost Wild
+              Card Round,&rdquo; etc.) is decided separately, by comparing team strength against a
+              documented survival bar for each round; that part doesn&apos;t simulate the other 31
+              teams and never did, but which rounds are played at home — and therefore which
+              rounds earn playoff revenue — now comes entirely from the seed above, so a hosted
+              game always traces back to a real top-4 (or #1) seed you can check in the standings.
             </p>
           </div>
         </section>

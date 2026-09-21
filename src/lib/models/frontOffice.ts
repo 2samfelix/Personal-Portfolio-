@@ -533,28 +533,122 @@ export function expectedWins(strength: number): number {
 // 6. PLAYOFF SEEDING AND ADVANCEMENT
 // ============================================================================
 
+export type NfcDivision = "NFC East" | "NFC North" | "NFC South" | "NFC West";
+
+export type NfcTeamRecord = {
+  name: string;
+  division: NfcDivision;
+  wins: number; // decimal, ties = 0.5
+  record: string; // real W-L(-T) display string
+};
+
 /**
- * [ASSUMPTION] NFC win-total → seed thresholds. [SOURCED]: current 7-team
- * playoff format per conference, #1 seed bye. Calibrated so a 9.5-win team
- * lands at exactly seed 7 (ACTUAL_2025_SEED), matching the real 2025
- * result; thresholds are strictly increasing so no win total resolves
- * ambiguously.
+ * [SOURCED] The other 15 NFC clubs' real, final 2025 regular-season
+ * records. This lives in the model layer (not just a UI display table)
+ * because playoff hosting — and therefore playoff revenue — now depends
+ * on the Packers' real position in this field; see buildNfcField and
+ * resolvePlayoffs below. Aggregated from the 2025-26 NFL playoff bracket
+ * and each division's final standings (ESPN, Pro Football Reference,
+ * division beat reporting) — the other 31 clubs publish nothing like the
+ * Packers' audited financial disclosure, so this is ordinary sports
+ * reporting, not a financial filing.
  */
-export const SEED_WIN_THRESHOLDS: { seed: number; minWins: number }[] = [
-  { seed: 1, minWins: 13.5 },
-  { seed: 2, minWins: 12.5 },
-  { seed: 3, minWins: 11.5 },
-  { seed: 4, minWins: 11.0 },
-  { seed: 5, minWins: 10.5 },
-  { seed: 6, minWins: 10.0 },
-  { seed: 7, minWins: 9.5 },
+export const STATIC_NFC_TEAMS: NfcTeamRecord[] = [
+  { name: "Seattle Seahawks", division: "NFC West", wins: 14, record: "14-3" },
+  { name: "Chicago Bears", division: "NFC North", wins: 11, record: "11-6" },
+  { name: "Philadelphia Eagles", division: "NFC East", wins: 11, record: "11-6" },
+  { name: "Carolina Panthers", division: "NFC South", wins: 8, record: "8-9" },
+  { name: "Los Angeles Rams", division: "NFC West", wins: 12, record: "12-5" },
+  { name: "San Francisco 49ers", division: "NFC West", wins: 12, record: "12-5" },
+  // Green Bay Packers deliberately omitted — inserted live at whatever
+  // this plan's projected win total is, by buildNfcField below.
+  { name: "Minnesota Vikings", division: "NFC North", wins: 9, record: "9-8" },
+  { name: "Detroit Lions", division: "NFC North", wins: 9, record: "9-8" },
+  { name: "Tampa Bay Buccaneers", division: "NFC South", wins: 8, record: "8-9" },
+  { name: "Atlanta Falcons", division: "NFC South", wins: 8, record: "8-9" },
+  { name: "New Orleans Saints", division: "NFC South", wins: 8, record: "8-9" },
+  { name: "Dallas Cowboys", division: "NFC East", wins: 7.5, record: "7-9-1" },
+  { name: "Washington Commanders", division: "NFC East", wins: 5, record: "5-12" },
+  { name: "New York Giants", division: "NFC East", wins: 4, record: "4-13" },
+  { name: "Arizona Cardinals", division: "NFC West", wins: 3, record: "3-14" },
 ];
 
-export function seedForWins(wins: number): number | null {
-  for (const { seed, minWins } of SEED_WIN_THRESHOLDS) {
-    if (wins >= minWins) return seed;
-  }
-  return null; // missed the playoffs
+export type NfcFieldTeam = {
+  key: string;
+  name: string;
+  division: NfcDivision;
+  wins: number;
+  record: string | null; // real sourced W-L(-T) for the other 15; null for the Packers — their record is this plan's live output, not a fixed fact
+  isPackers: boolean;
+  seed: number | null;
+  isDivisionWinner: boolean;
+};
+
+/**
+ * Real NFL seeding rules applied to the real 15-team NFC field with the
+ * Packers inserted at `packersWins`: each division's winner (highest wins;
+ * an exact tie keeps whichever team is the real 2025 winner, so a tie only
+ * flips when the plan strictly beats it) takes seeds 1-4 ordered by
+ * record, then the next three best remaining records take 5-7. This is
+ * THE seed this model produces — there is no second, independent seeding
+ * table. It drives both the standings display and, via resolvePlayoffs
+ * below, home-field for playoff revenue, so a hosted game always traces
+ * back to a real top-4 (or #1) seed a visitor can check against this same
+ * field. Always returns all 16 teams — the Packers plus every static team,
+ * regardless of where the Packers' win total places them.
+ */
+export function buildNfcField(packersWins: number): NfcFieldTeam[] {
+  type Entry = { key: string; division: NfcDivision; wins: number };
+  const teams: Entry[] = [
+    ...STATIC_NFC_TEAMS.map((t) => ({ key: t.name, division: t.division, wins: t.wins })),
+    { key: "packers", division: "NFC North", wins: packersWins },
+  ];
+
+  const byDivision = new Map<NfcDivision, Entry[]>();
+  teams.forEach((t) => {
+    const list = byDivision.get(t.division) ?? [];
+    list.push(t);
+    byDivision.set(t.division, list);
+  });
+
+  const winners: Entry[] = [];
+  byDivision.forEach((list) => {
+    winners.push(list.reduce((best, t) => (t.wins > best.wins ? t : best), list[0]));
+  });
+  const winnerKeys = new Set(winners.map((w) => w.key));
+  const wildcardPool = teams.filter((t) => !winnerKeys.has(t.key));
+
+  const seeding = new Map<string, { seed: number | null; isDivisionWinner: boolean }>();
+  teams.forEach((t) => seeding.set(t.key, { seed: null, isDivisionWinner: false }));
+  [...winners]
+    .sort((a, b) => b.wins - a.wins)
+    .forEach((t, i) => seeding.set(t.key, { seed: i + 1, isDivisionWinner: true }));
+  [...wildcardPool]
+    .sort((a, b) => b.wins - a.wins)
+    .slice(0, 3)
+    .forEach((t, i) => seeding.set(t.key, { seed: i + 5, isDivisionWinner: false }));
+
+  return teams.map((t) => {
+    const isPackers = t.key === "packers";
+    const info = seeding.get(t.key)!;
+    const staticTeam = isPackers ? undefined : STATIC_NFC_TEAMS.find((s) => s.name === t.key);
+    return {
+      key: t.key,
+      name: isPackers ? "Green Bay Packers" : t.key,
+      division: t.division,
+      wins: t.wins,
+      record: isPackers ? null : staticTeam!.record,
+      isPackers,
+      seed: info.seed,
+      isDivisionWinner: info.isDivisionWinner,
+    };
+  });
+}
+
+/** Convenience accessor onto buildNfcField for just the Packers' own seed. */
+export function packersFieldSeed(packersWins: number): { seed: number | null; isDivisionWinner: boolean } {
+  const packers = buildNfcField(packersWins).find((t) => t.isPackers)!;
+  return { seed: packers.seed, isDivisionWinner: packers.isDivisionWinner };
 }
 
 /** [DERIVED] Baseline team-strength ratio to league average. */
@@ -566,7 +660,8 @@ export const BASELINE_STRENGTH_RATIO = BASELINE_TEAM_STRENGTH / LEAGUE_AVERAGE_S
  * playoff result: a 7-seed team at exactly BASELINE_STRENGTH_RATIO falls
  * just short of the Wild Card bar (real outcome: lost at Chicago). Each
  * later round's bar is set higher, since survivors face progressively
- * tougher remaining competition.
+ * tougher remaining competition. These thresholds compare only to
+ * strength ratio, never to seed — seed determines hosting, not survival.
  */
 export const WILDCARD_SURVIVAL_RATIO = BASELINE_STRENGTH_RATIO * 1.03;
 export const DIVISIONAL_SURVIVAL_RATIO = WILDCARD_SURVIVAL_RATIO * 1.05;
@@ -575,49 +670,66 @@ export const SUPERBOWL_SURVIVAL_RATIO = CONFERENCE_SURVIVAL_RATIO * 1.05;
 
 export type PlayoffOutcome = {
   madePlayoffs: boolean;
-  seed: number | null;
+  seed: number | null; // the real-field seed from buildNfcField/packersFieldSeed — the only seed this model produces
+  isDivisionWinner: boolean;
   result: string;
   homeGamesHosted: number;
 };
 
 /**
- * Playoff outcome from win total against the documented seeding model
- * above, then a deterministic single-path advancement rule: a team
- * survives a round if its strength ratio clears that round's bar.
- * [ASSUMPTION] simplified home-field rule (single-path, not a full bracket
+ * Playoff outcome: qualification and seed come from the real NFC field
+ * (packersFieldSeed above), not from a standalone win-total lookup — so
+ * "did they make it" always matches what the standings table shows.
+ * Round-by-round survival is still purely strength-based: a team survives
+ * a round if its strength ratio clears that round's bar, independent of
+ * seed. Seed's only remaining job is HOME FIELD — which rounds are hosted,
+ * and therefore which rounds earn home playoff revenue — using the exact
+ * same seed the standings display, so a visitor can never see hosting
+ * revenue booked for a game the standings say never happened.
+ * [ASSUMPTION] simplified single-path hosting rule (not a full bracket
  * simulation — that's Monte Carlo territory in Prompt 3): seeds 1-4 host
- * Wild Card (seed 1 has a bye), seeds 1-2 host Divisional, only the #1 seed
- * hosts the Conference Championship, and the Super Bowl is a neutral site.
+ * Wild Card (seed 1 has a bye), seeds 1-2 host Divisional, only the #1
+ * seed hosts the Conference Championship, and the Super Bowl is a neutral
+ * site.
  */
-export function resolvePlayoffs(wins: number, strengthRatio: number): PlayoffOutcome {
-  const seed = seedForWins(wins);
-  if (seed === null) {
-    return { madePlayoffs: false, seed: null, result: "Missed the playoffs", homeGamesHosted: 0 };
+export function resolvePlayoffs(
+  strengthRatio: number,
+  fieldSeed: number | null,
+  isDivisionWinner: boolean
+): PlayoffOutcome {
+  if (fieldSeed === null) {
+    return {
+      madePlayoffs: false,
+      seed: null,
+      isDivisionWinner: false,
+      result: "Missed the playoffs",
+      homeGamesHosted: 0,
+    };
   }
 
   let homeGamesHosted = 0;
 
-  if (seed !== 1) {
-    if (seed <= 4) homeGamesHosted += 1; // hosts Wild Card
+  if (fieldSeed !== 1) {
+    if (fieldSeed <= 4) homeGamesHosted += 1; // hosts Wild Card
     if (strengthRatio < WILDCARD_SURVIVAL_RATIO) {
-      return { madePlayoffs: true, seed, result: "Lost Wild Card Round", homeGamesHosted };
+      return { madePlayoffs: true, seed: fieldSeed, isDivisionWinner, result: "Lost Wild Card Round", homeGamesHosted };
     }
   }
 
-  if (seed <= 2) homeGamesHosted += 1; // hosts Divisional
+  if (fieldSeed <= 2) homeGamesHosted += 1; // hosts Divisional
   if (strengthRatio < DIVISIONAL_SURVIVAL_RATIO) {
-    return { madePlayoffs: true, seed, result: "Lost Divisional Round", homeGamesHosted };
+    return { madePlayoffs: true, seed: fieldSeed, isDivisionWinner, result: "Lost Divisional Round", homeGamesHosted };
   }
 
-  if (seed === 1) homeGamesHosted += 1; // hosts Conference Championship
+  if (fieldSeed === 1) homeGamesHosted += 1; // hosts Conference Championship
   if (strengthRatio < CONFERENCE_SURVIVAL_RATIO) {
-    return { madePlayoffs: true, seed, result: "Lost Conference Championship", homeGamesHosted };
+    return { madePlayoffs: true, seed: fieldSeed, isDivisionWinner, result: "Lost Conference Championship", homeGamesHosted };
   }
 
   if (strengthRatio < SUPERBOWL_SURVIVAL_RATIO) {
-    return { madePlayoffs: true, seed, result: "Lost Super Bowl", homeGamesHosted }; // neutral site
+    return { madePlayoffs: true, seed: fieldSeed, isDivisionWinner, result: "Lost Super Bowl", homeGamesHosted }; // neutral site
   }
-  return { madePlayoffs: true, seed, result: "Won Super Bowl", homeGamesHosted };
+  return { madePlayoffs: true, seed: fieldSeed, isDivisionWinner, result: "Won Super Bowl", homeGamesHosted };
 }
 
 // ============================================================================
@@ -856,7 +968,8 @@ export function runFrontOfficeSimulation(rawAssumptions: FrontOfficeAssumptions)
   const strength = teamStrength(a);
   const strengthRatio = strength / LEAGUE_AVERAGE_STRENGTH;
   const wins = expectedWins(strength);
-  const playoff = resolvePlayoffs(wins, strengthRatio);
+  const fieldSeeding = packersFieldSeed(wins);
+  const playoff = resolvePlayoffs(strengthRatio, fieldSeeding.seed, fieldSeeding.isDivisionWinner);
 
   const attendance = attendanceRate(a, strength) * STADIUM_CAPACITY;
 
