@@ -75,17 +75,19 @@ export const PAYROLL_EQUALS_CAP_ASSUMPTION = true;
 
 /**
  * [SOURCED] Team salary-cash-spending floor under the current NFL CBA
- * (2020 CBA, Article 12, Section 9, "Minimum Team Cash Spending"). For the
- * 2024-2026 League Year period — which covers the 2025 season this model
- * is baselined on — each club must spend at least 90% of the salary cap in
- * actual cash on players, aggregated over that three-year window (a
- * separate, higher 95%-of-cap floor applies league-wide across all 32
- * clubs combined). Source: NFL CBA Article 12 §9, as reproduced at Over
- * The Cap (https://overthecap.com/collective-bargaining-agreement/article/12/section/9),
- * corroborated by Cap & Trade Football's league-wide cash spending
- * explainer. (Earlier 2017-2020 period used an 89% team floor — the rate
- * stepped up to 90% starting with the 2021-2023 period and has held there
- * since.)
+ * (2020 CBA, Article 12, Section 9, "Minimum Team Cash Spending"). The CBA
+ * sets this floor over four DIFFERENT multi-League-Year windows, not all
+ * the same length: 2017-2020 (four years, 89% floor), 2021-2023 (three
+ * years, 90%), 2024-2026 (three years, 90%), and 2027-2030 (four years,
+ * 90%). The 2025 season this model is baselined on falls in the
+ * 2024-2026 window — a THREE-year aggregation period, not four — over
+ * which each club must spend at least 90% of the salary cap in actual
+ * cash on players. (A separate, higher 95%-of-cap floor applies
+ * league-wide across all 32 clubs combined, over the same windows.)
+ * Source: NFL CBA Article 12 §9, as reproduced at Over The Cap
+ * (https://overthecap.com/collective-bargaining-agreement/article/12/section/9),
+ * cross-checked against Steelers Depot's and Cincy Jungle's independent
+ * write-ups of the same clause.
  *
  * [ASSUMPTION] simplification for a one-season model: the real rule is a
  * multi-year AGGREGATE — a single season under 90% is legal on its own, as
@@ -359,10 +361,38 @@ function saturating(spend: number, k: number): number {
 export const ROSTER_QUALITY_MAX = 100;
 /** [ASSUMPTION] Effective-payroll level for half-max roster quality. */
 export const ROSTER_QUALITY_K = 220_000_000;
-/** [ASSUMPTION] Development spend can raise payroll's effective
- * quality-per-dollar by at most 15% — a boost, not a second source of
- * quality, which is what keeps it distinct from the payroll lever. */
-export const DEVELOPMENT_BOOST_MAX = 0.15;
+/**
+ * [ASSUMPTION] Development spend can raise payroll's effective
+ * quality-per-dollar by at most 35% — a boost, not a second source of
+ * quality, which is what keeps it distinct from the payroll lever.
+ *
+ * Anchored to published rookie-contract surplus-value research, not picked
+ * to produce a particular strategy ranking: the #1 overall pick costs
+ * ~4.1% of the salary cap for production valued at ~6.5% of the cap — a
+ * ~58% surplus-efficiency premium (production/cost ≈ 1.59x) for the single
+ * most valuable pick in the draft (PFF, "The surplus value of each
+ * position in the NFL draft"). At the extreme, elite rookie-scale QB
+ * production costs ~3.6-3.9% of the cap versus ~21.5% of the cap for
+ * comparable veteran QB production, a 5-6x gap — but QB is the most
+ * positionally scarce case in the league, not representative of a whole
+ * roster. Surplus value is real through day two of the draft but shrinks
+ * fast further down the board and is bust-risk-adjusted; PFF's own
+ * analysis places the actual peak of surplus value outside the top 10
+ * picks, and the premium-vs-non-premium surplus gap narrows from roughly
+ * $6M (early) to $3M (late) over a rookie deal.
+ *
+ * This lever funds an entire scouting/development program — many picks
+ * across all seven rounds and the staff that develops them — not a
+ * guaranteed top-five selection, and most of a 53-man roster's cap hit at
+ * any given time is still veteran money even at a well-run drafting
+ * organization (the Packers' own archetype: draft, develop, extend,
+ * let good-but-not-great players walk for compensatory picks). 35% is
+ * anchored to the #1 pick's ~58% surplus-efficiency figure as an upper
+ * reference and discounted substantially for that reality — a judgment
+ * call on a real and well-documented phenomenon, not a number the
+ * literature hands you directly as a single "development boost %."
+ */
+export const DEVELOPMENT_BOOST_MAX = 0.35;
 /** [ASSUMPTION] Development spend for half of DEVELOPMENT_BOOST_MAX. */
 export const DEVELOPMENT_K = 20_000_000;
 
