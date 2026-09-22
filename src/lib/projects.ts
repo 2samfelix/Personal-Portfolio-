@@ -241,6 +241,18 @@ export const builds: Project[] = [
     icon: "🧭",
     link: "/tools/fpa-decision-lab",
   },
+  {
+    slug: "front-office-simulator",
+    title: "Front Office",
+    category: "Interactive Demo",
+    summary:
+      "You have a hard cap and a revenue ceiling you don't control. What's the plan? A Green Bay Packers front-office simulator built on their real, audited FY2026 financials — six spending levers, a binding salary cap, a live NFC standings and P&L, and a 1,000-season Monte Carlo stress test.",
+    tools: ["Monte Carlo Simulation", "Scenario Modeling", "Interactive"],
+    year: "2026",
+    status: "live",
+    icon: "🏈",
+    link: "/tools/front-office-simulator",
+  },
 ];
 
 export function getProjectBySlug(slug: string): Project | undefined {
