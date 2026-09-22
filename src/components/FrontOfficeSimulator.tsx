@@ -12,6 +12,7 @@ import {
   FIXED_OVERHEAD_SHARE_OF_REVENUE,
   FRONT_OFFICE_BASE_DEFAULTS,
   FRONT_OFFICE_DRIVERS,
+  NATIONAL_REVENUE,
   OPERATING_RESULT,
   PAYROLL_EQUALS_CAP_ASSUMPTION,
   PLAYER_COST_YOY_CHANGE,
@@ -28,6 +29,11 @@ import {
   type NfcFieldTeam,
 } from "@/lib/models/frontOffice";
 import type { BadgeTone, DriverConfig } from "@/lib/models/shared";
+import {
+  ATTENDANCE_NOISE_STDDEV,
+  runFrontOfficeMonteCarlo,
+  type FrontOfficeMonteCarloResult,
+} from "@/lib/frontOfficeMonteCarlo";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
 
 // ============================================================================
@@ -255,6 +261,183 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
 }
 
 // ============================================================================
+// Monte Carlo — the "Run 1,000 Seasons" section
+// ============================================================================
+
+const MONTE_CARLO_RUNS = 1000;
+
+type HistogramMarker = { value: number; label: string; color: string };
+
+const HIST_WIDTH = 640;
+const HIST_HEIGHT = 220;
+const HIST_PAD_LEFT = 8;
+const HIST_PAD_RIGHT = 8;
+const HIST_PAD_TOP = 10;
+const HIST_PAD_BOTTOM = 56; // room for two staggered rows of marker labels
+
+/**
+ * A binned histogram over `values`, with labeled vertical reference lines
+ * — the one distribution chart shape both Monte Carlo charts share (win
+ * totals and operating result), same visual language as the Decision
+ * Lab's own Monte Carlo histogram (bars + dashed markers), generalized to
+ * an arbitrary domain and an arbitrary list of markers instead of a fixed
+ * P10/median/P90 triplet, since these two charts need different markers
+ * (deterministic expectation; $0 and the FY2026 line).
+ */
+function DistributionHistogram({
+  values,
+  domain,
+  binCount,
+  markers,
+  formatValue,
+  ariaLabel,
+}: {
+  values: number[];
+  domain: [number, number];
+  binCount: number;
+  markers: HistogramMarker[];
+  formatValue: (v: number) => string;
+  ariaLabel: string;
+}) {
+  const [min, max] = domain;
+  const range = max - min || 1;
+  const binWidth = range / binCount;
+  const bins = Array.from({ length: binCount }, () => 0);
+  values.forEach((v) => {
+    const idx = Math.min(binCount - 1, Math.max(0, Math.floor((v - min) / binWidth)));
+    bins[idx]++;
+  });
+  const maxCount = Math.max(...bins, 1);
+  const innerWidth = HIST_WIDTH - HIST_PAD_LEFT - HIST_PAD_RIGHT;
+  const innerHeight = HIST_HEIGHT - HIST_PAD_TOP - HIST_PAD_BOTTOM;
+  const barGap = 2;
+  const barWidth = innerWidth / binCount - barGap;
+  const xFor = (value: number) => HIST_PAD_LEFT + ((value - min) / range) * innerWidth;
+
+  return (
+    <svg
+      viewBox={`0 0 ${HIST_WIDTH} ${HIST_HEIGHT}`}
+      className="w-full"
+      role="img"
+      aria-label={`${ariaLabel}. ${markers.map((m) => `${m.label}: ${formatValue(m.value)}`).join(", ")}.`}
+    >
+      {bins.map((count, i) => {
+        const x = HIST_PAD_LEFT + i * (innerWidth / binCount) + barGap / 2;
+        const height = (count / maxCount) * innerHeight;
+        const y = HIST_PAD_TOP + innerHeight - height;
+        return (
+          <rect key={i} x={x} y={y} width={Math.max(barWidth, 0.5)} height={Math.max(height, 0.5)} fill="#1e3a2b" fillOpacity={0.55} rx={1} />
+        );
+      })}
+      {(() => {
+        // Row-stagger labels that would otherwise collide: sort markers by
+        // x position and alternate rows whenever two neighbors land closer
+        // than a label's width needs — the same problem (and the same
+        // "give the second one a different row" fix) as multi-series line
+        // end-labels elsewhere on this page.
+        const MIN_LABEL_GAP = 70;
+        const withX = markers.map((m) => ({ ...m, x: xFor(m.value) })).sort((a, b) => a.x - b.x);
+        let lastX = -Infinity;
+        let row = 0;
+        const rowFor = new Map<string, number>();
+        withX.forEach((m) => {
+          if (m.x - lastX < MIN_LABEL_GAP) {
+            row = row === 0 ? 1 : 0;
+          } else {
+            row = 0;
+          }
+          rowFor.set(m.label, row);
+          lastX = m.x;
+        });
+
+        return markers.map((marker) => {
+          const labelRow = rowFor.get(marker.label) ?? 0;
+          const rowOffset = labelRow * 22;
+          return (
+            <g key={marker.label}>
+              <line
+                x1={xFor(marker.value)}
+                x2={xFor(marker.value)}
+                y1={HIST_PAD_TOP}
+                y2={HIST_PAD_TOP + innerHeight}
+                stroke={marker.color}
+                strokeWidth={1.5}
+                strokeDasharray="3 2"
+              />
+              <text
+                x={xFor(marker.value)}
+                y={HIST_HEIGHT - HIST_PAD_BOTTOM + 14 + rowOffset}
+                textAnchor="middle"
+                fontSize={9}
+                fontWeight={700}
+                fill={marker.color}
+                stroke="#f5f1e6"
+                strokeWidth={3}
+                paintOrder="stroke"
+              >
+                {marker.label}
+              </text>
+              <text
+                x={xFor(marker.value)}
+                y={HIST_HEIGHT - HIST_PAD_BOTTOM + 26 + rowOffset}
+                textAnchor="middle"
+                fontSize={9}
+                fill={marker.color}
+                stroke="#f5f1e6"
+                strokeWidth={3}
+                paintOrder="stroke"
+              >
+                {formatValue(marker.value)}
+              </text>
+            </g>
+          );
+        });
+      })()}
+    </svg>
+  );
+}
+
+// The three-part caption structure (stat bar, tone-colored alert, static
+// explainer) used everywhere else on the page — hand-built here rather
+// than through shared.ts's ChartConfig, since that type is shaped for a
+// 12-month series per scenario, and these are single-run distributions.
+function MonteCarloChartCaption({
+  statLabel,
+  statValue,
+  badge,
+  tone,
+  alertLead,
+  alertExplanation,
+  explainer,
+}: {
+  statLabel: string;
+  statValue: string;
+  badge: string;
+  tone: BadgeTone;
+  alertLead: string;
+  alertExplanation: string;
+  explainer: string;
+}) {
+  return (
+    <div className="mt-3 flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-forest/15 bg-white px-4 py-3">
+        <div>
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">{statLabel}</span>
+          <span className="text-xl font-bold text-charcoal">{statValue}</span>
+        </div>
+        <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}>
+          {badge}
+        </span>
+      </div>
+      <div className={`rounded-xl px-4 py-2.5 text-sm leading-6 ${ALERT_STYLE[tone]}`}>
+        <span className="font-bold">{alertLead}</span> {alertExplanation}
+      </div>
+      <p className="text-xs leading-5 text-charcoal-soft">{explainer}</p>
+    </div>
+  );
+}
+
+// ============================================================================
 // Season P&L table
 // ============================================================================
 
@@ -376,6 +559,12 @@ function DisclosureItem({ children }: { children: React.ReactNode }) {
 export default function FrontOfficeSimulator() {
   const [assumptions, setAssumptions] = useState<FrontOfficeAssumptions>(FRONT_OFFICE_BASE_DEFAULTS);
   const [marginalMetric, setMarginalMetric] = useState<MarginalMetric>("operatingResult");
+  // Monte Carlo is a deliberate action, not something that recomputes on
+  // every slider move (see Section 1 of the brief) — null means "no run
+  // for the current plan," and every assumptions change resets it to null
+  // via set()/resetToBaseline() below, so a stale distribution can never
+  // sit next to a plan it no longer describes.
+  const [monteCarlo, setMonteCarlo] = useState<FrontOfficeMonteCarloResult | null>(null);
 
   const result = useMemo(() => runFrontOfficeSimulation(assumptions), [assumptions]);
   // result.playoff.seed IS the standings' seed — buildStandings below calls
@@ -388,10 +577,17 @@ export default function FrontOfficeSimulator() {
     [assumptions, marginalMetric]
   );
 
-  const set = <K extends keyof FrontOfficeAssumptions>(key: K) => (value: number) =>
+  const set = <K extends keyof FrontOfficeAssumptions>(key: K) => (value: number) => {
     setAssumptions((prev) => ({ ...prev, [key]: value }));
+    setMonteCarlo(null);
+  };
 
-  const resetToBaseline = () => setAssumptions(FRONT_OFFICE_BASE_DEFAULTS);
+  const runSimulation = () => setMonteCarlo(runFrontOfficeMonteCarlo(assumptions, MONTE_CARLO_RUNS));
+
+  const resetToBaseline = () => {
+    setAssumptions(FRONT_OFFICE_BASE_DEFAULTS);
+    setMonteCarlo(null);
+  };
 
   const playoffTargetMet = result.playoff.madePlayoffs;
   const financialTargetMet = result.operatingResult > OPERATING_RESULT;
@@ -592,6 +788,183 @@ export default function FrontOfficeSimulator() {
               <PlayoffLineGauge wins={result.wins} madePlayoffs={result.playoff.madePlayoffs} />
             </div>
           </div>
+        </section>
+
+        {/* Monte Carlo */}
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                Run {MONTE_CARLO_RUNS.toLocaleString()} Seasons
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
+                Everything above is the plan on paper — one run under average luck. Football
+                isn&apos;t played on paper. This runs the exact same plan through{" "}
+                {MONTE_CARLO_RUNS.toLocaleString()} seasons of variance and reports the range
+                instead of a point estimate.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={runSimulation}
+              className="shrink-0 rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+            >
+              Run {MONTE_CARLO_RUNS.toLocaleString()} Seasons
+            </button>
+          </div>
+
+          {!monteCarlo && (
+            <p className="mt-4 rounded-xl border border-dashed border-forest/25 bg-white p-4 text-sm text-charcoal-soft">
+              No simulation has been run for this plan yet. Moving any lever clears a prior run —
+              the numbers below always describe the plan currently on screen.
+            </p>
+          )}
+
+          {monteCarlo && (
+            <div className="mt-6 flex flex-col gap-6">
+              {/* Mandate restated as probabilities */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
+                  The Board&apos;s Mandate, Restated as Odds
+                </h3>
+                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-forest/15 bg-white p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-charcoal">Playoff berth</span>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[playoffTargetMet ? "good" : "bad"]}`}
+                      >
+                        {playoffTargetMet ? "Met" : "Not Met"} on paper
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-charcoal-soft">
+                      Achieved in{" "}
+                      <span className="font-semibold text-charcoal">
+                        {(monteCarlo.playoffProbability * 100).toFixed(0)}%
+                      </span>{" "}
+                      of simulated seasons.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-forest/15 bg-white p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-charcoal">
+                        Beat FY2026 operating result
+                      </span>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[financialTargetMet ? "good" : "bad"]}`}
+                      >
+                        {financialTargetMet ? "Met" : "Not Met"} on paper
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-charcoal-soft">
+                      Achieved in{" "}
+                      <span className="font-semibold text-charcoal">
+                        {(monteCarlo.probabilityBeatsFY2026 * 100).toFixed(0)}%
+                      </span>{" "}
+                      of simulated seasons.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Six required outputs */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <KpiCard
+                  label="Playoff Probability"
+                  value={`${(monteCarlo.playoffProbability * 100).toFixed(0)}%`}
+                />
+                <KpiCard
+                  label="Prob. of Operating Profit"
+                  value={`${(monteCarlo.probabilityOperatingProfit * 100).toFixed(0)}%`}
+                />
+                <KpiCard
+                  label="Prob. Beats FY2026"
+                  value={`${(monteCarlo.probabilityBeatsFY2026 * 100).toFixed(0)}%`}
+                />
+                <KpiCard
+                  label="Median Operating Result"
+                  value={formatCurrencyCompact(monteCarlo.medianOperatingResult)}
+                />
+              </div>
+
+              {/* P10 — given prominence, per the brief */}
+              <div className="rounded-xl border-2 border-rust/30 bg-rust-pale p-4">
+                <span className="text-xs font-semibold uppercase tracking-wide text-rust">
+                  10th Percentile Operating Result — the downside case
+                </span>
+                <div className="mt-1 text-3xl font-black text-rust">
+                  {formatCurrencyCompact(monteCarlo.p10OperatingResult)}
+                </div>
+                <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+                  1 season in 10 comes in at or below this. This is the number a real board would
+                  ask for, and the one most people don&apos;t think to compute. (For reference,
+                  the 90th percentile — a good-luck season — is{" "}
+                  {formatCurrencyCompact(monteCarlo.p90OperatingResult)}.)
+                </p>
+              </div>
+
+              {/* Win total distribution */}
+              <section className="rounded-xl border border-forest/15 bg-white p-4 sm:p-6">
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  Win Total Distribution
+                </h3>
+                <div className="mt-2">
+                  <DistributionHistogram
+                    values={monteCarlo.samples.map((s) => s.wins)}
+                    domain={[-0.5, 17.5]}
+                    binCount={18}
+                    markers={[
+                      { value: monteCarlo.deterministicWins, label: "Expected", color: "#96703e" },
+                    ]}
+                    formatValue={(v) => `${v.toFixed(1)} wins`}
+                    ariaLabel={`Win total distribution across ${monteCarlo.simulations} simulated seasons, mean ${monteCarlo.meanWins.toFixed(2)} wins`}
+                  />
+                </div>
+                <MonteCarloChartCaption
+                  statLabel="Mean Simulated Wins"
+                  statValue={monteCarlo.meanWins.toFixed(2)}
+                  badge={`${(monteCarlo.playoffProbability * 100).toFixed(0)}% of seasons made the field`}
+                  tone={playoffTargetMet ? "good" : "bad"}
+                  alertLead="The distribution centers on the deterministic expectation."
+                  alertExplanation={`Mean simulated wins (${monteCarlo.meanWins.toFixed(2)}) land almost exactly on the deterministic expected wins (${monteCarlo.deterministicWins.toFixed(2)}) — the resampling doesn't shift the plan's true talent level, it only spreads a single season's luck around it. The spread itself comes from treating expected wins as a per-game win probability and drawing 17 games — the same binomial that gives a real NFL season its unpredictability.`}
+                  explainer="Each simulated season converts this plan's expected wins into a per-game win probability (expected wins ÷ 17) and draws 17 independent games. That's a Binomial(17, p) win total, not an invented noise term — at a competitive win probability it produces a standard deviation of about 2 wins, in line with real NFL season-to-season variance."
+                />
+              </section>
+
+              {/* Operating result distribution */}
+              <section className="rounded-xl border border-forest/15 bg-white p-4 sm:p-6">
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  Operating Result Distribution
+                </h3>
+                <div className="mt-2">
+                  <DistributionHistogram
+                    values={monteCarlo.samples.map((s) => s.operatingResult)}
+                    domain={[
+                      Math.min(...monteCarlo.samples.map((s) => s.operatingResult), OPERATING_RESULT, 0),
+                      Math.max(...monteCarlo.samples.map((s) => s.operatingResult), 0),
+                    ]}
+                    binCount={24}
+                    markers={[
+                      { value: 0, label: "Breakeven", color: "#2a2820" },
+                      { value: OPERATING_RESULT, label: "FY2026", color: "#96703e" },
+                      { value: monteCarlo.p10OperatingResult, label: "P10", color: "#a1462f" },
+                    ]}
+                    formatValue={(v) => formatCurrencyCompact(v)}
+                    ariaLabel={`Operating result distribution across ${monteCarlo.simulations} simulated seasons, median ${formatCurrencyCompact(monteCarlo.medianOperatingResult)}`}
+                  />
+                </div>
+                <MonteCarloChartCaption
+                  statLabel="Median Operating Result"
+                  statValue={formatCurrencyCompact(monteCarlo.medianOperatingResult)}
+                  badge={financialTargetMet ? "Beats FY2026 on paper" : "Below FY2026 on paper"}
+                  tone={financialTargetMet ? "good" : "bad"}
+                  alertLead="Playoff outcomes, not attendance, drive most of this spread."
+                  alertExplanation={`A season that misses the field entirely loses playoff revenue outright; a season that lands a home-hosting seed gains one or more extra gates worth several million dollars each. That swing dominates the modest, weather-and-demand-driven attendance noise layered on top — which is deliberate: the real financial risk in a football season is what the standings say in January, not a few thousand empty seats in October.`}
+                  explainer="Attendance is jittered a modest 2% (standard deviation on the rate, clamped to stadium capacity) to represent weather, schedule quality, and one-off demand — not a second coin flip. National revenue never varies: it's contractually fixed regardless of the season played out."
+                />
+              </section>
+            </div>
+          )}
         </section>
 
         {/* Standings */}
@@ -875,6 +1248,33 @@ export default function FrontOfficeSimulator() {
               teams and never did, but which rounds are played at home — and therefore which
               rounds earn playoff revenue — now comes entirely from the seed above, so a hosted
               game always traces back to a real top-4 (or #1) seed you can check in the standings.
+            </p>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-brass/30 bg-brass-pale/40 p-4">
+            <h3 className="text-sm font-semibold text-charcoal">
+              The Monte Carlo Variance Model — Two Sources, Not Six
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+              Only two inputs are resampled per simulated season, and neither is invented noise.{" "}
+              <strong>Game outcomes:</strong> the plan&apos;s expected wins imply a per-game win
+              probability (expected wins ÷ 17); each season draws 17 independent games from that
+              probability — a Binomial(17, p) win total, which at a competitive probability
+              produces roughly a 2-win standard deviation, a defensible real-NFL spread.{" "}
+              <strong>Attendance:</strong> a modest {formatPercent(ATTENDANCE_NOISE_STDDEV, 0)}{" "}
+              standard deviation on the deterministic attendance rate (weather, schedule quality,
+              one-off demand), clamped to stadium capacity, feeding ticketing and
+              concessions/merchandise only — never sponsorship, never national revenue, which
+              stays exactly {formatCurrencyCompact(NATIONAL_REVENUE)} regardless, since
+              it&apos;s contractually fixed. Team strength itself is never
+              resampled — the roster and coaching staff don&apos;t change from one simulated
+              season to the next, only the bounces of 17 games and a given Sunday&apos;s
+              attendance do. Runs are seeded from the plan&apos;s own assumptions (the same
+              pattern the FP&amp;A Decision Lab&apos;s Monte Carlo uses), so re-running &ldquo;Run
+              1,000 Seasons&rdquo; against an unchanged plan reproduces the exact same
+              distribution — chosen over fresh randomness because this page&apos;s own numbers
+              need to be verifiable, and because two plans should be compared apples to apples
+              rather than each drawing a different roll of the dice.
             </p>
           </div>
         </section>
