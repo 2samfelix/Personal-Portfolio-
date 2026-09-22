@@ -156,6 +156,85 @@ function SliderField({
   );
 }
 
+// Player Payroll gets a special control: the slider's own min/max ARE the
+// CBA floor and salary cap (Prompt 1's engine), so on its own the control
+// just looks like a short slider. This renders the full theoretical
+// payroll range as a ruler first, with the floor-to-cap window highlighted
+// and everything outside it visibly greyed out and labeled "not
+// reachable" — so hitting either end of the real slider below reads as
+// "the cap/floor stopped me," not "this slider is oddly short." Values
+// only, no engine change: SALARY_FLOOR and SALARY_CAP are the same
+// committed constants the slider itself already uses as min/max.
+const PAYROLL_AXIS_MIN = 200_000_000;
+const PAYROLL_AXIS_MAX = 340_000_000;
+
+function PayrollAxis({
+  value,
+  baseline,
+  onChange,
+}: {
+  value: number;
+  baseline: number;
+  onChange: (value: number) => void;
+}) {
+  const axisRange = PAYROLL_AXIS_MAX - PAYROLL_AXIS_MIN;
+  const pctFor = (v: number) => ((v - PAYROLL_AXIS_MIN) / axisRange) * 100;
+  const floorPct = pctFor(SALARY_FLOOR);
+  const capPct = pctFor(SALARY_CAP);
+  const delta = vsBaseline(value, baseline);
+
+  return (
+    <div className="flex flex-col gap-1.5 rounded-xl border border-forest/15 bg-forest/[0.03] p-3">
+      <span className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
+        <span>Player Payroll</span>
+        <span className="text-charcoal">{formatCurrencyCompact(value)}</span>
+      </span>
+
+      {/* The full theoretical axis: grey = unreachable, colored = the
+          floor-to-cap window the slider below can actually move within. */}
+      <div className="relative h-4 w-full rounded-full bg-mist" aria-hidden>
+        <span
+          className="absolute inset-y-0 rounded-full bg-forest/25"
+          style={{ left: `${floorPct}%`, width: `${capPct - floorPct}%` }}
+        />
+        <span className="absolute inset-y-0 border-l border-dashed border-charcoal/30" style={{ left: `${floorPct}%` }} />
+        <span className="absolute inset-y-0 border-l border-dashed border-charcoal/30" style={{ left: `${capPct}%` }} />
+      </div>
+      <div className="relative h-7 text-[9px] font-semibold leading-tight text-charcoal-soft/70" aria-hidden>
+        <span className="absolute left-0 top-0">{formatCurrencyCompact(PAYROLL_AXIS_MIN)}</span>
+        <span className="absolute top-0 text-center text-forest" style={{ left: `${floorPct}%`, transform: "translateX(-50%)" }}>
+          Floor
+          <br />
+          {formatCurrencyCompact(SALARY_FLOOR)}
+        </span>
+        <span className="absolute top-0 text-center text-forest" style={{ left: `${capPct}%`, transform: "translateX(-50%)" }}>
+          Cap
+          <br />
+          {formatCurrencyCompact(SALARY_CAP)}
+        </span>
+        <span className="absolute right-0 top-0">{formatCurrencyCompact(PAYROLL_AXIS_MAX)}</span>
+      </div>
+      <p className="text-[10px] leading-4 text-charcoal-soft">
+        The grey zones are enforced by the real NFL salary cap and CBA cash floor — not a slider
+        limitation. This plan can never spend below {formatCurrencyCompact(SALARY_FLOOR)} or above{" "}
+        {formatCurrencyCompact(SALARY_CAP)}.
+      </p>
+
+      {/* The functional control — moves only within the reachable window. */}
+      <input
+        type="range"
+        min={SALARY_FLOOR}
+        max={SALARY_CAP}
+        step={1_000_000}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/20 accent-forest sm:h-1.5"
+      />
+      {delta && <span className="text-[11px] font-semibold text-charcoal-soft">{delta.text}</span>}
+    </div>
+  );
+}
+
 function KpiCard({
   label,
   value,
@@ -556,6 +635,54 @@ function DisclosureItem({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Six cards of reference material is the longest block on the page and
+// isn't something most visitors read top to bottom on arrival — collapsed
+// by default, the heading still signals the disclosure exists (and a
+// one-line summary says what's inside) without costing four screens of
+// scroll. Same expand/collapse mechanics as the Decision Lab's own
+// AccordionSection: a grid-template-rows transition, not a hard show/hide.
+function CollapsibleSection({
+  title,
+  summary,
+  children,
+}: {
+  title: string;
+  summary: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="mt-12 border-t border-forest/10 pt-8">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{title}</h2>
+        <svg
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          className={`h-4 w-4 shrink-0 text-charcoal-soft transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        >
+          <path d="M5 7.5l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {!open && <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">{summary}</p>}
+      <div
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+          open ? "mt-4 grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">{children}</div>
+      </div>
+    </section>
+  );
+}
+
 export default function FrontOfficeSimulator() {
   const [assumptions, setAssumptions] = useState<FrontOfficeAssumptions>(FRONT_OFFICE_BASE_DEFAULTS);
   const [marginalMetric, setMarginalMetric] = useState<MarginalMetric>("operatingResult");
@@ -565,6 +692,10 @@ export default function FrontOfficeSimulator() {
   // via set()/resetToBaseline() below, so a stale distribution can never
   // sit next to a plan it no longer describes.
   const [monteCarlo, setMonteCarlo] = useState<FrontOfficeMonteCarloResult | null>(null);
+  // The standings table defaults to the playoff field + the Packers' own
+  // row (so it's compact enough to sit beside the sliders at a glance) —
+  // expandable to all 16 on request.
+  const [standingsExpanded, setStandingsExpanded] = useState(false);
 
   const result = useMemo(() => runFrontOfficeSimulation(assumptions), [assumptions]);
   // result.playoff.seed IS the standings' seed — buildStandings below calls
@@ -572,6 +703,10 @@ export default function FrontOfficeSimulator() {
   // there is exactly one seed number anywhere on this page. See "One Seed,
   // Everywhere" in Assumptions & Limitations.
   const standings = useMemo(() => buildStandings(result), [result]);
+  const visibleStandings = useMemo(
+    () => (standingsExpanded ? standings : standings.filter((r) => r.seed !== null || r.isPackers)),
+    [standings, standingsExpanded]
+  );
   const marginalImpact = useMemo(
     () => computeMarginalImpact(assumptions, marginalMetric),
     [assumptions, marginalMetric]
@@ -657,41 +792,64 @@ export default function FrontOfficeSimulator() {
           </div>
         </section>
 
-        {/* FY2026 reference case */}
-        <section className="mt-12 border-t border-forest/10 pt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            The FY2026 Reference Case
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-charcoal-soft">
-            This is what actually happened, before you touch anything: record revenue, and still
-            an operating loss, because player costs rose more than revenue could cover. This
-            block never moves — it&apos;s the baseline everything below is measured against.
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <KpiCard label="Total Revenue" value={formatCurrencyCompact(TOTAL_REVENUE)} sub="SOURCED" />
-            <KpiCard label="Operating Result" value={formatCurrencyCompact(OPERATING_RESULT)} sub="SOURCED" />
-            <KpiCard
-              label="Player Costs, YoY"
-              value={`+${formatCurrencyCompact(PLAYER_COST_YOY_CHANGE)}`}
-              sub="SOURCED"
-            />
-            <KpiCard
-              label="Record"
-              value={`${ACTUAL_2025_RECORD.wins}-${ACTUAL_2025_RECORD.losses}-${ACTUAL_2025_RECORD.ties}`}
-              sub={`SOURCED · Seed ${ACTUAL_2025_SEED}`}
-            />
-            <KpiCard label="Playoff Result" value="Wild Card Loss" sub={ACTUAL_2025_PLAYOFF_RESULT} />
-          </div>
-          <p className="mt-3 text-[11px] text-charcoal-soft">
-            Source: Packers FY2026 annual financial release (packers.com, July 2026); Sportico;
-            Yahoo Sports.
-          </p>
-        </section>
-
         {/* The console */}
         <section className="mt-12 border-t border-forest/10 pt-8">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">The Console</h2>
-          <div className="mt-4 lg:grid lg:grid-cols-[420px_1fr] lg:items-start lg:gap-6">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
+            Move a lever and watch the Packers move in the standings beside it — record, seed,
+            operating result, and franchise health all recompute in the same view as the control
+            that moved them.
+          </p>
+
+          {/* KPI row — above both columns, so it's in the same glance as either one */}
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <KpiCard label="Projected Wins" value={result.wins.toFixed(2)} sub="of 17 games" />
+            <KpiCard
+              label="Seed & Result"
+              value={result.playoff.seed !== null ? `${result.playoff.seed} Seed` : "Missed"}
+              badge={result.playoff.result}
+              tone={playoffTone(result)}
+              sub={
+                result.playoff.isDivisionWinner
+                  ? "NFC North Winner"
+                  : result.playoff.seed !== null
+                    ? "Wild Card"
+                    : undefined
+              }
+            />
+            <KpiCard
+              label="Operating Result"
+              value={formatCurrencyCompact(result.operatingResult)}
+              badge={financialTargetMet ? "Beats FY2026" : "Below FY2026"}
+              tone={financialTargetMet ? "good" : "bad"}
+            />
+            <KpiCard
+              label="Franchise Health"
+              value={result.franchiseHealth.toFixed(1)}
+              badge={`${(assumptions.strategyWeighting * 100).toFixed(0)}% On-Field Weighting`}
+              tone={healthTone(result.franchiseHealth)}
+            />
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <MandateTarget
+              label="Playoff berth"
+              detail={`${result.wins.toFixed(2)} projected wins`}
+              met={playoffTargetMet}
+            />
+            <MandateTarget
+              label="Beat FY2026 operating result"
+              detail={`${formatCurrencyCompact(result.operatingResult)} vs ${formatCurrencyCompact(OPERATING_RESULT)}`}
+              met={financialTargetMet}
+            />
+          </div>
+
+          <div className="mt-3">
+            <PlayoffLineGauge wins={result.wins} madePlayoffs={result.playoff.madePlayoffs} />
+          </div>
+
+          {/* Sliders alongside the standings — cause and effect in one glance */}
+          <div className="mt-6 lg:grid lg:grid-cols-[420px_1fr] lg:items-start lg:gap-6">
             {/* Left: levers, cap readout pinned at top */}
             <aside className="mb-8 flex flex-col rounded-2xl border border-forest/15 bg-white p-4 lg:sticky lg:top-24 lg:mb-0 lg:max-h-[calc(100vh-7rem)]">
               {/* Cap readout — never scrolls, sits above the scrollable slider list */}
@@ -729,68 +887,264 @@ export default function FrontOfficeSimulator() {
               </button>
 
               <div className="flex flex-col gap-4 overflow-y-auto pr-1">
-                {FRONT_OFFICE_DRIVERS.map((driver) => (
-                  <SliderField
-                    key={driver.key}
-                    driver={driver}
-                    value={assumptions[driver.key]}
-                    baseline={FRONT_OFFICE_BASE_DEFAULTS[driver.key]}
-                    onChange={set(driver.key)}
-                  />
-                ))}
+                {FRONT_OFFICE_DRIVERS.map((driver) =>
+                  driver.key === "payroll" ? (
+                    <PayrollAxis
+                      key={driver.key}
+                      value={assumptions.payroll}
+                      baseline={FRONT_OFFICE_BASE_DEFAULTS.payroll}
+                      onChange={set("payroll")}
+                    />
+                  ) : (
+                    <SliderField
+                      key={driver.key}
+                      driver={driver}
+                      value={assumptions[driver.key]}
+                      baseline={FRONT_OFFICE_BASE_DEFAULTS[driver.key]}
+                      onChange={set(driver.key)}
+                    />
+                  )
+                )}
               </div>
             </aside>
 
-            {/* Right: outcomes */}
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <KpiCard label="Projected Wins" value={result.wins.toFixed(2)} sub="of 17 games" />
-                <KpiCard
-                  label="Seed & Result"
-                  value={result.playoff.seed !== null ? `${result.playoff.seed} Seed` : "Missed"}
-                  badge={result.playoff.result}
-                  tone={playoffTone(result)}
-                  sub={
-                    result.playoff.isDivisionWinner
-                      ? "NFC North Winner"
-                      : result.playoff.seed !== null
-                        ? "Wild Card"
-                        : undefined
-                  }
-                />
-                <KpiCard
-                  label="Operating Result"
-                  value={formatCurrencyCompact(result.operatingResult)}
-                  badge={financialTargetMet ? "Beats FY2026" : "Below FY2026"}
-                  tone={financialTargetMet ? "good" : "bad"}
-                />
-                <KpiCard
-                  label="Franchise Health"
-                  value={result.franchiseHealth.toFixed(1)}
-                  badge={`${(assumptions.strategyWeighting * 100).toFixed(0)}% On-Field Weighting`}
-                  tone={healthTone(result.franchiseHealth)}
-                />
+            {/* Right: NFC standings — the Packers' row moves here, live, right
+                beside the lever that moved it */}
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
+                  NFC Standings
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setStandingsExpanded((v) => !v)}
+                  className="rounded-lg border border-forest/20 px-2.5 py-1 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+                >
+                  {standingsExpanded ? "Show playoff field only" : "Show all 16 teams"}
+                </button>
               </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <MandateTarget
-                  label="Playoff berth"
-                  detail={`${result.wins.toFixed(2)} projected wins`}
-                  met={playoffTargetMet}
-                />
-                <MandateTarget
-                  label="Beat FY2026 operating result"
-                  detail={`${formatCurrencyCompact(result.operatingResult)} vs ${formatCurrencyCompact(OPERATING_RESULT)}`}
-                  met={financialTargetMet}
-                />
+              <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                Team names only. Every row but the Packers&apos; is the real, final 2025 result —
+                fixed, and sourced independently of this model. The Packers&apos; record and seed
+                are this plan&apos;s live output. Seeds are recomputed for the whole field on every
+                plan: each division&apos;s winner (highest wins,
+                <span className="mx-1 rounded-full bg-forest/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-forest">
+                  Div
+                </span>
+                below) takes seeds 1-4 by record, then the next three best remaining records take
+                5-7 — so a division winner can rank above a wild card with more wins, exactly as it
+                does in the real NFL.
+              </p>
+              <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white">
+                <table className="w-full min-w-[420px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
+                      <th className="px-4 py-3 font-semibold">Seed</th>
+                      <th className="px-4 py-3 font-semibold">Team</th>
+                      <th className="px-4 py-3 font-semibold">Division</th>
+                      <th className="px-4 py-3 text-right font-semibold">Record</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleStandings.map((row, i) => {
+                      const isLastPlayoffRow =
+                        row.seed !== null && visibleStandings[i + 1]?.seed === null;
+                      return (
+                        <tr
+                          key={row.key}
+                          className={`border-b border-forest/5 last:border-0 ${
+                            row.isPackers ? "bg-forest/10 font-semibold" : ""
+                          } ${isLastPlayoffRow ? "border-b-2 border-b-charcoal" : ""}`}
+                        >
+                          <td className="px-4 py-2.5 text-charcoal-soft">{row.seedLabel ?? "—"}</td>
+                          <td className="px-4 py-2.5 text-charcoal">
+                            <span className="flex items-center gap-1.5">
+                              {row.name}
+                              {row.isDivisionWinner && (
+                                <span
+                                  title="Division winner"
+                                  className="rounded-full bg-forest/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-forest"
+                                >
+                                  Div
+                                </span>
+                              )}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-charcoal-soft">{row.division}</td>
+                          <td className="px-4 py-2.5 text-right text-charcoal-soft">{row.displayRecord}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-
-              <PlayoffLineGauge wins={result.wins} madePlayoffs={result.playoff.madePlayoffs} />
+              {!standingsExpanded && standings.length > visibleStandings.length && (
+                <p className="mt-2 text-[11px] text-charcoal-soft">
+                  Showing the playoff field{result.playoff.seed === null ? " plus the Packers' row" : ""}{" "}
+                  — {standings.length - visibleStandings.length} more teams hidden.
+                </p>
+              )}
             </div>
           </div>
         </section>
 
-        {/* Monte Carlo */}
+        {/* FY2026 reference case */}
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+            The FY2026 Reference Case
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-charcoal-soft">
+            This is what actually happened — compare it against the plan you just built above.
+            Record revenue, and still an operating loss, because player costs rose more than
+            revenue could cover. This block never moves.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <KpiCard label="Total Revenue" value={formatCurrencyCompact(TOTAL_REVENUE)} sub="SOURCED" />
+            <KpiCard label="Operating Result" value={formatCurrencyCompact(OPERATING_RESULT)} sub="SOURCED" />
+            <KpiCard
+              label="Player Costs, YoY"
+              value={`+${formatCurrencyCompact(PLAYER_COST_YOY_CHANGE)}`}
+              sub="SOURCED"
+            />
+            <KpiCard
+              label="Record"
+              value={`${ACTUAL_2025_RECORD.wins}-${ACTUAL_2025_RECORD.losses}-${ACTUAL_2025_RECORD.ties}`}
+              sub={`SOURCED · Seed ${ACTUAL_2025_SEED}`}
+            />
+            <KpiCard label="Playoff Result" value="Wild Card Loss" sub={ACTUAL_2025_PLAYOFF_RESULT} />
+          </div>
+          <p className="mt-3 text-[11px] text-charcoal-soft">
+            Source: Packers FY2026 annual financial release (packers.com, July 2026); Sportico;
+            Yahoo Sports.
+          </p>
+        </section>
+
+        {/* Season P&L */}
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Season P&amp;L</h2>
+          <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
+                Revenue
+              </h3>
+              <div className="overflow-hidden rounded-xl border border-forest/15 bg-white">
+                <PnlRow label="National Revenue" value={result.revenue.national} fixed />
+                <PnlRow label="Ticketing" value={result.revenue.ticketing} />
+                <PnlRow label="Concessions &amp; Merchandise" value={result.revenue.concessionsMerchandise} />
+                <PnlRow label="Local Sponsorship" value={result.revenue.sponsorship} />
+                <PnlRow label="Playoff Revenue" value={result.revenue.playoff} />
+                <PnlRow label="Total Revenue" value={result.revenue.total} emphasis />
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
+                Cost
+              </h3>
+              <div className="overflow-hidden rounded-xl border border-forest/15 bg-white">
+                <PnlRow label="Payroll" value={result.cost.payroll} tag="Cap Allocation" />
+                <PnlRow label="Coaching &amp; Football Staff" value={result.cost.coaching} />
+                <PnlRow label="Facilities &amp; Sports Science" value={result.cost.facilities} />
+                <PnlRow label="Scouting &amp; Development" value={result.cost.development} />
+                <PnlRow label="Marketing &amp; Fan Engagement" value={result.cost.marketing} />
+                <PnlRow label="Stadium &amp; Gameday Ops" value={result.cost.gameday} />
+                <PnlRow label="Fixed Overhead" value={result.cost.fixedOverhead} tag="Derived Residual" />
+                <PnlRow label="Total Cost" value={result.cost.total} emphasis />
+              </div>
+              <p className="mt-2 rounded-lg bg-brass-pale/40 p-2.5 text-[11px] leading-4 text-charcoal-soft">
+                Fixed Overhead is {formatPercent(FIXED_OVERHEAD_SHARE_OF_REVENUE, 0)} of total
+                revenue at baseline ({formatCurrencyCompact(FIXED_OVERHEAD)}) — the largest single
+                cost line in the model. It&apos;s a derived residual, not an independently sourced
+                or assumed figure: it absorbs whatever error sits in the five assumed
+                discretionary cost lines above. See Assumptions &amp; Limitations below.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 rounded-xl border border-forest/15 bg-forest/5 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-charcoal">Operating Result</span>
+              <span className={`text-xl font-black ${result.operatingResult >= 0 ? "text-forest" : "text-rust"}`}>
+                {formatCurrency(result.operatingResult)}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Marginal impact */}
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              Marginal Impact — What the Next $1M Does
+            </h2>
+            <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
+              {MARGINAL_METRIC_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setMarginalMetric(tab.key)}
+                  aria-pressed={marginalMetric === tab.key}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                    marginalMetric === tab.key
+                      ? "bg-forest text-cream"
+                      : "text-charcoal-soft hover:text-charcoal"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+            Impact of one more $1M on each spend lever, from the current plan, on{" "}
+            {MARGINAL_METRIC_TABS.find((t) => t.key === marginalMetric)?.label.toLowerCase()}. This
+            is where the tool stops being a game and starts being an analyst&apos;s instrument —
+            every row is a full engine re-run, not an estimate.
+          </p>
+          <ul className="mt-3 flex flex-col gap-2.5">
+            {(() => {
+              const maxAbsImpact = Math.max(...marginalImpact.map((r) => Math.abs(r.impact)), 1e-9);
+              return marginalImpact.map((row, i) => {
+                const isPositive = row.impact >= 0;
+                const pct = (Math.abs(row.impact) / maxAbsImpact) * 100;
+                return (
+                  <li key={row.key} className="flex items-center gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
+                      {i + 1}
+                    </span>
+                    <span className="w-32 shrink-0 text-xs font-semibold text-charcoal sm:w-40 sm:text-sm">
+                      {row.label}
+                    </span>
+                    {row.atCeiling ? (
+                      <>
+                        <span className="h-2 flex-1 overflow-hidden rounded-full bg-mist" />
+                        <span className="w-20 shrink-0 rounded-full bg-brass/15 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-brass">
+                          {row.key === "payroll" ? "At Cap" : "At Max"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="h-2 flex-1 overflow-hidden rounded-full bg-mist">
+                          <span
+                            className={`block h-full rounded-full ${isPositive ? "bg-forest" : "bg-rust"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </span>
+                        <span
+                          className={`w-20 shrink-0 text-right text-xs font-semibold sm:text-sm ${
+                            isPositive ? "text-forest" : "text-rust"
+                          }`}
+                        >
+                          {formatMarginalImpact(marginalMetric, row.impact)}
+                        </span>
+                      </>
+                    )}
+                  </li>
+                );
+              });
+            })()}
+          </ul>
+        </section>
+
+        {/* Monte Carlo — "now stress your plan," after everything deterministic */}
         <section className="mt-12 border-t border-forest/10 pt-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -967,199 +1321,11 @@ export default function FrontOfficeSimulator() {
           )}
         </section>
 
-        {/* Standings */}
-        <section className="mt-12 border-t border-forest/10 pt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            NFC Standings
-          </h2>
-          <p className="mt-2 max-w-2xl text-xs leading-5 text-charcoal-soft">
-            Team names only. Every row but the Packers&apos; is the real, final 2025 result —
-            fixed, and sourced independently of this model. The Packers&apos; record and seed are
-            this plan&apos;s live output. Seeds are recomputed for the whole field on every plan:
-            each division&apos;s winner (highest wins,
-            <span className="mx-1 rounded-full bg-forest/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-forest">
-              Div
-            </span>
-            below) takes seeds 1-4 by record, then the next three best remaining records take 5-7
-            — so a division winner can rank above a wild card with more wins, exactly as it does
-            in the real NFL. That&apos;s why the seed column won&apos;t always match a plain sort
-            by record.
-          </p>
-          <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
-            <table className="w-full min-w-[480px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
-                  <th className="px-4 py-3 font-semibold">Seed</th>
-                  <th className="px-4 py-3 font-semibold">Team</th>
-                  <th className="px-4 py-3 font-semibold">Division</th>
-                  <th className="px-4 py-3 text-right font-semibold">Record</th>
-                </tr>
-              </thead>
-              <tbody>
-                {standings.map((row, i) => {
-                  const isLastPlayoffRow = row.seed !== null && standings[i + 1]?.seed === null;
-                  return (
-                    <tr
-                      key={row.key}
-                      className={`border-b border-forest/5 last:border-0 ${
-                        row.isPackers ? "bg-forest/10 font-semibold" : ""
-                      } ${isLastPlayoffRow ? "border-b-2 border-b-charcoal" : ""}`}
-                    >
-                      <td className="px-4 py-2.5 text-charcoal-soft">{row.seedLabel ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-charcoal">
-                        <span className="flex items-center gap-1.5">
-                          {row.name}
-                          {row.isDivisionWinner && (
-                            <span
-                              title="Division winner"
-                              className="rounded-full bg-forest/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-forest"
-                            >
-                              Div
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-charcoal-soft">{row.division}</td>
-                      <td className="px-4 py-2.5 text-right text-charcoal-soft">{row.displayRecord}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Season P&L */}
-        <section className="mt-12 border-t border-forest/10 pt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Season P&amp;L</h2>
-          <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
-                Revenue
-              </h3>
-              <div className="overflow-hidden rounded-xl border border-forest/15 bg-white">
-                <PnlRow label="National Revenue" value={result.revenue.national} fixed />
-                <PnlRow label="Ticketing" value={result.revenue.ticketing} />
-                <PnlRow label="Concessions &amp; Merchandise" value={result.revenue.concessionsMerchandise} />
-                <PnlRow label="Local Sponsorship" value={result.revenue.sponsorship} />
-                <PnlRow label="Playoff Revenue" value={result.revenue.playoff} />
-                <PnlRow label="Total Revenue" value={result.revenue.total} emphasis />
-              </div>
-            </div>
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
-                Cost
-              </h3>
-              <div className="overflow-hidden rounded-xl border border-forest/15 bg-white">
-                <PnlRow label="Payroll" value={result.cost.payroll} tag="Cap Allocation" />
-                <PnlRow label="Coaching &amp; Football Staff" value={result.cost.coaching} />
-                <PnlRow label="Facilities &amp; Sports Science" value={result.cost.facilities} />
-                <PnlRow label="Scouting &amp; Development" value={result.cost.development} />
-                <PnlRow label="Marketing &amp; Fan Engagement" value={result.cost.marketing} />
-                <PnlRow label="Stadium &amp; Gameday Ops" value={result.cost.gameday} />
-                <PnlRow label="Fixed Overhead" value={result.cost.fixedOverhead} tag="Derived Residual" />
-                <PnlRow label="Total Cost" value={result.cost.total} emphasis />
-              </div>
-              <p className="mt-2 rounded-lg bg-brass-pale/40 p-2.5 text-[11px] leading-4 text-charcoal-soft">
-                Fixed Overhead is {formatPercent(FIXED_OVERHEAD_SHARE_OF_REVENUE, 0)} of total
-                revenue at baseline ({formatCurrencyCompact(FIXED_OVERHEAD)}) — the largest single
-                cost line in the model. It&apos;s a derived residual, not an independently sourced
-                or assumed figure: it absorbs whatever error sits in the five assumed
-                discretionary cost lines above. See Assumptions &amp; Limitations below.
-              </p>
-            </div>
-          </div>
-          <div className="mt-4 rounded-xl border border-forest/15 bg-forest/5 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-charcoal">Operating Result</span>
-              <span className={`text-xl font-black ${result.operatingResult >= 0 ? "text-forest" : "text-rust"}`}>
-                {formatCurrency(result.operatingResult)}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Marginal impact */}
-        <section className="mt-12 border-t border-forest/10 pt-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-              Marginal Impact — What the Next $1M Does
-            </h2>
-            <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
-              {MARGINAL_METRIC_TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setMarginalMetric(tab.key)}
-                  aria-pressed={marginalMetric === tab.key}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                    marginalMetric === tab.key
-                      ? "bg-forest text-cream"
-                      : "text-charcoal-soft hover:text-charcoal"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="mt-2 text-xs leading-5 text-charcoal-soft">
-            Impact of one more $1M on each spend lever, from the current plan, on{" "}
-            {MARGINAL_METRIC_TABS.find((t) => t.key === marginalMetric)?.label.toLowerCase()}. This
-            is where the tool stops being a game and starts being an analyst&apos;s instrument —
-            every row is a full engine re-run, not an estimate.
-          </p>
-          <ul className="mt-3 flex flex-col gap-2.5">
-            {(() => {
-              const maxAbsImpact = Math.max(...marginalImpact.map((r) => Math.abs(r.impact)), 1e-9);
-              return marginalImpact.map((row, i) => {
-                const isPositive = row.impact >= 0;
-                const pct = (Math.abs(row.impact) / maxAbsImpact) * 100;
-                return (
-                  <li key={row.key} className="flex items-center gap-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
-                      {i + 1}
-                    </span>
-                    <span className="w-32 shrink-0 text-xs font-semibold text-charcoal sm:w-40 sm:text-sm">
-                      {row.label}
-                    </span>
-                    {row.atCeiling ? (
-                      <>
-                        <span className="h-2 flex-1 overflow-hidden rounded-full bg-mist" />
-                        <span className="w-20 shrink-0 rounded-full bg-brass/15 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-brass">
-                          {row.key === "payroll" ? "At Cap" : "At Max"}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="h-2 flex-1 overflow-hidden rounded-full bg-mist">
-                          <span
-                            className={`block h-full rounded-full ${isPositive ? "bg-forest" : "bg-rust"}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </span>
-                        <span
-                          className={`w-20 shrink-0 text-right text-xs font-semibold sm:text-sm ${
-                            isPositive ? "text-forest" : "text-rust"
-                          }`}
-                        >
-                          {formatMarginalImpact(marginalMetric, row.impact)}
-                        </span>
-                      </>
-                    )}
-                  </li>
-                );
-              });
-            })()}
-          </ul>
-        </section>
-
-        {/* Assumptions & Limitations */}
-        <section className="mt-12 border-t border-forest/10 pt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            Assumptions &amp; Limitations
-          </h2>
-
+        {/* Assumptions & Limitations — collapsed by default, reference material */}
+        <CollapsibleSection
+          title="Assumptions & Limitations"
+          summary="Every constant tagged and every simplification disclosed — sourced/assumed splits, the salary floor and cap, the development-boost evidence, the one-seed architecture, and the Monte Carlo variance model. Click to expand."
+        >
           <div className="mt-4">
             <h3 className="text-sm font-semibold text-charcoal">What&apos;s Sourced vs. Assumed</h3>
             <ul className="mt-2 flex flex-col gap-1.5">
@@ -1277,7 +1443,7 @@ export default function FrontOfficeSimulator() {
               rather than each drawing a different roll of the dice.
             </p>
           </div>
-        </section>
+        </CollapsibleSection>
       </div>
     </main>
   );
