@@ -29,6 +29,7 @@ export type Project = {
   icon: string;
   visual?: string;
   link?: string;
+  ctaLabel?: string;
   headlineStat?: string;
   githubUrl?: string;
   caseStudy?: CaseStudy;
@@ -218,18 +219,6 @@ export const flagshipProjects: Project[] = [
 
 export const builds: Project[] = [
   {
-    slug: "driver-sensitivity-simulator",
-    title: "Driver Sensitivity Simulator",
-    category: "Interactive Demo",
-    summary:
-      "Which single assumption, if it moved, would change the answer? An interactive tool that flexes revenue and cost drivers ±5% to show which assumptions move EBITDA the most — illustrative sample data, not a real case study.",
-    tools: ["Sensitivity Analysis", "Interactive"],
-    year: "2026",
-    status: "live",
-    icon: "📉",
-    link: "/tools/driver-sensitivity-simulator",
-  },
-  {
     slug: "fpa-decision-lab",
     title: "FP&A Decision Lab",
     category: "Interactive Demo",
@@ -244,14 +233,30 @@ export const builds: Project[] = [
   {
     slug: "front-office-simulator",
     title: "Front Office",
-    category: "Interactive Demo",
+    category: "NFL Strategy & Financial Simulation",
+    description:
+      "Run one season from the front office: allocate six operating decisions, balance competitive performance against financial results, and watch the effects flow through roster quality, projected wins, playoff outcomes, revenue, and operating profit.",
     summary:
       "You have a hard cap and a revenue ceiling you don't control. What's the plan? A Green Bay Packers front-office simulator built on their real, audited FY2026 financials — six spending levers, a binding salary cap, a live NFC standings and P&L, and a 1,000-season Monte Carlo stress test.",
-    tools: ["Monte Carlo Simulation", "Scenario Modeling", "Interactive"],
+    tools: ["Strategy", "Financial Modeling", "Monte Carlo", "Interactive"],
     year: "2026",
     status: "live",
     icon: "🏈",
+    visual: "/project-visuals/front-office.png",
     link: "/tools/front-office-simulator",
+    ctaLabel: "Run the Simulation →",
+  },
+  {
+    slug: "driver-sensitivity-simulator",
+    title: "Driver Sensitivity Simulator",
+    category: "Interactive Demo",
+    summary:
+      "Which single assumption, if it moved, would change the answer? An interactive tool that flexes revenue and cost drivers ±5% to show which assumptions move EBITDA the most — illustrative sample data, not a real case study.",
+    tools: ["Sensitivity Analysis", "Interactive"],
+    year: "2026",
+    status: "live",
+    icon: "📉",
+    link: "/tools/driver-sensitivity-simulator",
   },
 ];
 
