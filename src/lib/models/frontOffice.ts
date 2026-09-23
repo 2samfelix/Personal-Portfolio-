@@ -8,7 +8,7 @@
 // sequence. This file exists to prove the economics work before any pixel
 // is drawn.
 
-import type { DriverConfig } from "./shared";
+import { formatUsdCompact, type BadgeTone, type DriverConfig } from "./shared";
 
 // ============================================================================
 // 1. SOURCED BASELINE — Green Bay Packers FY2026 (the 2025 season)
@@ -1023,4 +1023,224 @@ export function runFrontOfficeSimulation(rawAssumptions: FrontOfficeAssumptions)
     capRoomRemaining: SALARY_CAP - cost.payroll,
     franchiseHealth: franchiseHealthScore(wins, operatingResult, a.strategyWeighting),
   };
+}
+
+// ============================================================================
+// 9. THE BOARD'S VERDICT — a deterministic sentence, not two badges
+// ============================================================================
+//
+// MandateTarget's Met/Not-Met badges (Prompt 2's UI) grade each half of the
+// board's mandate in isolation and never say what both results mean
+// TOGETHER — whether a plan traded one target for the other, and by how
+// much. This section builds that sentence from the engine's own numbers.
+//
+// [ASSUMPTION] Why this does NOT reuse shared.ts's classifyMargin /
+// MarginStatus, unlike saas.ts / consulting.ts / realEstate.ts. That
+// vocabulary buckets a margin as a PERCENTAGE OF REVENUE — the right lens
+// when the target itself IS a margin. The board's mandate here is not a
+// margin target at all: it is a fixed DOLLAR bar, OPERATING_RESULT, the
+// real FY2026 result (-$1.1M). Because this franchise's revenue base is
+// large (~$750-800M) relative to the swings any one plan can produce, a
+// genuinely enormous miss against the board's own bar still reads as a
+// small percentage of revenue — a $46.81M loss is only a -6% margin, which
+// lands in classifyMargin's mildest "ApproachingBreakeven" band right next
+// to a plan missing by under $1M. That is exactly the failure mode
+// classifyMargin's own QA pass was written to fix for SaaS margins (see
+// its comment in shared.ts: a real -29.4% margin sharing a label with a
+// -2% one) — showing up here for a different reason, because the board's
+// target is a dollar figure, not a margin. So this section bands the
+// DOLLAR gap to that bar instead (classifyMandateGap below), anchored to
+// FRONT_OFFICE_MANDATE_GAP_SEVERE (the payroll lever's own full
+// floor-to-cap swing, ~$29.01M — the single largest move any one lever on
+// this page can make by itself) rather than an arbitrary round number.
+// shared.ts itself is untouched by this file: the SaaS / Consulting / Real
+// Estate Decision Lab still reads classifyMargin exactly as it did before.
+//
+// The sentence itself is generated here, deterministically, from live
+// outputs, the same way saas.ts's buildCfoCommentaryData feeds the FP&A
+// Decision Lab's CFO Commentary — the UI must carry the same
+// "not AI-written" disclosure for the same reason.
+
+/** [DERIVED] The payroll lever's own full floor-to-cap swing (~$29.01M) —
+ * the single largest move any ONE lever on this page can make by itself.
+ * A miss against the board's own dollar bar bigger than this is "severe"
+ * by construction: no single lever could have closed that gap alone. */
+export const FRONT_OFFICE_MANDATE_GAP_SEVERE = SALARY_CAP - SALARY_FLOOR;
+/** [DERIVED] Half of the above — the "material" threshold. */
+export const FRONT_OFFICE_MANDATE_GAP_MATERIAL = FRONT_OFFICE_MANDATE_GAP_SEVERE / 2;
+
+export type FrontOfficeMandateBand =
+  | "ClearsWithRoomToSpare"
+  | "ClearsTheBar"
+  | "MissesNarrowly"
+  | "MissesMaterially"
+  | "MissesSeverely";
+
+export const FRONT_OFFICE_MANDATE_BAND_LABEL: Record<FrontOfficeMandateBand, string> = {
+  ClearsWithRoomToSpare: "Clears With Room to Spare",
+  ClearsTheBar: "Clears the Bar",
+  MissesNarrowly: "Misses Narrowly",
+  MissesMaterially: "Misses Materially",
+  MissesSeverely: "Misses Severely",
+};
+
+/**
+ * Bands `gap` — operatingResult minus OPERATING_RESULT, positive when a
+ * plan beats FY2026 — against the board's own dollar bar, not against
+ * total revenue. See the section comment above for why this exists
+ * instead of reusing shared.ts's classifyMargin.
+ */
+export function classifyMandateGap(gap: number): FrontOfficeMandateBand {
+  if (gap >= FRONT_OFFICE_MANDATE_GAP_SEVERE) return "ClearsWithRoomToSpare";
+  if (gap >= 0) return "ClearsTheBar";
+  if (gap > -FRONT_OFFICE_MANDATE_GAP_MATERIAL) return "MissesNarrowly";
+  if (gap > -FRONT_OFFICE_MANDATE_GAP_SEVERE) return "MissesMaterially";
+  return "MissesSeverely";
+}
+
+export type FrontOfficeVerdictMonteCarloInputs = {
+  playoffProbability: number;
+  probabilityBeatsFY2026: number;
+  medianOperatingResult: number;
+};
+
+export type FrontOfficeVerdict = {
+  tone: BadgeTone; // shared.ts's own 3-value tone vocabulary — no 4th color invented here
+  mandateBand: FrontOfficeMandateBand; // the actual band driving the language below, not decoration
+  headline: string; // the one blunt line naming the tradeoff
+  detail: string; // what was sacrificed, and what it cost, in real numbers
+  quotingProbabilities: boolean; // true once a Monte Carlo run backs this exact plan
+};
+
+/**
+ * Point-estimate verdict. Whenever the financial mandate ("beat FY2026") is
+ * NOT met, the plan's operating result is, by construction, at or below
+ * OPERATING_RESULT itself (an already-negative -$1.1M) — see the strict `>`
+ * comparison this mirrors in the UI's financialTargetMet. That guarantees
+ * it is always a real loss, so "lost $X" below is never a stretch applied
+ * to a positive number.
+ */
+function buildDeterministicVerdict(result: FrontOfficeResult): FrontOfficeVerdict {
+  const gap = result.operatingResult - OPERATING_RESULT; // positive = better than FY2026
+  const mandateBand = classifyMandateGap(gap);
+  const bandPhrase = FRONT_OFFICE_MANDATE_BAND_LABEL[mandateBand].toLowerCase();
+
+  const playoffMet = result.playoff.madePlayoffs;
+  const financialMet = gap > 0;
+  const winsShortOfCutline = Math.max(0, ACTUAL_2025_WIN_TOTAL - result.wins);
+
+  if (playoffMet && financialMet) {
+    return {
+      tone: "good",
+      mandateBand,
+      quotingProbabilities: false,
+      headline: `This plan clears both marks: a playoff berth, and an operating result ${formatUsdCompact(gap)} better than FY2026.`,
+      detail: `The board asked for both, and this plan delivers both — an operating result of ${formatUsdCompact(result.operatingResult)}, which ${bandPhrase} against the board's own FY2026 target.`,
+    };
+  }
+
+  if (playoffMet && !financialMet) {
+    return {
+      tone: "neutral",
+      mandateBand,
+      quotingProbabilities: false,
+      headline: `You made the field and lost ${formatUsdCompact(Math.abs(result.operatingResult))} doing it.`,
+      detail: `The board asked for both; this plan buys the on-field target with the entire operating result — that ${bandPhrase} against the FY2026 bar, ${formatUsdCompact(Math.abs(gap))} worse than the season it was supposed to beat.`,
+    };
+  }
+
+  if (!playoffMet && financialMet) {
+    return {
+      tone: "neutral",
+      mandateBand,
+      quotingProbabilities: false,
+      headline: `You beat FY2026 by ${formatUsdCompact(gap)} and missed the field doing it.`,
+      detail: `The board asked for both; this plan buys the financial target — which ${bandPhrase} against FY2026 — by declining to fund the roster it would take to compete: ${winsShortOfCutline.toFixed(2)} wins short of the real 2025 cutline, and out of the playoff picture entirely.`,
+    };
+  }
+
+  return {
+    tone: "bad",
+    mandateBand,
+    quotingProbabilities: false,
+    headline: `This plan clears neither mark: it missed the field and still lost ${formatUsdCompact(Math.abs(result.operatingResult))} against FY2026.`,
+    detail: `The board asked for a playoff berth and a better operating result than FY2026; this plan delivers neither — it ${bandPhrase} against the FY2026 bar, and is ${winsShortOfCutline.toFixed(2)} wins short of the real cutline.`,
+  };
+}
+
+/**
+ * Once a Monte Carlo run exists for the CURRENT plan, the verdict quotes
+ * that run's probabilities instead of the single-season point estimate —
+ * "makes the field in 62% of seasons," not "made the field." "Likely" means
+ * >=50% of simulated seasons — the same majority-outcome reading the
+ * console's own probability KPIs already imply, not a second threshold
+ * invented for this sentence. The mandate band here classifies the median
+ * simulated operating result against the same dollar bar as the
+ * point-estimate verdict.
+ */
+function buildMonteCarloVerdict(
+  result: FrontOfficeResult,
+  mc: FrontOfficeVerdictMonteCarloInputs
+): FrontOfficeVerdict {
+  const medianGap = mc.medianOperatingResult - OPERATING_RESULT; // positive = better than FY2026
+  const mandateBand = classifyMandateGap(medianGap);
+  const bandPhrase = FRONT_OFFICE_MANDATE_BAND_LABEL[mandateBand].toLowerCase();
+
+  const playoffPct = Math.round(mc.playoffProbability * 100);
+  const financePct = Math.round(mc.probabilityBeatsFY2026 * 100);
+  const playoffLikely = mc.playoffProbability >= 0.5;
+  const financialLikely = mc.probabilityBeatsFY2026 >= 0.5;
+
+  if (playoffLikely && financialLikely) {
+    return {
+      tone: "good",
+      mandateBand,
+      quotingProbabilities: true,
+      headline: `Across 1,000 seasons, this plan makes the field ${playoffPct}% of the time and beats FY2026 ${financePct}% of the time.`,
+      detail: `The board's mandate is this plan's typical outcome, not a lucky one — the median season posts an operating result of ${formatUsdCompact(mc.medianOperatingResult)}, which ${bandPhrase} against FY2026.`,
+    };
+  }
+
+  if (playoffLikely && !financialLikely) {
+    return {
+      tone: "neutral",
+      mandateBand,
+      quotingProbabilities: true,
+      headline: `This plan makes the field in ${playoffPct}% of seasons — and beats FY2026 in only ${financePct}%.`,
+      detail: `The board asked for both; across the run, most seasons buy the on-field target at the financial target's expense. The median season loses ${formatUsdCompact(Math.abs(mc.medianOperatingResult))}, which ${bandPhrase} against FY2026.`,
+    };
+  }
+
+  if (!playoffLikely && financialLikely) {
+    return {
+      tone: "neutral",
+      mandateBand,
+      quotingProbabilities: true,
+      headline: `This plan beats FY2026 in ${financePct}% of seasons but only makes the field ${playoffPct}% of the time.`,
+      detail: `The board asked for both; across the run, most seasons buy the financial target by not fielding a contender. The median season beats FY2026 by ${formatUsdCompact(medianGap)}, which ${bandPhrase}.`,
+    };
+  }
+
+  return {
+    tone: "bad",
+    mandateBand,
+    quotingProbabilities: true,
+    headline: `Across 1,000 seasons, this plan clears the field in just ${playoffPct}% and beats FY2026 in just ${financePct}%.`,
+    detail: `Most seasons miss both parts of the board's mandate. The median season loses ${formatUsdCompact(Math.abs(mc.medianOperatingResult))}, which ${bandPhrase} against FY2026.`,
+  };
+}
+
+/**
+ * The single entry point the UI calls: point-estimate verdict when no
+ * Monte Carlo run backs the current plan, probability-quoting verdict once
+ * one does — see FrontOfficeVerdictMonteCarloInputs above for the three
+ * fields the UI must pass through unchanged from its own
+ * FrontOfficeMonteCarloResult.
+ */
+export function buildFrontOfficeVerdict(
+  result: FrontOfficeResult,
+  monteCarlo?: FrontOfficeVerdictMonteCarloInputs | null
+): FrontOfficeVerdict {
+  if (monteCarlo) return buildMonteCarloVerdict(result, monteCarlo);
+  return buildDeterministicVerdict(result);
 }

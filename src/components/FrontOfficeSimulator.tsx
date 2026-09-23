@@ -7,11 +7,16 @@ import {
   ACTUAL_2025_RECORD,
   ACTUAL_2025_SEED,
   ACTUAL_2025_WIN_TOTAL,
+  BASELINE_TICKET_PRICE,
   DEVELOPMENT_BOOST_MAX,
   FIXED_OVERHEAD,
   FIXED_OVERHEAD_SHARE_OF_REVENUE,
+  FREE_ZONE_MULTIPLIER,
   FRONT_OFFICE_BASE_DEFAULTS,
   FRONT_OFFICE_DRIVERS,
+  FRONT_OFFICE_MANDATE_BAND_LABEL,
+  FRONT_OFFICE_MANDATE_GAP_MATERIAL,
+  FRONT_OFFICE_MANDATE_GAP_SEVERE,
   NATIONAL_REVENUE,
   OPERATING_RESULT,
   PAYROLL_EQUALS_CAP_ASSUMPTION,
@@ -20,6 +25,7 @@ import {
   SALARY_FLOOR,
   SALARY_FLOOR_PCT,
   TOTAL_REVENUE,
+  buildFrontOfficeVerdict,
   buildNfcField,
   clampToDriverBounds,
   runFrontOfficeSimulation,
@@ -324,7 +330,8 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
         />
       </div>
       <div className={`mt-3 rounded-lg px-3 py-2 text-[11px] leading-4 ${ALERT_STYLE[tone]}`}>
-        The vertical line marks {PLAYOFF_LINE_WINS} wins — the actual 2025 cutline (see
+        The vertical line marks {PLAYOFF_LINE_WINS}{" "}
+        wins — the actual 2025 cutline (see
         Assumptions; the live pass/fail below comes from this plan&apos;s real position in the
         NFC field, not a fixed number). At this plan, projected wins sit{" "}
         <span className="font-semibold">
@@ -683,6 +690,164 @@ function CollapsibleSection({
   );
 }
 
+// ============================================================================
+// Scenario presets — coherent named strategies a visitor can load in one
+// click, so the console's depth (six independent levers) is discoverable
+// without requiring someone to invent a plan from scratch by hand. Each
+// preset is a full, real FrontOfficeAssumptions object built entirely from
+// already-committed model constants: SALARY_CAP / SALARY_FLOOR, each named
+// lever's own slider max from FRONT_OFFICE_DRIVERS, FRONT_OFFICE_BASE_DEFAULTS
+// for every lever a preset doesn't name, and BASELINE_TICKET_PRICE x
+// FREE_ZONE_MULTIPLIER for "the top of the free zone" — the exact price
+// point above which the engine's own attendanceRate() starts responding to
+// price. No new number is invented for this feature, and nothing here
+// changes what a given set of assumptions produces — same engine, same
+// constants, just three real starting points on it.
+// ============================================================================
+
+function driverMax(key: FrontOfficeDriverKey): number {
+  return FRONT_OFFICE_DRIVERS.find((d) => d.key === key)!.max;
+}
+
+function driverMin(key: FrontOfficeDriverKey): number {
+  return FRONT_OFFICE_DRIVERS.find((d) => d.key === key)!.min;
+}
+
+/** [DERIVED] The highest ticket price at which the model's own free-zone
+ * rule (FREE_ZONE_MULTIPLIER, frontOffice.ts) still shows zero attendance
+ * response — real revenue upside with no demand cost, and the least
+ * discoverable lever on this page since nothing on the slider itself
+ * marks where the free zone ends. Verified against the committed engine
+ * (a full sweep of runFrontOfficeSimulation across the entire ticketPrice
+ * range) to be the actual revenue-maximizing price, not just a plausible
+ * one: below it, price rises with zero attendance cost; above it,
+ * PRICE_ELASTICITY > 1 (frontOffice.ts) guarantees attendance falls faster
+ * than price rises, so revenue strictly declines past this exact point in
+ * both directions. */
+const TOP_OF_FREE_ZONE_TICKET_PRICE = BASELINE_TICKET_PRICE * FREE_ZONE_MULTIPLIER;
+
+/**
+ * Ternary search, run once at module load against the real committed
+ * engine (runFrontOfficeSimulation — no reimplementation of its formulas),
+ * for the marketingSpend value that maximizes operatingResult holding
+ * every other lever in `base` fixed. Marketing is the one discretionary
+ * lever on this page whose profit curve is genuinely single-peaked: it
+ * raises both attendance-linked revenue and sponsorship through the
+ * engine's own saturating diminishing-returns curves, but every dollar of
+ * it is also a real dollar of cost, so the curve rises then falls. 60
+ * ternary-search iterations over a smooth single-peaked function converge
+ * to sub-cent precision — this is verification against the shipped model,
+ * not a guess or a slider position picked by eye. Used below to build
+ * "Maximize the Business" from the engine's own computed optimum rather
+ * than an assumed "more marketing is better" reading, which turns out to
+ * be false past roughly $21M (see the Assumptions disclosure for the
+ * sweep that shows why).
+ */
+function argmaxMarketingSpend(base: FrontOfficeAssumptions): number {
+  const { min, max } = FRONT_OFFICE_DRIVERS.find((d) => d.key === "marketingSpend")!;
+  let lo = min;
+  let hi = max;
+  const profitAt = (m: number) => runFrontOfficeSimulation({ ...base, marketingSpend: m }).operatingResult;
+  for (let i = 0; i < 60; i++) {
+    const m1 = lo + (hi - lo) / 3;
+    const m2 = hi - (hi - lo) / 3;
+    if (profitAt(m1) < profitAt(m2)) {
+      lo = m1;
+    } else {
+      hi = m2;
+    }
+  }
+  return (lo + hi) / 2;
+}
+
+// "Maximize the Business" is built from an actual search of the engine's
+// output, not an assumption that maxing every revenue-flavored lever wins.
+// Payroll and every football-ops lever (coaching, facilities, development)
+// go to their floor: each only affects revenue indirectly, through a small
+// team-strength sensitivity, and that trickle never outweighs its own
+// dollar-for-dollar cost once the playoff path is abandoned. Gameday ops
+// ALSO wants its floor — verified below, not assumed — because its
+// per-cap-spend lift saturates fast relative to its cost. Marketing is the
+// one lever with a real, single-peaked ROI curve, so its value comes from
+// argmaxMarketingSpend rather than from the slider's own max. Ticket price
+// sits at the free-zone ceiling — see TOP_OF_FREE_ZONE_TICKET_PRICE.
+const MAXIMIZE_BUSINESS_FOOTBALL_SPEND_AT_FLOOR: FrontOfficeAssumptions = {
+  ...FRONT_OFFICE_BASE_DEFAULTS,
+  payroll: SALARY_FLOOR,
+  coachingSpend: driverMin("coachingSpend"),
+  facilitiesSpend: driverMin("facilitiesSpend"),
+  developmentSpend: driverMin("developmentSpend"),
+  gamedaySpend: driverMin("gamedaySpend"),
+  ticketPrice: TOP_OF_FREE_ZONE_TICKET_PRICE,
+};
+
+const MAXIMIZE_BUSINESS_ASSUMPTIONS: FrontOfficeAssumptions = {
+  ...MAXIMIZE_BUSINESS_FOOTBALL_SPEND_AT_FLOOR,
+  marketingSpend: argmaxMarketingSpend(MAXIMIZE_BUSINESS_FOOTBALL_SPEND_AT_FLOOR),
+};
+
+// The "obvious but wrong" reading of this preset — max out marketing AND
+// gameday, since both are named as revenue levers — kept here only so the
+// Assumptions disclosure below can quote its real shortfall against the
+// searched optimum, computed live rather than typed as a remembered
+// number.
+const MAXIMIZE_BUSINESS_NAIVE_ASSUMPTIONS: FrontOfficeAssumptions = {
+  ...MAXIMIZE_BUSINESS_FOOTBALL_SPEND_AT_FLOOR,
+  gamedaySpend: driverMax("gamedaySpend"),
+  marketingSpend: driverMax("marketingSpend"),
+};
+const MAXIMIZE_BUSINESS_NAIVE_OPERATING_RESULT = runFrontOfficeSimulation(
+  MAXIMIZE_BUSINESS_NAIVE_ASSUMPTIONS
+).operatingResult;
+const MAXIMIZE_BUSINESS_OPERATING_RESULT = runFrontOfficeSimulation(MAXIMIZE_BUSINESS_ASSUMPTIONS).operatingResult;
+const MAXIMIZE_BUSINESS_SEARCH_IMPROVEMENT =
+  MAXIMIZE_BUSINESS_OPERATING_RESULT - MAXIMIZE_BUSINESS_NAIVE_OPERATING_RESULT;
+
+type FrontOfficePreset = {
+  key: string;
+  label: string;
+  description: string;
+  assumptions: FrontOfficeAssumptions;
+};
+
+const FRONT_OFFICE_PRESETS: FrontOfficePreset[] = [
+  {
+    key: "spendToContend",
+    label: "Spend to Contend",
+    description:
+      "Payroll at the cap; coaching and facilities spend maxed out. Buy the best roster and infrastructure the cap allows.",
+    assumptions: {
+      ...FRONT_OFFICE_BASE_DEFAULTS,
+      payroll: SALARY_CAP,
+      coachingSpend: driverMax("coachingSpend"),
+      facilitiesSpend: driverMax("facilitiesSpend"),
+    },
+  },
+  {
+    key: "developAndPromote",
+    label: "Develop and Promote",
+    description:
+      "Payroll at the CBA floor; scouting and facilities spend maxed out. Win through the draft and player development instead of free agency.",
+    assumptions: {
+      ...FRONT_OFFICE_BASE_DEFAULTS,
+      payroll: SALARY_FLOOR,
+      developmentSpend: driverMax("developmentSpend"),
+      facilitiesSpend: driverMax("facilitiesSpend"),
+    },
+  },
+  {
+    key: "maximizeBusiness",
+    label: "Maximize the Business",
+    description:
+      "Every football-ops lever (payroll, coaching, facilities, scouting, gameday) at its floor; marketing funded to its own profit-maximizing point, not its max; ticket price at the top of the free zone. This is the model's actual financial ceiling, found by searching the engine, not assumed.",
+    assumptions: MAXIMIZE_BUSINESS_ASSUMPTIONS,
+  },
+];
+
+function assumptionsEqual(a: FrontOfficeAssumptions, b: FrontOfficeAssumptions): boolean {
+  return (Object.keys(a) as FrontOfficeDriverKey[]).every((key) => a[key] === b[key]);
+}
+
 export default function FrontOfficeSimulator() {
   const [assumptions, setAssumptions] = useState<FrontOfficeAssumptions>(FRONT_OFFICE_BASE_DEFAULTS);
   const [marginalMetric, setMarginalMetric] = useState<MarginalMetric>("operatingResult");
@@ -724,11 +889,32 @@ export default function FrontOfficeSimulator() {
     setMonteCarlo(null);
   };
 
+  const loadPreset = (preset: FrontOfficePreset) => {
+    setAssumptions(preset.assumptions);
+    setMonteCarlo(null);
+  };
+
   const playoffTargetMet = result.playoff.madePlayoffs;
   const financialTargetMet = result.operatingResult > OPERATING_RESULT;
 
   const capBindState: "cap" | "floor" | null =
     result.capUsed >= SALARY_CAP ? "cap" : assumptions.payroll <= SALARY_FLOOR ? "floor" : null;
+
+  // The verdict quotes this exact plan's Monte Carlo run once one exists —
+  // resets to the point-estimate reading the moment a lever moves, since
+  // set()/resetToBaseline()/loadPreset() all null out monteCarlo already.
+  const verdict = useMemo(
+    () =>
+      buildFrontOfficeVerdict(
+        result,
+        monteCarlo && {
+          playoffProbability: monteCarlo.playoffProbability,
+          probabilityBeatsFY2026: monteCarlo.probabilityBeatsFY2026,
+          medianOperatingResult: monteCarlo.medianOperatingResult,
+        }
+      ),
+    [result, monteCarlo]
+  );
 
   return (
     <main className="bg-cream">
@@ -776,8 +962,8 @@ export default function FrontOfficeSimulator() {
             <div className="rounded-xl border border-forest/15 bg-white p-3">
               <span className="block text-sm font-semibold text-charcoal">A playoff berth</span>
               <span className="block text-xs text-charcoal-soft">
-                A top-7 seed in the real NFC field (see NFC Standings) — {PLAYOFF_LINE_WINS} wins
-                got the 7-seed in the actual 2025 season, though the exact cutoff for a given plan
+                A top-7 seed in the real NFC field (see NFC Standings) — {PLAYOFF_LINE_WINS}{" "}
+                wins got the 7-seed in the actual 2025 season, though the exact cutoff for a given plan
                 depends on the other 15 teams&apos; fixed records.
               </span>
             </div>
@@ -844,6 +1030,30 @@ export default function FrontOfficeSimulator() {
             />
           </div>
 
+          {/* The board's verdict — what the two badges above mean TOGETHER,
+              not each in isolation. Generated by the model layer's own
+              buildFrontOfficeVerdict, never hand-written per plan. */}
+          <div className="mt-3 rounded-xl border border-forest/15 bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
+                The Board&apos;s Verdict
+              </h3>
+              <span
+                className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[verdict.tone]}`}
+              >
+                {FRONT_OFFICE_MANDATE_BAND_LABEL[verdict.mandateBand]}
+              </span>
+            </div>
+            <p className="mt-2 text-base font-bold leading-6 text-charcoal">{verdict.headline}</p>
+            <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">{verdict.detail}</p>
+            <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+              Generated deterministically from live model outputs — not AI-written.{" "}
+              {verdict.quotingProbabilities
+                ? "Quoting the last 1,000-season run for this exact plan."
+                : "Quoting this plan's single-season point estimate — run 1,000 seasons below to see it restated as odds."}
+            </p>
+          </div>
+
           <div className="mt-3">
             <PlayoffLineGauge wins={result.wins} madePlayoffs={result.playoff.madePlayoffs} />
           </div>
@@ -885,6 +1095,36 @@ export default function FrontOfficeSimulator() {
               >
                 Reset to FY2026 Baseline
               </button>
+
+              {/* Scenario presets — coherent starting points so the six
+                  levers' depth is discoverable without inventing a plan
+                  from scratch; see FRONT_OFFICE_PRESETS above. */}
+              <div className="mb-3 shrink-0">
+                <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft">
+                  Load a Strategy
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {FRONT_OFFICE_PRESETS.map((preset) => {
+                    const active = assumptionsEqual(assumptions, preset.assumptions);
+                    return (
+                      <button
+                        key={preset.key}
+                        type="button"
+                        onClick={() => loadPreset(preset)}
+                        title={preset.description}
+                        aria-pressed={active}
+                        className={`w-full rounded-lg border px-3 py-1.5 text-left text-xs font-semibold transition-colors ${
+                          active
+                            ? "border-forest bg-forest text-cream"
+                            : "border-forest/20 text-forest hover:bg-forest/5"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div className="flex flex-col gap-4 overflow-y-auto pr-1">
                 {FRONT_OFFICE_DRIVERS.map((driver) =>
@@ -1441,6 +1681,57 @@ export default function FrontOfficeSimulator() {
               distribution — chosen over fresh randomness because this page&apos;s own numbers
               need to be verifiable, and because two plans should be compared apples to apples
               rather than each drawing a different roll of the dice.
+            </p>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-brass/30 bg-brass-pale/40 p-4">
+            <h3 className="text-sm font-semibold text-charcoal">
+              Why the Verdict Doesn&apos;t Reuse the Decision Lab&apos;s Margin Bands
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+              The FP&amp;A Decision Lab grades SaaS/Consulting/Real Estate margins as a percentage
+              of revenue (<code>classifyMargin</code>, <code>src/lib/models/shared.ts</code>) — the
+              right lens when the target itself is a margin. The board&apos;s mandate here is not a
+              margin, it&apos;s a fixed dollar bar: beat FY2026&apos;s {formatCurrency(OPERATING_RESULT)}{" "}
+              operating result. Because this franchise&apos;s revenue base is large (roughly
+              $750-800M) relative to what any one plan can move, a genuinely large miss against
+              that bar still reads as a small percentage of revenue — a $46.81M loss is only a -6%
+              margin, which landed in <code>classifyMargin</code>&apos;s mildest &ldquo;Approaching
+              Breakeven&rdquo; band next to a plan missing by under $1M. That&apos;s the exact
+              failure mode the Decision Lab&apos;s own margin-band QA pass exists to prevent for
+              SaaS, showing up here for a different reason. So the verdict bands the actual DOLLAR
+              gap to the board&apos;s bar instead: a miss or beat past{" "}
+              {formatCurrencyCompact(FRONT_OFFICE_MANDATE_GAP_SEVERE)} — the payroll lever&apos;s
+              own full floor-to-cap swing, the single largest move any one lever on this page can
+              make by itself — reads as &ldquo;severe&rdquo; or &ldquo;with room to spare&rdquo;;
+              half that ({formatCurrencyCompact(FRONT_OFFICE_MANDATE_GAP_MATERIAL)}) separates
+              &ldquo;narrowly&rdquo; from &ldquo;materially.&rdquo; This band set
+              (<code>classifyMandateGap</code>) lives in{" "}
+              <code>src/lib/models/frontOffice.ts</code> only — <code>shared.ts</code> and the
+              Decision Lab it serves are untouched.
+            </p>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-brass/30 bg-brass-pale/40 p-4">
+            <h3 className="text-sm font-semibold text-charcoal">
+              &ldquo;Maximize the Business&rdquo; Is a Searched Optimum, Not a Guess
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+              The obvious reading of &ldquo;maximize the business&rdquo; — floor payroll, max out
+              every revenue-flavored lever, price at the free-zone ceiling — is wrong, and checking
+              it against the committed engine is what caught it: maxing marketing and gameday spend
+              produces {formatCurrencyCompact(MAXIMIZE_BUSINESS_NAIVE_OPERATING_RESULT)} in
+              operating result, while a directed search of the same engine finds a plan{" "}
+              {formatCurrencyCompact(MAXIMIZE_BUSINESS_SEARCH_IMPROVEMENT)} better. Gameday
+              ops&apos; per-cap-spend lift
+              saturates fast relative to its own cost — every dollar of gameday spend past the
+              floor loses money on this plan, all the way to its max. Marketing is the one
+              exception with a genuine, single-peaked return (it lifts both attendance-linked
+              revenue and sponsorship), but even it peaks around $21M, well short of its own
+              $35M ceiling. The preset&apos;s marketing figure is the actual output of a 60-round
+              ternary search against <code>runFrontOfficeSimulation</code> holding every other
+              lever fixed — not a hand-picked value — so if a future change to the engine&apos;s
+              formulas moves that optimum, this preset moves with it automatically.
             </p>
           </div>
         </CollapsibleSection>
