@@ -1091,8 +1091,11 @@ export const FRONT_OFFICE_MANDATE_BAND_LABEL: Record<FrontOfficeMandateBand, str
  * instead of reusing shared.ts's classifyMargin.
  */
 export function classifyMandateGap(gap: number): FrontOfficeMandateBand {
+  // Strictly > 0, matching the UI's own financialTargetMet (operatingResult
+  // > OPERATING_RESULT) — a plan that exactly TIES FY2026 has not beaten it,
+  // so gap === 0 must fall on the "misses" side, not "clears."
   if (gap >= FRONT_OFFICE_MANDATE_GAP_SEVERE) return "ClearsWithRoomToSpare";
-  if (gap >= 0) return "ClearsTheBar";
+  if (gap > 0) return "ClearsTheBar";
   if (gap > -FRONT_OFFICE_MANDATE_GAP_MATERIAL) return "MissesNarrowly";
   if (gap > -FRONT_OFFICE_MANDATE_GAP_SEVERE) return "MissesMaterially";
   return "MissesSeverely";

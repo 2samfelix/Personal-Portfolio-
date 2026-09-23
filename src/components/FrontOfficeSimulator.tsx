@@ -7,7 +7,10 @@ import {
   ACTUAL_2025_RECORD,
   ACTUAL_2025_SEED,
   ACTUAL_2025_WIN_TOTAL,
+  AVAILABILITY_MAX,
+  AVAILABILITY_MIN,
   BASELINE_TICKET_PRICE,
+  COACHING_WEIGHT,
   DEVELOPMENT_BOOST_MAX,
   FIXED_OVERHEAD,
   FIXED_OVERHEAD_SHARE_OF_REVENUE,
@@ -17,6 +20,8 @@ import {
   FRONT_OFFICE_MANDATE_BAND_LABEL,
   FRONT_OFFICE_MANDATE_GAP_MATERIAL,
   FRONT_OFFICE_MANDATE_GAP_SEVERE,
+  LEAGUE_AVERAGE_DEVELOPMENT_SPEND,
+  LEAGUE_AVERAGE_PAYROLL,
   NATIONAL_REVENUE,
   OPERATING_RESULT,
   PAYROLL_EQUALS_CAP_ASSUMPTION,
@@ -28,7 +33,10 @@ import {
   buildFrontOfficeVerdict,
   buildNfcField,
   clampToDriverBounds,
+  developmentMultiplier,
+  expectedWins,
   runFrontOfficeSimulation,
+  teamStrength,
   type FrontOfficeAssumptions,
   type FrontOfficeDriverKey,
   type FrontOfficeResult,
@@ -295,6 +303,14 @@ function MandateTarget({
   );
 }
 
+function driverMax(key: FrontOfficeDriverKey): number {
+  return FRONT_OFFICE_DRIVERS.find((d) => d.key === key)!.max;
+}
+
+function driverMin(key: FrontOfficeDriverKey): number {
+  return FRONT_OFFICE_DRIVERS.find((d) => d.key === key)!.min;
+}
+
 // The playoff-line gauge: makes the win-total discontinuity visible rather
 // than letting a small slider move silently jump the record/seed/revenue.
 // Scaled 0-17 (a full regular season). The vertical line marks the actual
@@ -307,9 +323,63 @@ function MandateTarget({
 const PLAYOFF_LINE_WINS = ACTUAL_2025_WIN_TOTAL;
 const GAUGE_MAX_WINS = 17;
 
+// The achievable win range — every lever at its slider minimum vs. every
+// lever at its slider maximum — computed by calling the committed engine's
+// own teamStrength/expectedWins on the two extreme assumption sets, not
+// guessed or hardcoded. Only payroll, coaching, facilities, and
+// development feed teamStrength (see teamStrength in frontOffice.ts) —
+// marketing, gameday, ticket price, and strategy weighting don't move
+// wins at all, so they're irrelevant to this pair and set to their own
+// minimum/maximum purely for a complete, valid FrontOfficeAssumptions
+// object.
+const FLOOR_WIN_ASSUMPTIONS: FrontOfficeAssumptions = {
+  payroll: SALARY_FLOOR,
+  coachingSpend: driverMin("coachingSpend"),
+  facilitiesSpend: driverMin("facilitiesSpend"),
+  developmentSpend: driverMin("developmentSpend"),
+  marketingSpend: driverMin("marketingSpend"),
+  gamedaySpend: driverMin("gamedaySpend"),
+  ticketPrice: driverMin("ticketPrice"),
+  strategyWeighting: 0.5,
+};
+const CEILING_WIN_ASSUMPTIONS: FrontOfficeAssumptions = {
+  payroll: SALARY_CAP,
+  coachingSpend: driverMax("coachingSpend"),
+  facilitiesSpend: driverMax("facilitiesSpend"),
+  developmentSpend: driverMax("developmentSpend"),
+  marketingSpend: driverMax("marketingSpend"),
+  gamedaySpend: driverMax("gamedaySpend"),
+  ticketPrice: driverMax("ticketPrice"),
+  strategyWeighting: 0.5,
+};
+const FLOOR_WINS = expectedWins(teamStrength(FLOOR_WIN_ASSUMPTIONS));
+const CEILING_WINS = expectedWins(teamStrength(CEILING_WIN_ASSUMPTIONS));
+
+/**
+ * [DERIVED] Effective payroll at the CBA floor with scouting/development
+ * spend at its own minimum, as a share of the LEAGUE-AVERAGE TEAM'S OWN
+ * effective payroll — not the league's raw payroll figure. The
+ * league-average team in this model also spends on development
+ * (LEAGUE_AVERAGE_DEVELOPMENT_SPEND feeds LEAGUE_AVERAGE_STRENGTH in
+ * frontOffice.ts), so it carries its own developmentMultiplier too;
+ * comparing a floor team's EFFECTIVE payroll against the average team's
+ * RAW payroll would mix two different bases and produce a number
+ * (~103%) that looks like the floor team out-earns the average team,
+ * which isn't a real or checkable comparison. Effective-to-effective is
+ * the comparison a reader can actually verify against the same formula
+ * on both sides.
+ */
+const FLOOR_EFFECTIVE_PAYROLL = SALARY_FLOOR * developmentMultiplier(driverMin("developmentSpend"));
+const LEAGUE_AVERAGE_EFFECTIVE_PAYROLL =
+  LEAGUE_AVERAGE_PAYROLL * developmentMultiplier(LEAGUE_AVERAGE_DEVELOPMENT_SPEND);
+const FLOOR_EFFECTIVE_PAYROLL_PCT_OF_LEAGUE_AVG = FLOOR_EFFECTIVE_PAYROLL / LEAGUE_AVERAGE_EFFECTIVE_PAYROLL;
+const FACILITIES_AVAILABILITY_SWING = AVAILABILITY_MAX - AVAILABILITY_MIN;
+
 function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: boolean }) {
   const pct = Math.min(100, Math.max(0, (wins / GAUGE_MAX_WINS) * 100));
   const linePct = (PLAYOFF_LINE_WINS / GAUGE_MAX_WINS) * 100;
+  const floorPct = (FLOOR_WINS / GAUGE_MAX_WINS) * 100;
+  const ceilingPct = (CEILING_WINS / GAUGE_MAX_WINS) * 100;
   const distance = wins - PLAYOFF_LINE_WINS;
   const tone: BadgeTone = madePlayoffs ? "good" : "bad";
   return (
@@ -324,12 +394,34 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
           style={{ width: `${pct}%` }}
         />
         <span
+          className="absolute -top-2 h-4 w-px bg-charcoal/35"
+          style={{ left: `${floorPct}%` }}
+          aria-hidden
+        />
+        <span
+          className="absolute -top-2 h-4 w-px bg-charcoal/35"
+          style={{ left: `${ceilingPct}%` }}
+          aria-hidden
+        />
+        <span
           className="absolute -top-1.5 h-6 w-0.5 bg-charcoal"
           style={{ left: `${linePct}%` }}
           aria-hidden
         />
       </div>
-      <div className={`mt-3 rounded-lg px-3 py-2 text-[11px] leading-4 ${ALERT_STYLE[tone]}`}>
+      <div className="relative mt-1 h-7 text-[9px] font-semibold leading-tight text-charcoal-soft/70" aria-hidden>
+        <span className="absolute top-0 text-center" style={{ left: `${floorPct}%`, transform: "translateX(-50%)" }}>
+          Floor
+          <br />
+          {FLOOR_WINS.toFixed(2)}
+        </span>
+        <span className="absolute top-0 text-center" style={{ left: `${ceilingPct}%`, transform: "translateX(-50%)" }}>
+          Ceiling
+          <br />
+          {CEILING_WINS.toFixed(2)}
+        </span>
+      </div>
+      <div className={`mt-2 rounded-lg px-3 py-2 text-[11px] leading-4 ${ALERT_STYLE[tone]}`}>
         The vertical line marks {PLAYOFF_LINE_WINS}{" "}
         wins — the actual 2025 cutline (see
         Assumptions; the live pass/fail below comes from this plan&apos;s real position in the
@@ -341,6 +433,27 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
         Crossing the true cutoff is a real step change — playoff hosting revenue and the health
         score jump discontinuously right at the threshold, not smoothly. That is correct
         behavior, not a rendering glitch.
+      </div>
+      <div className="mt-2 rounded-lg bg-brass-pale/40 px-3 py-2 text-[11px] leading-4 text-charcoal-soft">
+        <span className="font-semibold text-charcoal">
+          Every lever at its minimum produces {FLOOR_WINS.toFixed(2)} wins; every lever at its
+          maximum produces {CEILING_WINS.toFixed(2)}.
+        </span>{" "}
+        That {(CEILING_WINS - FLOOR_WINS).toFixed(2)}-win range is narrow because you cannot field
+        a cheap roster in this league: even at the CBA floor with scouting funded at its minimum,
+        effective payroll — what actually drives team strength — still comes to{" "}
+        {formatPercent(FLOOR_EFFECTIVE_PAYROLL_PCT_OF_LEAGUE_AVG, 0)}{" "}
+        of the league-average team&apos;s own effective payroll (both sides computed the same way:
+        payroll times its own development multiplier). The floor is fixed at{" "}
+        {formatPercent(SALARY_FLOOR_PCT, 0)}{" "}
+        of the cap by CBA rule, and development spend only ever raises effective payroll, never
+        lowers it, so a floor-payroll team can never fall further behind than that. Nearly all of
+        the floor-to-ceiling range comes from coaching and facilities instead:
+        coaching carries only {formatPercent(COACHING_WEIGHT, 0)}{" "}
+        of team strength on its own, and facilities can only
+        swing strength across a {formatPercent(FACILITIES_AVAILABILITY_SWING, 0)}{" "}
+        availability band. That&apos;s the CBA doing what it&apos;s designed to do — producing competitive
+        parity — not a limitation of this model.
       </div>
     </div>
   );
@@ -524,43 +637,42 @@ function MonteCarloChartCaption({
 }
 
 // ============================================================================
-// Season P&L table
+// Season P&L — compact column, proportional bars per line item (same
+// visual language as the Marginal Impact panel's ranked bars below) rather
+// than the old wide two-column table, so it's narrow enough to sit beside
+// the levers and standings instead of below the fold.
 // ============================================================================
 
-function PnlRow({
+function PnlBar({
   label,
   value,
-  tag,
+  tone,
+  maxAbs,
   emphasis,
-  fixed,
 }: {
   label: string;
   value: number;
-  tag?: string;
+  tone: "revenue" | "cost";
+  maxAbs: number;
   emphasis?: boolean;
-  fixed?: boolean;
 }) {
+  const pct = maxAbs === 0 ? 0 : (Math.abs(value) / maxAbs) * 100;
+  const barColor = tone === "revenue" ? "bg-forest" : "bg-brass";
   return (
-    <div
-      className={`flex items-center justify-between gap-3 border-b border-forest/5 px-4 py-2.5 last:border-0 ${
-        fixed ? "bg-brass-pale/40" : ""
-      } ${emphasis ? "bg-forest/5" : ""}`}
-    >
-      <span className={`flex items-center gap-2 text-sm ${emphasis ? "font-bold text-charcoal" : "text-charcoal-soft"}`}>
-        {label}
-        {fixed && (
-          <span className="rounded-full bg-brass px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cream">
-            Fixed — never moves
-          </span>
-        )}
-        {tag && (
-          <span className="rounded-full border border-forest/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-charcoal-soft">
-            {tag}
-          </span>
-        )}
-      </span>
-      <span className={`shrink-0 text-sm ${emphasis ? "font-bold text-charcoal" : "font-semibold text-charcoal"}`}>
-        {formatCurrency(value)}
+    <div className="flex flex-col gap-1">
+      <div className="flex items-start justify-between gap-2">
+        <span className={`text-xs leading-4 ${emphasis ? "font-bold text-charcoal" : "text-charcoal-soft"}`}>
+          {label}
+        </span>
+        <span className={`shrink-0 text-xs leading-4 ${emphasis ? "font-bold text-charcoal" : "font-semibold text-charcoal"}`}>
+          {formatCurrencyCompact(value)}
+        </span>
+      </div>
+      <span className="block h-1.5 w-full overflow-hidden rounded-full bg-mist">
+        <span
+          className={`block h-full rounded-full ${barColor} ${emphasis ? "" : "opacity-50"}`}
+          style={{ width: `${pct}%` }}
+        />
       </span>
     </div>
   );
@@ -704,14 +816,6 @@ function CollapsibleSection({
 // changes what a given set of assumptions produces — same engine, same
 // constants, just three real starting points on it.
 // ============================================================================
-
-function driverMax(key: FrontOfficeDriverKey): number {
-  return FRONT_OFFICE_DRIVERS.find((d) => d.key === key)!.max;
-}
-
-function driverMin(key: FrontOfficeDriverKey): number {
-  return FRONT_OFFICE_DRIVERS.find((d) => d.key === key)!.min;
-}
 
 /** [DERIVED] The highest ticket price at which the model's own free-zone
  * rule (FREE_ZONE_MULTIPLIER, frontOffice.ts) still shows zero attendance
@@ -876,6 +980,11 @@ export default function FrontOfficeSimulator() {
     () => computeMarginalImpact(assumptions, marginalMetric),
     [assumptions, marginalMetric]
   );
+  // The compact P&L's bars scale against the larger of the two totals, so
+  // every line item reads as its share of whichever side is bigger — the
+  // same "scale against the largest value in the list" rule Marginal
+  // Impact's own bars already use.
+  const pnlScale = Math.max(result.revenue.total, result.cost.total);
 
   const set = <K extends keyof FrontOfficeAssumptions>(key: K) => (value: number) => {
     setAssumptions((prev) => ({ ...prev, [key]: value }));
@@ -1058,8 +1167,10 @@ export default function FrontOfficeSimulator() {
             <PlayoffLineGauge wins={result.wins} madePlayoffs={result.playoff.madePlayoffs} />
           </div>
 
-          {/* Sliders alongside the standings — cause and effect in one glance */}
-          <div className="mt-6 lg:grid lg:grid-cols-[420px_1fr] lg:items-start lg:gap-6">
+          {/* Three columns: levers, standings, and the P&L — every view a
+              plan produces sits in the same glance as the control that
+              moved it. */}
+          <div className="mt-6 lg:grid lg:grid-cols-[360px_1fr_300px] lg:items-start lg:gap-4">
             {/* Left: levers, cap readout pinned at top */}
             <aside className="mb-8 flex flex-col rounded-2xl border border-forest/15 bg-white p-4 lg:sticky lg:top-24 lg:mb-0 lg:max-h-[calc(100vh-7rem)]">
               {/* Cap readout — never scrolls, sits above the scrollable slider list */}
@@ -1225,6 +1336,81 @@ export default function FrontOfficeSimulator() {
                 </p>
               )}
             </div>
+
+            {/* Third column: Season P&L, compact — the financial
+                consequence of a lever drag in the same view as the lever
+                and the standings it also moved. */}
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">Season P&amp;L</h3>
+              <div className="mt-2 flex flex-col gap-4 rounded-xl border border-forest/15 bg-white p-3">
+                <div className="flex flex-col gap-2.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft/70">
+                    Revenue
+                  </span>
+                  <PnlBar label="National Revenue" value={result.revenue.national} tone="revenue" maxAbs={pnlScale} />
+                  <PnlBar label="Ticketing" value={result.revenue.ticketing} tone="revenue" maxAbs={pnlScale} />
+                  <PnlBar
+                    label="Concessions & Merchandise"
+                    value={result.revenue.concessionsMerchandise}
+                    tone="revenue"
+                    maxAbs={pnlScale}
+                  />
+                  <PnlBar label="Local Sponsorship" value={result.revenue.sponsorship} tone="revenue" maxAbs={pnlScale} />
+                  <PnlBar label="Playoff Revenue" value={result.revenue.playoff} tone="revenue" maxAbs={pnlScale} />
+                  <PnlBar
+                    label="Total Revenue"
+                    value={result.revenue.total}
+                    tone="revenue"
+                    maxAbs={pnlScale}
+                    emphasis
+                  />
+                </div>
+                <div className="flex flex-col gap-2.5 border-t border-forest/10 pt-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft/70">
+                    Cost
+                  </span>
+                  <PnlBar label="Payroll" value={result.cost.payroll} tone="cost" maxAbs={pnlScale} />
+                  <PnlBar label="Coaching & Football Staff" value={result.cost.coaching} tone="cost" maxAbs={pnlScale} />
+                  <PnlBar
+                    label="Facilities & Sports Science"
+                    value={result.cost.facilities}
+                    tone="cost"
+                    maxAbs={pnlScale}
+                  />
+                  <PnlBar
+                    label="Scouting & Development"
+                    value={result.cost.development}
+                    tone="cost"
+                    maxAbs={pnlScale}
+                  />
+                  <PnlBar
+                    label="Marketing & Fan Engagement"
+                    value={result.cost.marketing}
+                    tone="cost"
+                    maxAbs={pnlScale}
+                  />
+                  <PnlBar label="Stadium & Gameday Ops" value={result.cost.gameday} tone="cost" maxAbs={pnlScale} />
+                  <PnlBar label="Fixed Overhead" value={result.cost.fixedOverhead} tone="cost" maxAbs={pnlScale} />
+                  <PnlBar label="Total Cost" value={result.cost.total} tone="cost" maxAbs={pnlScale} emphasis />
+                </div>
+                <div className="flex items-center justify-between gap-2 rounded-lg bg-forest/5 px-3 py-2">
+                  <span className="text-xs font-bold text-charcoal">Operating Result</span>
+                  <span
+                    className={`text-sm font-black ${result.operatingResult >= 0 ? "text-forest" : "text-rust"}`}
+                  >
+                    {formatCurrency(result.operatingResult)}
+                  </span>
+                </div>
+              </div>
+              <p className="mt-2 text-[10px] leading-4 text-charcoal-soft">
+                Bars are scaled against the larger of this plan&apos;s total revenue or total cost,
+                the same proportional-bar convention Marginal Impact uses below. Fixed Overhead
+                ({formatCurrencyCompact(FIXED_OVERHEAD)} at baseline,{" "}
+                {formatPercent(FIXED_OVERHEAD_SHARE_OF_REVENUE, 0)}{" "}
+                of total revenue) is a derived
+                residual that never moves with any lever — see Assumptions &amp; Limitations.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -1257,56 +1443,6 @@ export default function FrontOfficeSimulator() {
             Source: Packers FY2026 annual financial release (packers.com, July 2026); Sportico;
             Yahoo Sports.
           </p>
-        </section>
-
-        {/* Season P&L */}
-        <section className="mt-12 border-t border-forest/10 pt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Season P&amp;L</h2>
-          <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
-                Revenue
-              </h3>
-              <div className="overflow-hidden rounded-xl border border-forest/15 bg-white">
-                <PnlRow label="National Revenue" value={result.revenue.national} fixed />
-                <PnlRow label="Ticketing" value={result.revenue.ticketing} />
-                <PnlRow label="Concessions &amp; Merchandise" value={result.revenue.concessionsMerchandise} />
-                <PnlRow label="Local Sponsorship" value={result.revenue.sponsorship} />
-                <PnlRow label="Playoff Revenue" value={result.revenue.playoff} />
-                <PnlRow label="Total Revenue" value={result.revenue.total} emphasis />
-              </div>
-            </div>
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
-                Cost
-              </h3>
-              <div className="overflow-hidden rounded-xl border border-forest/15 bg-white">
-                <PnlRow label="Payroll" value={result.cost.payroll} tag="Cap Allocation" />
-                <PnlRow label="Coaching &amp; Football Staff" value={result.cost.coaching} />
-                <PnlRow label="Facilities &amp; Sports Science" value={result.cost.facilities} />
-                <PnlRow label="Scouting &amp; Development" value={result.cost.development} />
-                <PnlRow label="Marketing &amp; Fan Engagement" value={result.cost.marketing} />
-                <PnlRow label="Stadium &amp; Gameday Ops" value={result.cost.gameday} />
-                <PnlRow label="Fixed Overhead" value={result.cost.fixedOverhead} tag="Derived Residual" />
-                <PnlRow label="Total Cost" value={result.cost.total} emphasis />
-              </div>
-              <p className="mt-2 rounded-lg bg-brass-pale/40 p-2.5 text-[11px] leading-4 text-charcoal-soft">
-                Fixed Overhead is {formatPercent(FIXED_OVERHEAD_SHARE_OF_REVENUE, 0)} of total
-                revenue at baseline ({formatCurrencyCompact(FIXED_OVERHEAD)}) — the largest single
-                cost line in the model. It&apos;s a derived residual, not an independently sourced
-                or assumed figure: it absorbs whatever error sits in the five assumed
-                discretionary cost lines above. See Assumptions &amp; Limitations below.
-              </p>
-            </div>
-          </div>
-          <div className="mt-4 rounded-xl border border-forest/15 bg-forest/5 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-charcoal">Operating Result</span>
-              <span className={`text-xl font-black ${result.operatingResult >= 0 ? "text-forest" : "text-rust"}`}>
-                {formatCurrency(result.operatingResult)}
-              </span>
-            </div>
-          </div>
         </section>
 
         {/* Marginal impact */}
@@ -1588,8 +1724,8 @@ export default function FrontOfficeSimulator() {
               Fixed Overhead is a Derived Residual
             </h3>
             <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-              At {formatPercent(FIXED_OVERHEAD_SHARE_OF_REVENUE, 0)} of total revenue
-              ({formatCurrencyCompact(FIXED_OVERHEAD)} at baseline), Fixed Overhead is the largest
+              At {formatPercent(FIXED_OVERHEAD_SHARE_OF_REVENUE, 0)}{" "}
+              of total revenue ({formatCurrencyCompact(FIXED_OVERHEAD)} at baseline), Fixed Overhead is the largest
               cost line in the model and does not move with any lever. It is not independently
               sourced or assumed — it is defined as whatever remains after the five assumed
               discretionary cost lines are subtracted from the real, derived operating-cost total,
@@ -1630,8 +1766,8 @@ export default function FrontOfficeSimulator() {
               of the salary cap in cash, aggregated over a multi-year window (three years for the
               2024-2026 period this model is baselined on) — a single season below the floor is
               legal on its own, as long as the club catches up later. This model has no
-              multi-season memory, so it applies {formatPercent(SALARY_FLOOR_PCT, 0)} as a hard
-              per-season minimum instead ({formatCurrencyCompact(SALARY_FLOOR)}), which is
+              multi-season memory, so it applies {formatPercent(SALARY_FLOOR_PCT, 0)}{" "}
+              as a hard per-season minimum instead ({formatCurrencyCompact(SALARY_FLOOR)}), which is
               stricter than the real rule. That&apos;s part of why a low-payroll strategy
               underperforms here: the real CBA would let a club dip below this floor for one
               season and recover the shortfall later, and this model doesn&apos;t give it that
