@@ -525,12 +525,17 @@ function DistributionHistogram({
   const xFor = (value: number) => HIST_PAD_LEFT + ((value - min) / range) * innerWidth;
 
   return (
-    <svg
-      viewBox={`0 0 ${HIST_WIDTH} ${HIST_HEIGHT}`}
-      className="w-full"
-      role="img"
-      aria-label={`${ariaLabel}. ${markers.map((m) => `${m.label}: ${formatValue(m.value)}`).join(", ")}.`}
-    >
+    <div className="overflow-x-auto">
+      <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft sm:hidden">
+        <span aria-hidden>&larr;</span> Scroll to see the full chart <span aria-hidden>&rarr;</span>
+      </p>
+      <svg
+        viewBox={`0 0 ${HIST_WIDTH} ${HIST_HEIGHT}`}
+        className="w-full"
+        style={{ minWidth: 480 }}
+        role="img"
+        aria-label={`${ariaLabel}. ${markers.map((m) => `${m.label}: ${formatValue(m.value)}`).join(", ")}.`}
+      >
       {bins.map((count, i) => {
         const x = HIST_PAD_LEFT + i * (innerWidth / binCount) + barGap / 2;
         const height = (count / maxCount) * innerHeight;
@@ -603,7 +608,8 @@ function DistributionHistogram({
           );
         });
       })()}
-    </svg>
+      </svg>
+    </div>
   );
 }
 
@@ -1382,6 +1388,9 @@ function StrategyMapChart({ result }: { result: FrontOfficeResult }) {
 
   return (
     <div>
+      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft sm:hidden">
+        <span aria-hidden>&larr;</span> Scroll to see the full chart <span aria-hidden>&rarr;</span>
+      </p>
       <div className="overflow-x-auto rounded-2xl border border-forest/15 bg-white p-4">
         <svg
           viewBox={`0 0 ${width} ${height}`}
@@ -1904,6 +1913,9 @@ export default function FrontOfficeSimulator() {
               presets above stay in the normal column. */}
           <div className="relative left-1/2 mt-4 w-screen -translate-x-1/2">
             <div className="mx-auto max-w-[1680px] px-6">
+              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft xl:hidden">
+                <span aria-hidden>&larr;</span> Scroll to see the full diagram <span aria-hidden>&rarr;</span>
+              </p>
               <FrontOfficeCausalChain assumptions={assumptions} result={result} />
             </div>
           </div>
@@ -1992,9 +2004,16 @@ export default function FrontOfficeSimulator() {
           {/* Three columns: levers, standings, and the P&L — every view a
               plan produces sits in the same glance as the control that
               moved it. */}
-          <div className="mt-6 lg:grid lg:grid-cols-[360px_1fr_300px] lg:items-start lg:gap-4">
+          {/* Three-column grid only from xl (1280px) up: at 1024px (lg) the
+              fixed 360px + 300px side columns plus the standings table's own
+              420px minimum left less than 300px for the middle column,
+              overflowing the page. Below xl, this is a plain block — the
+              three pieces stack in DOM order (controls, then standings, then
+              P&L), which already reads as decisions -> competitive outcome
+              -> financial outcome. */}
+          <div className="mt-6 xl:grid xl:grid-cols-[360px_1fr_300px] xl:items-start xl:gap-4">
             {/* Left: levers, cap readout pinned at top */}
-            <aside className="mb-8 flex flex-col rounded-2xl border border-forest/15 bg-white p-4 lg:sticky lg:top-24 lg:mb-0 lg:max-h-[calc(100vh-7rem)]">
+            <aside className="mb-8 flex flex-col rounded-2xl border border-forest/15 bg-white p-4 xl:sticky xl:top-24 xl:mb-0 xl:max-h-[calc(100vh-7rem)]">
               {/* Cap readout — never scrolls, sits above the scrollable slider list */}
               <div className="mb-3 shrink-0 rounded-xl border border-forest/20 bg-forest/5 p-3">
                 <div className="flex items-center justify-between">
@@ -2084,7 +2103,10 @@ export default function FrontOfficeSimulator() {
                 incumbent&apos;s win total to take a tie, not the real NFL&apos;s full
                 head-to-head/common-games/strength-of-schedule tiebreaker hierarchy.
               </p>
-              <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white">
+              <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft sm:hidden">
+                <span aria-hidden>&larr;</span> Scroll for the Record column <span aria-hidden>&rarr;</span>
+              </p>
+              <div className="mt-2 overflow-x-auto rounded-xl border border-forest/15 bg-white sm:mt-3">
                 <table className="w-full min-w-[420px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
