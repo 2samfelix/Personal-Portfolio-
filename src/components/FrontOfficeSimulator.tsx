@@ -251,6 +251,11 @@ function PayrollAxis({
         className="mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/20 accent-forest sm:h-1.5"
       />
       {delta && <span className="text-[11px] font-semibold text-charcoal-soft">{delta.text}</span>}
+
+      <p className="border-t border-forest/10 pt-1.5 text-[10px] leading-4 text-charcoal-soft">
+        One input among several, not a direct wins dial — Team Strength below also depends on
+        Coaching, Facilities, and Scouting &amp; Development spend.
+      </p>
     </div>
   );
 }
@@ -918,6 +923,12 @@ type FrontOfficePreset = {
   label: string;
   description: string;
   assumptions: FrontOfficeAssumptions;
+  // Computed once, at module load, by calling the committed engine
+  // (runFrontOfficeSimulation) on this preset's own assumptions — never a
+  // second, hand-written estimate of what a preset "should" produce. The
+  // compact wins/operating-result summary shown on each preset button reads
+  // straight from this field.
+  result: FrontOfficeResult;
 };
 
 // ----------------------------------------------------------------------------
@@ -974,43 +985,701 @@ type FrontOfficePreset = {
 // Business for w in [0, 0.68), Develop and Promote for w in [0.68, 0.73),
 // Spend to Contend for w in [0.73, 1]. None is dominated everywhere.
 // ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// Middle-preset swap (Candidate B audit, see conversation record): the
+// former "Develop and Promote" allocation was replaced with a plan found on
+// the Strategy Map's own 500-point Halton frontier — not assumed, searched.
+// Its four win-determining levers (payroll, coaching, facilities,
+// development) are that frontier point's own sampled allocation, rounded to
+// the nearest $10K. strategyWeighting is set to 0.5 — matching Maximize the
+// Business and Spend to Contend, both of which already default to 0.5
+// rather than overriding it — specifically so this preset's Franchise
+// Health score sits on the same footing as the other two rather than
+// quietly using the frontier point's own raw sampled weighting (0.371,
+// on-field-leaning), which would have made a cross-preset Franchise Health
+// comparison misleading. strategyWeighting affects franchiseHealthScore
+// only (see franchiseHealthScore in frontOffice.ts) — it does not change
+// wins, revenue, cost, operating result, seed, or any Monte Carlo output.
+//
+// Local-efficiency audit (see conversation record): marketingSpend,
+// gamedaySpend, and ticketPrice don't feed teamStrength at all (see
+// teamStrength in frontOffice.ts) — only payroll, coaching, facilities, and
+// development do. That means any change to those three revenue/cost-only
+// levers that improves operatingResult is a strict Pareto improvement over
+// the current plan (identical wins, strictly more profit), never a
+// trade-off. Checked against the live engine (full-range sweeps confirming
+// each curve is single-peaked, not just a local marginal check) for every
+// preset: Maximize the Business was already sitting at each lever's own
+// profit-maximizing point (it was built that way from the start — see
+// argmaxMarketingSpend and TOP_OF_FREE_ZONE_TICKET_PRICE above). Both
+// Spend to Contend and this preset were not: each had gamedaySpend and
+// ticketPrice left at inherited baseline/frontier-sample values with real,
+// engine-confirmed profit-only improvements sitting on the table — gameday
+// spend's cost-to-attendance-quality curve is a linear cost against a
+// saturating (diminishing-returns) benefit, so its profit-maximizing point
+// is the driver's own $40M floor for every preset tested, not an interior
+// value; ticket price's profit-maximizing point converges (via ternary
+// search over the live engine, confirmed single-peaked by full $1
+// resolution sweep) to the exact same ~$261.86 "top of the free zone" value
+// Maximize the Business already uses, independent of team strength — a
+// structural feature of the model's price/attendance curve, not a
+// coincidence of any one preset's allocation. Only marketingSpend,
+// gamedaySpend, and ticketPrice were touched by this pass; payroll,
+// coaching, facilities, and development are unchanged from the Candidate B
+// swap above, and Maximize the Business is untouched entirely (nothing
+// dominated it). No model formula, coefficient, calibration constant, or
+// simulation logic changed — only which values these two presets' three
+// revenue-only levers point at.
+const SPEND_TO_CONTEND_ASSUMPTIONS: FrontOfficeAssumptions = {
+  ...FRONT_OFFICE_BASE_DEFAULTS,
+  payroll: SALARY_CAP,
+  coachingSpend: driverMax("coachingSpend"),
+  facilitiesSpend: driverMax("facilitiesSpend"),
+  developmentSpend: driverMax("developmentSpend"),
+  marketingSpend: 21_101_431.52,
+  gamedaySpend: driverMin("gamedaySpend"),
+  ticketPrice: TOP_OF_FREE_ZONE_TICKET_PRICE,
+};
+
+const BUILD_THROUGH_DEVELOPMENT_ASSUMPTIONS: FrontOfficeAssumptions = {
+  payroll: 271_060_000,
+  coachingSpend: 68_150_000,
+  facilitiesSpend: 18_320_000,
+  developmentSpend: 28_270_000,
+  marketingSpend: 21_749_290.92,
+  gamedaySpend: driverMin("gamedaySpend"),
+  ticketPrice: TOP_OF_FREE_ZONE_TICKET_PRICE,
+  strategyWeighting: 0.5,
+};
+
+// Ordered to match the strategy spectrum this section narrates: prioritize
+// the business, hold a competitive/efficient middle ground, or push
+// football investment to the ceiling — finance-first to wins-first left to
+// right, not the order the presets were originally authored in.
 const FRONT_OFFICE_PRESETS: FrontOfficePreset[] = [
-  {
-    key: "spendToContend",
-    label: "Spend to Contend",
-    description:
-      "Every football-ops lever at its max: payroll at the cap, coaching, facilities, and scouting/development all maxed out. This is the engine's actual win ceiling (11.02 projected wins) — not close to it.",
-    assumptions: {
-      ...FRONT_OFFICE_BASE_DEFAULTS,
-      payroll: SALARY_CAP,
-      coachingSpend: driverMax("coachingSpend"),
-      facilitiesSpend: driverMax("facilitiesSpend"),
-      developmentSpend: driverMax("developmentSpend"),
-    },
-  },
-  {
-    key: "developAndPromote",
-    label: "Develop and Promote",
-    description:
-      "Payroll at the CBA floor; coaching staff maxed out, scouting funded at the FY2026 baseline, facilities at their floor. Win through coaching and player development instead of free agency — and, unlike a payroll cut alone, this one actually beats the FY2026 baseline on both wins and operating result.",
-    assumptions: {
-      ...FRONT_OFFICE_BASE_DEFAULTS,
-      payroll: SALARY_FLOOR,
-      coachingSpend: driverMax("coachingSpend"),
-      facilitiesSpend: driverMin("facilitiesSpend"),
-    },
-  },
   {
     key: "maximizeBusiness",
     label: "Maximize the Business",
     description:
-      "Every football-ops lever (payroll, coaching, facilities, scouting, gameday) at its floor; marketing funded to its own profit-maximizing point, not its max; ticket price at the top of the free zone. This is the model's actual financial ceiling, found by searching the engine, not assumed.",
+      "Every football-ops lever (payroll, coaching, facilities, scouting, gameday) at its floor; marketing funded to its own profit-maximizing point, not its max; ticket price at the top of the free zone. This is the model's actual financial ceiling, found by searching the engine, not assumed. Prioritizes operating economics and franchise health even as competitive performance declines.",
     assumptions: MAXIMIZE_BUSINESS_ASSUMPTIONS,
+    result: runFrontOfficeSimulation(MAXIMIZE_BUSINESS_ASSUMPTIONS),
+  },
+  {
+    key: "buildThroughDevelopment",
+    label: "Build Through Development",
+    description:
+      "Invest heavily in coaching and player development, keep player payroll below the cap, and preserve strong operating economics while remaining competitive. The competitive edge comes from coaching and scouting/development spend; marketing, gameday operations, and ticket price are each set to their own engine-searched profit-maximizing point rather than a round number, since none of the three affects projected wins.",
+    assumptions: BUILD_THROUGH_DEVELOPMENT_ASSUMPTIONS,
+    result: runFrontOfficeSimulation(BUILD_THROUGH_DEVELOPMENT_ASSUMPTIONS),
+  },
+  {
+    key: "spendToContend",
+    label: "Spend to Contend",
+    description:
+      "Every football-ops lever at its max: payroll at the cap, coaching, facilities, and scouting/development all maxed out. This is the engine's actual win ceiling (11.02 projected wins) — not close to it. Marketing, gameday operations, and ticket price are each set to their own engine-searched profit-maximizing point rather than the FY2026 baseline, since none of the three affects projected wins — pushing football investment to the competitive ceiling still costs real operating profit compared to the other two presets, but far less than leaving those three revenue levers unoptimized would suggest.",
+    assumptions: SPEND_TO_CONTEND_ASSUMPTIONS,
+    result: runFrontOfficeSimulation(SPEND_TO_CONTEND_ASSUMPTIONS),
   },
 ];
 
 function assumptionsEqual(a: FrontOfficeAssumptions, b: FrontOfficeAssumptions): boolean {
   return (Object.keys(a) as FrontOfficeDriverKey[]).every((key) => a[key] === b[key]);
+}
+
+// ============================================================================
+// Strategy Map / "You Are Here" — presentation layer only. Every plotted
+// point comes from calling the committed runFrontOfficeSimulation() on a
+// real, valid FrontOfficeAssumptions object; nothing here re-derives wins or
+// operating result by any other means.
+// ============================================================================
+
+/** [DERIVED] FY2026 baseline plotted as a run of the live engine on
+ * FRONT_OFFICE_BASE_DEFAULTS — by construction this reproduces the sourced
+ * 9.50 wins / -$1.10M exactly, same as every other point on this chart, so
+ * the baseline sits on identical footing to the presets and the current
+ * plan rather than being a separately-sourced number. */
+const FY2026_BASELINE_RESULT = runFrontOfficeSimulation(FRONT_OFFICE_BASE_DEFAULTS);
+
+/**
+ * Halton low-discrepancy sequence — deterministic, reproducible, and far
+ * better-distributed across 8 dimensions than either a fixed grid (which
+ * would need min(8 steps)^8 evaluations to reach this density) or
+ * Math.random() (which reruns differently on every load). One prime base
+ * per lever, in FRONT_OFFICE_DRIVERS' own order.
+ */
+function haltonValue(index: number, base: number): number {
+  let f = 1;
+  let r = 0;
+  let i = index;
+  while (i > 0) {
+    f = f / base;
+    r += f * (i % base);
+    i = Math.floor(i / base);
+  }
+  return r;
+}
+const STRATEGY_MAP_HALTON_BASES = [2, 3, 5, 7, 11, 13, 17, 19];
+const STRATEGY_MAP_SAMPLE_SIZE = 500;
+
+type StrategyMapPoint = { wins: number; operatingResult: number };
+
+/**
+ * The feasible-region cloud: STRATEGY_MAP_SAMPLE_SIZE plans, each built by
+ * mapping one Halton point (one coordinate per lever, index 1..500) linearly
+ * onto that lever's own [min, max] from FRONT_OFFICE_DRIVERS, then run
+ * through the real engine. Computed once at module load — the sample does
+ * not depend on the current plan, so dragging a slider never recomputes it.
+ */
+function sampleFeasibleFrontOfficePlans(): StrategyMapPoint[] {
+  const points: StrategyMapPoint[] = [];
+  for (let i = 1; i <= STRATEGY_MAP_SAMPLE_SIZE; i++) {
+    const sampled = {} as FrontOfficeAssumptions;
+    FRONT_OFFICE_DRIVERS.forEach((driver, dimIndex) => {
+      const t = haltonValue(i, STRATEGY_MAP_HALTON_BASES[dimIndex]);
+      sampled[driver.key] = driver.min + t * (driver.max - driver.min);
+    });
+    const r = runFrontOfficeSimulation(sampled);
+    points.push({ wins: r.wins, operatingResult: r.operatingResult });
+  }
+  return points;
+}
+const STRATEGY_MAP_FEASIBLE_SAMPLE = sampleFeasibleFrontOfficePlans();
+
+/**
+ * Non-dominated (efficient) frontier: a point survives only if no other
+ * candidate matches or beats it on wins AND on operating result with at
+ * least one strictly better — the exact dominance rule specified, not an
+ * approximation. Standard two-objective skyline algorithm: sort candidates
+ * by wins descending or, on a wins tie, by operating result descending;
+ * scan once, keeping a running best operating result seen so far; a point
+ * survives only if it strictly beats that running best (otherwise some
+ * earlier point already has >= wins AND >= operating result). Run against
+ * the 500-plan Halton sample PLUS the explicitly injected boundary/reference
+ * plans below (STRATEGY_MAP_INJECTED_ANCHORS) — both extremes (every lever
+ * at its floor; every lever at its cap), the three presets, the FY2026
+ * baseline, and all four payroll-floor/cap x football-levers-min/max
+ * corners — so the frontier is checked against the engine's true 6.21/11.02
+ * win extremes as real evaluated plans, not just inferred from wherever the
+ * random sample happened to land closest to them.
+ */
+function computeEfficientFrontier(points: StrategyMapPoint[]): StrategyMapPoint[] {
+  const sorted = [...points].sort(
+    (a, b) => b.wins - a.wins || b.operatingResult - a.operatingResult
+  );
+  const frontier: StrategyMapPoint[] = [];
+  let bestOperatingResult = -Infinity;
+  for (const p of sorted) {
+    if (p.operatingResult > bestOperatingResult) {
+      frontier.push(p);
+      bestOperatingResult = p.operatingResult;
+    }
+  }
+  return frontier.sort((a, b) => a.wins - b.wins);
+}
+
+// Corner configurations not already named elsewhere: floor/cap payroll
+// crossed with the football levers' own min/max, leaving marketing, gameday,
+// ticket price, and strategy weighting at the FY2026 baseline — deliberately
+// naive corners, unlike Spend to Contend itself (which, after the local-
+// efficiency audit below, has those three levers at their own searched
+// optimum, not baseline). "Payroll cap + football levers maxed" is still
+// aliased to SPEND_TO_CONTEND_ASSUMPTIONS rather than redefined here, so
+// this one corner reuses Spend to Contend's actual (optimized) values
+// instead of the naive-baseline convention the other three corners use.
+const PAYROLL_FLOOR_FOOTBALL_MIN_ASSUMPTIONS: FrontOfficeAssumptions = {
+  ...FRONT_OFFICE_BASE_DEFAULTS,
+  payroll: SALARY_FLOOR,
+  coachingSpend: driverMin("coachingSpend"),
+  facilitiesSpend: driverMin("facilitiesSpend"),
+  developmentSpend: driverMin("developmentSpend"),
+};
+const PAYROLL_FLOOR_FOOTBALL_MAX_ASSUMPTIONS: FrontOfficeAssumptions = {
+  ...FRONT_OFFICE_BASE_DEFAULTS,
+  payroll: SALARY_FLOOR,
+  coachingSpend: driverMax("coachingSpend"),
+  facilitiesSpend: driverMax("facilitiesSpend"),
+  developmentSpend: driverMax("developmentSpend"),
+};
+const PAYROLL_CAP_FOOTBALL_MIN_ASSUMPTIONS: FrontOfficeAssumptions = {
+  ...FRONT_OFFICE_BASE_DEFAULTS,
+  payroll: SALARY_CAP,
+  coachingSpend: driverMin("coachingSpend"),
+  facilitiesSpend: driverMin("facilitiesSpend"),
+  developmentSpend: driverMin("developmentSpend"),
+};
+
+type StrategyMapAnchor = { key: string; assumptions: FrontOfficeAssumptions };
+
+/**
+ * The ten explicitly injected boundary/reference plans (Strategy Map audit,
+ * item 1): both true extremes, the FY2026 baseline, the three presets, and
+ * all four payroll x football-lever corners. Every one is a real,
+ * already-committed assumptions object run through the same
+ * runFrontOfficeSimulation the rest of the page uses — none of these values
+ * are fabricated or interpolated. These feed the frontier/dominance
+ * calculation regardless of whether the Halton sample happened to sample
+ * anywhere near them.
+ */
+const STRATEGY_MAP_INJECTED_ANCHOR_ASSUMPTIONS: StrategyMapAnchor[] = [
+  { key: "allMin", assumptions: FLOOR_WIN_ASSUMPTIONS },
+  { key: "allMax", assumptions: CEILING_WIN_ASSUMPTIONS },
+  { key: "fy2026Baseline", assumptions: FRONT_OFFICE_BASE_DEFAULTS },
+  { key: "maximizeBusiness", assumptions: MAXIMIZE_BUSINESS_ASSUMPTIONS },
+  { key: "buildThroughDevelopment", assumptions: BUILD_THROUGH_DEVELOPMENT_ASSUMPTIONS },
+  { key: "spendToContend", assumptions: SPEND_TO_CONTEND_ASSUMPTIONS },
+  { key: "payrollFloorFootballMin", assumptions: PAYROLL_FLOOR_FOOTBALL_MIN_ASSUMPTIONS },
+  { key: "payrollFloorFootballMax", assumptions: PAYROLL_FLOOR_FOOTBALL_MAX_ASSUMPTIONS },
+  { key: "payrollCapFootballMin", assumptions: PAYROLL_CAP_FOOTBALL_MIN_ASSUMPTIONS },
+  { key: "payrollCapFootballMax", assumptions: SPEND_TO_CONTEND_ASSUMPTIONS },
+];
+const STRATEGY_MAP_INJECTED_ANCHORS: (StrategyMapPoint & { key: string })[] =
+  STRATEGY_MAP_INJECTED_ANCHOR_ASSUMPTIONS.map(({ key, assumptions }) => {
+    const r = runFrontOfficeSimulation(assumptions);
+    return { key, wins: r.wins, operatingResult: r.operatingResult };
+  });
+
+// The subset of injected anchors worth a distinct (if unlabeled) mark in the
+// cloud: the true floor/ceiling and the four payroll x football-lever
+// corners. FY2026 baseline and the three presets already get their own
+// dedicated, labeled markers elsewhere on the chart, so repeating them here
+// would just draw a second dot under an existing one.
+const STRATEGY_MAP_EXTRA_ANCHOR_KEYS = new Set([
+  "allMin",
+  "allMax",
+  "payrollFloorFootballMin",
+  "payrollFloorFootballMax",
+  "payrollCapFootballMin",
+]);
+const STRATEGY_MAP_EXTRA_ANCHOR_POINTS: StrategyMapPoint[] = STRATEGY_MAP_INJECTED_ANCHORS.filter((a) =>
+  STRATEGY_MAP_EXTRA_ANCHOR_KEYS.has(a.key)
+);
+
+const STRATEGY_MAP_FRONTIER_CANDIDATES: StrategyMapPoint[] = [
+  ...STRATEGY_MAP_FEASIBLE_SAMPLE,
+  ...STRATEGY_MAP_INJECTED_ANCHORS,
+];
+const STRATEGY_MAP_FRONTIER = computeEfficientFrontier(STRATEGY_MAP_FRONTIER_CANDIDATES);
+
+const STRATEGY_MAP_VIEW = { width: 860, height: 420, margin: { top: 24, right: 28, bottom: 48, left: 78 } };
+
+/**
+ * The Strategy Map / "You Are Here" chart. Presentation only: every (wins,
+ * operatingResult) pair it draws — presets, FY2026 baseline, the feasible
+ * cloud, the frontier, and the current plan — comes from
+ * runFrontOfficeSimulation, called either here at module load (the fixed
+ * reference layers above) or once per assumptions change by the parent
+ * (the `result` prop). Nothing below re-derives either number.
+ */
+function StrategyMapChart({ result }: { result: FrontOfficeResult }) {
+  const currentPoint: StrategyMapPoint = { wins: result.wins, operatingResult: result.operatingResult };
+  const baselinePoint: StrategyMapPoint = {
+    wins: FY2026_BASELINE_RESULT.wins,
+    operatingResult: FY2026_BASELINE_RESULT.operatingResult,
+  };
+
+  const domain = useMemo(() => {
+    const allWins = [
+      ...STRATEGY_MAP_FEASIBLE_SAMPLE.map((p) => p.wins),
+      ...STRATEGY_MAP_EXTRA_ANCHOR_POINTS.map((p) => p.wins),
+      ...FRONT_OFFICE_PRESETS.map((p) => p.result.wins),
+      baselinePoint.wins,
+      currentPoint.wins,
+    ];
+    const allOperatingResults = [
+      ...STRATEGY_MAP_FEASIBLE_SAMPLE.map((p) => p.operatingResult),
+      ...STRATEGY_MAP_EXTRA_ANCHOR_POINTS.map((p) => p.operatingResult),
+      ...FRONT_OFFICE_PRESETS.map((p) => p.result.operatingResult),
+      baselinePoint.operatingResult,
+      currentPoint.operatingResult,
+    ];
+    const winsMin = Math.min(...allWins);
+    const winsMax = Math.max(...allWins);
+    const opMin = Math.min(...allOperatingResults);
+    const opMax = Math.max(...allOperatingResults);
+    const winsPad = (winsMax - winsMin) * 0.08 || 1;
+    const opPad = (opMax - opMin) * 0.08 || 1_000_000;
+    return { winsMin: winsMin - winsPad, winsMax: winsMax + winsPad, opMin: opMin - opPad, opMax: opMax + opPad };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPoint.wins, currentPoint.operatingResult]);
+
+  const { width, height, margin } = STRATEGY_MAP_VIEW;
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  // Rounded to 2dp: SVG coordinates only, no effect on any plotted value —
+  // avoids a server/client hydration mismatch from floating-point noise in
+  // the last few digits of an unrounded pixel position.
+  const xScale = (wins: number) =>
+    Math.round((margin.left + ((wins - domain.winsMin) / (domain.winsMax - domain.winsMin)) * plotWidth) * 100) / 100;
+  const yScale = (op: number) =>
+    Math.round((margin.top + (1 - (op - domain.opMin) / (domain.opMax - domain.opMin)) * plotHeight) * 100) / 100;
+
+  const winsTicks = Array.from({ length: 5 }, (_, i) => domain.winsMin + (i / 4) * (domain.winsMax - domain.winsMin));
+  const opTicks = Array.from({ length: 5 }, (_, i) => domain.opMin + (i / 4) * (domain.opMax - domain.opMin));
+
+  const regionX = xScale(ACTUAL_2025_WIN_TOTAL);
+  const regionY = yScale(OPERATING_RESULT);
+  const frontierPath = STRATEGY_MAP_FRONTIER.map(
+    (p, i) => `${i === 0 ? "M" : "L"} ${xScale(p.wins).toFixed(1)} ${yScale(p.operatingResult).toFixed(1)}`
+  ).join(" ");
+
+  const meetsCompetitive = result.wins >= ACTUAL_2025_WIN_TOTAL;
+  const meetsFinancial = result.operatingResult > OPERATING_RESULT;
+  const tone: BadgeTone =
+    meetsCompetitive && meetsFinancial ? "good" : !meetsCompetitive && !meetsFinancial ? "bad" : "neutral";
+  const badge =
+    tone === "good" ? "Above Both References" : tone === "bad" ? "Below Both References" : "Splits the References";
+
+  // "Computed insight": how many of the evaluated feasible plans — the 500
+  // Halton samples plus the ten injected boundary/reference plans, the same
+  // pool the frontier itself is computed from — strictly beat this exact
+  // plan on both axes. A direct count against real engine output, not an
+  // estimate of frontier distance.
+  const dominatingCount = STRATEGY_MAP_FRONTIER_CANDIDATES.filter(
+    (p) =>
+      p.wins >= currentPoint.wins &&
+      p.operatingResult >= currentPoint.operatingResult &&
+      (p.wins > currentPoint.wins || p.operatingResult > currentPoint.operatingResult)
+  ).length;
+  const onFrontier = dominatingCount === 0;
+
+  return (
+    <div>
+      <div className="overflow-x-auto rounded-2xl border border-forest/15 bg-white p-4">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full"
+          style={{ minWidth: 620 }}
+          role="img"
+          aria-label={`Strategy map plotting projected wins against operating result. Current plan sits at ${result.wins.toFixed(
+            2
+          )} wins and ${formatCurrencyCompact(result.operatingResult)}.`}
+        >
+          {/* Subtle "clears both references" tint — restrained, not a labeled quadrant infographic */}
+          <rect
+            x={regionX}
+            y={margin.top}
+            width={Math.max(0, margin.left + plotWidth - regionX)}
+            height={Math.max(0, regionY - margin.top)}
+            fill="#1e3a2b"
+            fillOpacity={0.045}
+          />
+
+          {winsTicks.map((t, i) => (
+            <line
+              key={`vg-${i}`}
+              x1={xScale(t)}
+              x2={xScale(t)}
+              y1={margin.top}
+              y2={margin.top + plotHeight}
+              stroke="#2a2820"
+              strokeOpacity={0.06}
+            />
+          ))}
+          {opTicks.map((t, i) => (
+            <line
+              key={`hg-${i}`}
+              x1={margin.left}
+              x2={margin.left + plotWidth}
+              y1={yScale(t)}
+              y2={yScale(t)}
+              stroke="#2a2820"
+              strokeOpacity={0.06}
+            />
+          ))}
+
+          <line
+            x1={margin.left}
+            x2={margin.left + plotWidth}
+            y1={margin.top + plotHeight}
+            y2={margin.top + plotHeight}
+            stroke="#2a2820"
+            strokeOpacity={0.25}
+          />
+          <line x1={margin.left} x2={margin.left} y1={margin.top} y2={margin.top + plotHeight} stroke="#2a2820" strokeOpacity={0.25} />
+
+          {winsTicks.map((t, i) => (
+            <text key={`vt-${i}`} x={xScale(t)} y={margin.top + plotHeight + 16} textAnchor="middle" fontSize={9} fill="#5b5847">
+              {t.toFixed(1)}
+            </text>
+          ))}
+          {opTicks.map((t, i) => (
+            <text key={`ht-${i}`} x={margin.left - 8} y={yScale(t) + 3} textAnchor="end" fontSize={9} fill="#5b5847">
+              {formatCurrencyCompact(t)}
+            </text>
+          ))}
+
+          <text
+            x={margin.left + plotWidth / 2}
+            y={height - 6}
+            textAnchor="middle"
+            fontSize={10}
+            fontWeight={600}
+            fill="#5b5847"
+            letterSpacing="0.04em"
+          >
+            PROJECTED WINS
+          </text>
+          <text
+            x={14}
+            y={margin.top + plotHeight / 2}
+            textAnchor="middle"
+            fontSize={10}
+            fontWeight={600}
+            fill="#5b5847"
+            letterSpacing="0.04em"
+            transform={`rotate(-90 14 ${margin.top + plotHeight / 2})`}
+          >
+            OPERATING RESULT
+          </text>
+
+          {/* Board reference lines — read from the same engine constants the rest of the page uses */}
+          <line x1={regionX} x2={regionX} y1={margin.top} y2={margin.top + plotHeight} stroke="#2a2820" strokeOpacity={0.35} strokeDasharray="4 3" />
+          <line x1={margin.left} x2={margin.left + plotWidth} y1={regionY} y2={regionY} stroke="#2a2820" strokeOpacity={0.35} strokeDasharray="4 3" />
+          <text x={regionX + 5} y={margin.top + 11} fontSize={9} fill="#5b5847">
+            {ACTUAL_2025_WIN_TOTAL} wins (FY2026 cutline)
+          </text>
+          <text x={margin.left + 5} y={regionY + 13} fontSize={9} fill="#5b5847">
+            FY2026 operating result
+          </text>
+
+          {/* Feasible-region cloud — faint, background. The 500 Halton-sampled
+              plans (small, very faint) and the explicitly injected boundary
+              cases (slightly larger and more solid) are visually distinct
+              layers, not because every injected point needs its own label,
+              but because a visitor should be able to tell "randomly sampled"
+              from "deliberately evaluated at a known extreme" at a glance. */}
+          {STRATEGY_MAP_FEASIBLE_SAMPLE.map((p, i) => (
+            <circle key={`cloud-${i}`} cx={xScale(p.wins)} cy={yScale(p.operatingResult)} r={2} fill="#1e3a2b" fillOpacity={0.09} />
+          ))}
+          {STRATEGY_MAP_EXTRA_ANCHOR_POINTS.map((p, i) => (
+            <circle key={`anchor-${i}`} cx={xScale(p.wins)} cy={yScale(p.operatingResult)} r={3.5} fill="#1e3a2b" fillOpacity={0.4} />
+          ))}
+
+          {/* Efficient frontier — emphasized over the cloud */}
+          <path d={frontierPath} fill="none" stroke="#1e3a2b" strokeWidth={1.75} strokeOpacity={0.55} />
+
+          {/* FY2026 Baseline — a diamond with a dashed ring, deliberately unlike the solid preset circles: a historical reference, not a selectable strategy */}
+          <g transform={`translate(${xScale(baselinePoint.wins)}, ${yScale(baselinePoint.operatingResult)})`}>
+            <rect x={-8} y={-8} width={16} height={16} fill="none" stroke="#2a2820" strokeOpacity={0.4} strokeDasharray="2 2" transform="rotate(45)" />
+            <rect x={-5} y={-5} width={10} height={10} fill="#2a2820" fillOpacity={0.85} transform="rotate(45)" />
+            <text y={22} textAnchor="middle" fontSize={9.5} fontWeight={600} fill="#2a2820">
+              FY2026 Baseline
+            </text>
+          </g>
+
+          {/* The three presets — reference points, not selectable from this chart.
+              All three label above their own dot: the middle preset previously
+              labeled below (to stay clear of its own dot when it was assumed
+              isolated), but its dot — when that preset was still "Develop and
+              Promote" — sat close enough to the FY2026 Baseline diamond that a
+              below-placed label overlapped the diamond shape itself — moving it
+              above keeps every preset label on the same, predictable side and
+              pulls it away from the baseline marker instead of toward it. Build
+              Through Development now sits well clear of the baseline, but the
+              shared above-placement convention is kept for all three rather
+              than special-cased per preset. */}
+          {FRONT_OFFICE_PRESETS.map((preset) => {
+            const x = xScale(preset.result.wins);
+            const y = yScale(preset.result.operatingResult);
+            return (
+              <g key={preset.key}>
+                <circle cx={x} cy={y} r={6} fill="#96703e" stroke="#f5f1e6" strokeWidth={1.5} />
+                <text x={x} y={y - 11} textAnchor="middle" fontSize={9.5} fontWeight={600} fill="#96703e">
+                  {preset.label}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Current Plan — the one point that moves, smoothly, on every lever
+              change. Its label tries a fixed sequence of candidate positions
+              (right, left, above, below, then the four diagonals) and uses
+              the first one that doesn't overlap any other label's own
+              (estimated) bounding box — because the current plan routinely
+              lands exactly on a preset, or (with the old, since-replaced
+              "Develop and Promote" allocation) close to a tightly-clustered
+              baseline/preset pair, and no single fixed offset avoids every
+              other label in every one of those cases. */}
+          {(() => {
+            const cx = xScale(currentPoint.wins);
+            const cy = yScale(currentPoint.operatingResult);
+
+            // Rough estimated label footprint, calibrated against this
+            // chart's own rendered text (9.5-10px bold, this font stack):
+            // ~5.4 SVG units per character, ~12 units tall. Only used to
+            // pick a non-colliding position for the one label that moves —
+            // never plotted or shown, so an estimate is fine here.
+            const CHAR_WIDTH = 5.4;
+            // "YOU ARE HERE" is bold, all-caps, and letter-spaced — measurably
+            // wider per character than this chart's other (title-case,
+            // normal-spacing) labels, so it gets its own, larger estimate
+            // rather than sharing CHAR_WIDTH and under-counting its own footprint.
+            const YOU_ARE_HERE_CHAR_WIDTH = 6.8;
+            const LABEL_HEIGHT = 12;
+            type LabelRect = { x1: number; x2: number; y1: number; y2: number };
+            const textRect = (
+              anchorX: number,
+              anchorY: number,
+              text: string,
+              anchor: "start" | "middle" | "end",
+              charWidth: number = CHAR_WIDTH
+            ): LabelRect => {
+              const w = text.length * charWidth;
+              const x1 = anchor === "start" ? anchorX : anchor === "end" ? anchorX - w : anchorX - w / 2;
+              return { x1, x2: x1 + w, y1: anchorY - LABEL_HEIGHT * 0.8, y2: anchorY + LABEL_HEIGHT * 0.3 };
+            };
+            const overlaps = (a: LabelRect, b: LabelRect) =>
+              a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+
+            const baselineX = xScale(baselinePoint.wins);
+            const baselineY = yScale(baselinePoint.operatingResult);
+            // Includes the marker SHAPES too (the baseline diamond, the preset
+            // dots), not just their text — a prior version of this list only
+            // checked label-vs-label and missed that a preset's own label
+            // could overlap a nearby marker's graphic instead of its text.
+            const referenceRects: LabelRect[] = [
+              textRect(baselineX, baselineY + 22, "FY2026 Baseline", "middle"),
+              { x1: baselineX - 12, x2: baselineX + 12, y1: baselineY - 12, y2: baselineY + 12 },
+              ...FRONT_OFFICE_PRESETS.flatMap((preset) => {
+                const px = xScale(preset.result.wins);
+                const py = yScale(preset.result.operatingResult);
+                return [
+                  textRect(px, py - 11, preset.label, "middle"),
+                  { x1: px - 7, x2: px + 7, y1: py - 7, y2: py + 7 },
+                ];
+              }),
+              textRect(margin.left + 5, regionY + 13, "FY2026 operating result", "start"),
+              textRect(regionX + 5, margin.top + 11, `${ACTUAL_2025_WIN_TOTAL} wins (FY2026 cutline)`, "start"),
+            ];
+
+            const YOU_ARE_HERE = "YOU ARE HERE";
+            // Graduated escalation: try the tight, close-to-the-marker
+            // offsets first (best-looking for an isolated point), then
+            // widen. The preset/baseline labels are wide (up to ~100 SVG
+            // units) relative to how close the current plan often sits to
+            // them — e.g. loading a preset puts it exactly on that preset's
+            // label, and the old "Develop and Promote" allocation sat close
+            // enough to the baseline that a +-15 nudge never cleared either
+            // one's full width — so the wide candidates exist specifically
+            // for that clustered case (kept even though Build Through
+            // Development itself no longer sits that close to baseline).
+            const candidates: { dx: number; dy: number; anchor: "start" | "middle" | "end" }[] = [
+              { dx: 15, dy: 4, anchor: "start" },
+              { dx: -15, dy: 4, anchor: "end" },
+              { dx: 0, dy: -24, anchor: "middle" },
+              { dx: 0, dy: 30, anchor: "middle" },
+              { dx: 70, dy: 4, anchor: "start" },
+              { dx: -70, dy: 4, anchor: "end" },
+              { dx: 40, dy: -24, anchor: "start" },
+              { dx: -40, dy: -24, anchor: "end" },
+              { dx: 40, dy: 30, anchor: "start" },
+              { dx: -40, dy: 30, anchor: "end" },
+              { dx: 90, dy: -24, anchor: "start" },
+              { dx: -90, dy: -24, anchor: "end" },
+            ];
+            // Pick the first candidate with zero collisions; if every one
+            // collides with something (only possible in extreme clustering),
+            // fall back to whichever collides with the fewest reference labels.
+            let chosen = candidates[0];
+            let bestCollisions = Infinity;
+            for (const c of candidates) {
+              const rect = textRect(cx + c.dx, cy + c.dy, YOU_ARE_HERE, c.anchor, YOU_ARE_HERE_CHAR_WIDTH);
+              const withinBounds = rect.x1 >= margin.left - 4 && rect.x2 <= margin.left + plotWidth + 4;
+              if (!withinBounds) continue;
+              const collisions = referenceRects.filter((r) => overlaps(rect, r)).length;
+              if (collisions === 0) {
+                chosen = c;
+                bestCollisions = 0;
+                break;
+              }
+              if (collisions < bestCollisions) {
+                chosen = c;
+                bestCollisions = collisions;
+              }
+            }
+
+            return (
+              <g style={{ transition: "transform 300ms ease-out" }} transform={`translate(${cx}, ${cy})`}>
+                <circle r={12} fill="none" stroke="#1e3a2b" strokeOpacity={0.3} strokeWidth={2} />
+                <circle r={7} fill="#1e3a2b" stroke="#f5f1e6" strokeWidth={2} />
+                <text
+                  x={chosen.dx}
+                  y={chosen.dy}
+                  textAnchor={chosen.anchor}
+                  fontSize={10}
+                  fontWeight={700}
+                  fill="#1e3a2b"
+                  letterSpacing="0.04em"
+                >
+                  {YOU_ARE_HERE}
+                </text>
+              </g>
+            );
+          })()}
+        </svg>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-charcoal-soft">
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="10" height="10" aria-hidden>
+            <circle cx="5" cy="5" r="4.5" fill="#1e3a2b" />
+          </svg>
+          Current Plan
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="10" height="10" aria-hidden>
+            <circle cx="5" cy="5" r="4.5" fill="#96703e" />
+          </svg>
+          Presets
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="10" height="10" aria-hidden>
+            <rect x="1" y="1" width="8" height="8" fill="#2a2820" transform="rotate(45 5 5)" />
+          </svg>
+          FY2026 Baseline
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="16" height="10" aria-hidden>
+            <line x1="1" y1="5" x2="15" y2="5" stroke="#1e3a2b" strokeWidth="2" />
+          </svg>
+          Efficient Frontier
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="16" height="10" aria-hidden>
+            <circle cx="2" cy="6" r="1.5" fill="#1e3a2b" fillOpacity="0.35" />
+            <circle cx="8" cy="3" r="1.5" fill="#1e3a2b" fillOpacity="0.35" />
+            <circle cx="13" cy="7" r="1.5" fill="#1e3a2b" fillOpacity="0.35" />
+          </svg>
+          Feasible Plans (sampled)
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="10" height="10" aria-hidden>
+            <circle cx="5" cy="5" r="3.5" fill="#1e3a2b" fillOpacity="0.4" />
+          </svg>
+          Boundary Cases
+        </span>
+      </div>
+
+      <MonteCarloChartCaption
+        statLabel="Current Plan"
+        statValue={`${result.wins.toFixed(2)} Wins · ${formatSignedCompact(result.operatingResult)}`}
+        badge={badge}
+        tone={tone}
+        alertLead={
+          onFrontier
+            ? "This plan sits on the sampled efficient frontier."
+            : `${dominatingCount} of ${STRATEGY_MAP_FRONTIER_CANDIDATES.length} evaluated plans dominate this one.`
+        }
+        alertExplanation={
+          onFrontier
+            ? `No plan among the ${STRATEGY_MAP_FRONTIER_CANDIDATES.length} evaluated feasible plans below is equal-or-better on both projected wins and operating result — within this set, everything that does better on one axis does worse on the other.`
+            : `Those plans are equal-or-better on both projected wins and operating result, with at least one strictly better — a real, feasible reallocation of the same eight levers does strictly better without giving up ground elsewhere.`
+        }
+        explainer={`A plan is "dominated" when another feasible plan is equal-or-better on both projected wins and operating result, with at least one strictly better. The "efficient frontier" is the sequence of actually-evaluated plans that no other evaluated plan dominates — that exact rule, run against real engine output, across ${STRATEGY_MAP_FRONTIER_CANDIDATES.length} evaluated plans (${STRATEGY_MAP_SAMPLE_SIZE} Halton-sampled, plus ten explicitly injected boundary cases: both true extremes, the FY2026 baseline, all three presets, and every payroll-floor/cap x football-lever corner). The line drawn between frontier points is a visual connector, not a claim that the plans in between were tested: some stretches of it — especially toward the wins floor and ceiling — span real gaps where nothing was evaluated. The faint cloud is the ${STRATEGY_MAP_SAMPLE_SIZE} Halton-sampled plans (generated by a deterministic sequence across every lever's real range — not a full grid, infeasible at this density across eight levers, and not random search, which would draw a different sample on every reload); the slightly larger, more solid dots are the ten injected boundary cases.`}
+      />
+    </div>
+  );
 }
 
 export default function FrontOfficeSimulator() {
@@ -1173,13 +1842,19 @@ export default function FrontOfficeSimulator() {
                   onClick={() => loadPreset(preset)}
                   title={preset.description}
                   aria-pressed={active}
-                  className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                  className={`flex flex-col items-start gap-0.5 rounded-lg border px-4 py-2 text-left transition-colors ${
                     active
                       ? "border-forest bg-forest text-cream"
                       : "border-forest/20 bg-white text-forest hover:bg-forest/5"
                   }`}
                 >
-                  {preset.label}
+                  <span className="text-sm font-semibold">{preset.label}</span>
+                  {/* Engine-derived, not a second estimate — read straight off
+                      preset.result, computed once at module load by calling
+                      runFrontOfficeSimulation on this preset's own assumptions. */}
+                  <span className={`text-[11px] font-medium ${active ? "text-cream/80" : "text-charcoal-soft"}`}>
+                    {preset.result.wins.toFixed(2)} Wins · {formatSignedCompact(preset.result.operatingResult)}
+                  </span>
                 </button>
               );
             })}
@@ -1309,33 +1984,37 @@ export default function FrontOfficeSimulator() {
                 </dl>
               </div>
 
+              {/* Player Payroll sits immediately below the Cap Readout, not
+                  buried as just the first item in the lever list — it's the
+                  single largest lever and the one most visitors expect to
+                  find right next to the cap numbers it's bound by. Still the
+                  same PayrollAxis component and the same live assumptions.payroll
+                  state; only its position moved, so it's filtered out of the
+                  lever-list map below rather than duplicated. */}
+              <PayrollAxis
+                value={assumptions.payroll}
+                baseline={FRONT_OFFICE_BASE_DEFAULTS.payroll}
+                onChange={set("payroll")}
+              />
+
               <button
                 type="button"
                 onClick={resetToBaseline}
-                className="mb-3 w-full shrink-0 rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
+                className="mb-3 mt-3 w-full shrink-0 rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
               >
                 Reset to FY2026 Baseline
               </button>
 
               <div className="flex flex-col gap-4 overflow-y-auto pr-1">
-                {FRONT_OFFICE_DRIVERS.map((driver) =>
-                  driver.key === "payroll" ? (
-                    <PayrollAxis
-                      key={driver.key}
-                      value={assumptions.payroll}
-                      baseline={FRONT_OFFICE_BASE_DEFAULTS.payroll}
-                      onChange={set("payroll")}
-                    />
-                  ) : (
-                    <SliderField
-                      key={driver.key}
-                      driver={driver}
-                      value={assumptions[driver.key]}
-                      baseline={FRONT_OFFICE_BASE_DEFAULTS[driver.key]}
-                      onChange={set(driver.key)}
-                    />
-                  )
-                )}
+                {FRONT_OFFICE_DRIVERS.filter((driver) => driver.key !== "payroll").map((driver) => (
+                  <SliderField
+                    key={driver.key}
+                    driver={driver}
+                    value={assumptions[driver.key]}
+                    baseline={FRONT_OFFICE_BASE_DEFAULTS[driver.key]}
+                    onChange={set(driver.key)}
+                  />
+                ))}
               </div>
             </aside>
 
@@ -1598,6 +2277,25 @@ export default function FrontOfficeSimulator() {
               });
             })()}
           </ul>
+        </section>
+
+        {/* Strategy Map / "You Are Here" — sits between the deterministic
+            decision layers above (levers, marginal impact) and the
+            uncertainty layer below (Monte Carlo): decisions → marginal
+            effects → strategic position → uncertainty. */}
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+            Strategy Map
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
+            The whole front-office trade-off in one picture: how much competitive performance a
+            plan buys against how much it costs the operating result. The three presets and the
+            FY2026 baseline are fixed reference points — the current plan is the one marker that
+            moves.
+          </p>
+          <div className="mt-4">
+            <StrategyMapChart result={result} />
+          </div>
         </section>
 
         {/* Monte Carlo — "now stress your plan," after everything deterministic */}
