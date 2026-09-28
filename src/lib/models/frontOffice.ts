@@ -466,13 +466,20 @@ export function teamStrength(a: FrontOfficeAssumptions): number {
 }
 
 /**
- * [ASSUMPTION] Documented "league-average" spend levels, used only to
- * compute LEAGUE_AVERAGE_STRENGTH — the denominator every team-strength
- * ratio in the engine is measured against. Set below the Packers' own
- * sourced baseline on every line (most clubs spend close to, but not at,
- * the cap; Green Bay's disclosed baseline payroll IS the cap), so a team
- * spending at the Packers' baseline comes out stronger than a league-average
- * team — consistent with a playoff-caliber season.
+ * [ASSUMPTION] — not documented, and not fitted to any target either. These
+ * four "league-average" spend levels are the author's own estimate of a
+ * typical NFL club's spend on each line, used only to compute
+ * LEAGUE_AVERAGE_STRENGTH — the denominator every team-strength ratio in the
+ * engine is measured against. No league-wide payroll/coaching/facilities/
+ * development disclosure exists to cite the way SALARY_CAP or
+ * DEVELOPMENT_BOOST_MAX's PFF research can be cited; a prior version of this
+ * comment called them "documented," which overstated what's actually here —
+ * corrected to a plain [ASSUMPTION] tag rather than an unsupported claim of
+ * evidence. Set below the Packers' own sourced baseline on every line (most
+ * clubs spend close to, but not at, the cap; Green Bay's disclosed baseline
+ * payroll IS the cap), so a team spending at the Packers' baseline comes out
+ * stronger than a league-average team — consistent with a playoff-caliber
+ * season, but a judgment call, not a sourced fact.
  */
 export const LEAGUE_AVERAGE_PAYROLL = 270_000_000;
 export const LEAGUE_AVERAGE_COACHING_SPEND = 35_000_000;
@@ -480,9 +487,9 @@ export const LEAGUE_AVERAGE_FACILITIES_SPEND = 22_000_000;
 export const LEAGUE_AVERAGE_DEVELOPMENT_SPEND = 14_000_000;
 
 /** [DERIVED] Computed via the same teamStrength() formula as every other
- * team-strength figure, at the documented league-average spend levels
- * above. Marketing/gameday/ticket price/strategy weighting don't affect
- * strength, so they're passed as 0. */
+ * team-strength figure, at the assumed (not documented — see above)
+ * league-average spend levels above. Marketing/gameday/ticket price/strategy
+ * weighting don't affect strength, so they're passed as 0. */
 export const LEAGUE_AVERAGE_STRENGTH = teamStrength({
   payroll: LEAGUE_AVERAGE_PAYROLL,
   coachingSpend: LEAGUE_AVERAGE_COACHING_SPEND,
@@ -511,8 +518,29 @@ export const LEAGUE_AVERAGE_WINS = 8.5;
  *
  * Rather than hand-picking a win-sensitivity constant, it's solved
  * algebraically from two team-strength values the engine itself computes
- * (baseline vs. documented league-average spend) — forcing the baseline
- * case to reproduce the real 2025 record by construction, not by tuning.
+ * (baseline vs. assumed league-average spend, see LEAGUE_AVERAGE_PAYROLL
+ * above) — forcing the baseline case to reproduce the real 2025 record by
+ * construction, not by tuning.
+ *
+ * What this calibration step does NOT do: because WINS_ELASTICITY is solved
+ * AFTER team strength is computed, it silently absorbs whatever
+ * BASELINE_TEAM_STRENGTH value the upstream saturation constants
+ * (ROSTER_QUALITY_K, COACHING_QUALITY_K, AVAILABILITY_K, DEVELOPMENT_K, and
+ * ROSTER_WEIGHT/COACHING_WEIGHT) happen to produce. Verified directly: at
+ * five tested values of ROSTER_QUALITY_K spanning $50M-$880M, baseline wins
+ * come back exactly 9.5000 every time — WINS_ELASTICITY simply re-solves
+ * itself around whatever team strength results. This is a real strength of
+ * the calibration (it guarantees the one sourced data point, FY2026, is hit
+ * exactly, regardless of the saturation curves' shape), but it also means
+ * baseline reproduction is not evidence that those saturation constants are
+ * correct — it validates one point on the curve, not its slope elsewhere.
+ * The curve's shape away from baseline (i.e. how much wins move when a
+ * lever moves) is controlled entirely by ROSTER_QUALITY_K /
+ * COACHING_QUALITY_K / AVAILABILITY_K / DEVELOPMENT_K / ROSTER_WEIGHT /
+ * COACHING_WEIGHT, and none of those five is fitted or sourced — they are
+ * disclosed [ASSUMPTION]s, chosen for a defensible economic interpretation
+ * (each K reads as "the spend level at half-max quality"), not derived from
+ * external data or validated against a second real season.
  */
 export const WINS_ELASTICITY =
   (ACTUAL_2025_WIN_TOTAL - LEAGUE_AVERAGE_WINS) /
@@ -940,6 +968,9 @@ export type FrontOfficeCost = {
 };
 
 export type FrontOfficeResult = {
+  rosterQuality: number;
+  coachingQuality: number;
+  availability: number;
   teamStrength: number;
   strengthRatio: number;
   wins: number;
@@ -964,6 +995,15 @@ export function runFrontOfficeSimulation(rawAssumptions: FrontOfficeAssumptions)
     ...rawAssumptions,
     payroll: Math.min(rawAssumptions.payroll, SALARY_CAP), // the cap genuinely binds
   };
+
+  // Surfaced for display (e.g. the causal-chain diagram) by calling the
+  // exact same exported pure functions teamStrength() itself calls
+  // internally — not a second computation of team strength, just the
+  // three intermediate values it already produces along the way, exposed
+  // instead of discarded.
+  const roster = rosterQuality(a.payroll, a.developmentSpend);
+  const coaching = coachingQuality(a.coachingSpend);
+  const avail = availability(a.facilitiesSpend);
 
   const strength = teamStrength(a);
   const strengthRatio = strength / LEAGUE_AVERAGE_STRENGTH;
@@ -1010,6 +1050,9 @@ export function runFrontOfficeSimulation(rawAssumptions: FrontOfficeAssumptions)
   const operatingResult = revenue.total - cost.total;
 
   return {
+    rosterQuality: roster,
+    coachingQuality: coaching,
+    availability: avail,
     teamStrength: strength,
     strengthRatio,
     wins,

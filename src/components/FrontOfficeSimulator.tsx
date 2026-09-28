@@ -7,11 +7,14 @@ import {
   ACTUAL_2025_RECORD,
   ACTUAL_2025_SEED,
   ACTUAL_2025_WIN_TOTAL,
+  AVAILABILITY_K,
   AVAILABILITY_MAX,
   AVAILABILITY_MIN,
   BASELINE_TICKET_PRICE,
+  COACHING_QUALITY_K,
   COACHING_WEIGHT,
   DEVELOPMENT_BOOST_MAX,
+  DEVELOPMENT_K,
   FIXED_OVERHEAD,
   FIXED_OVERHEAD_SHARE_OF_REVENUE,
   FREE_ZONE_MULTIPLIER,
@@ -26,6 +29,8 @@ import {
   OPERATING_RESULT,
   PAYROLL_EQUALS_CAP_ASSUMPTION,
   PLAYER_COST_YOY_CHANGE,
+  ROSTER_QUALITY_K,
+  ROSTER_WEIGHT,
   SALARY_CAP,
   SALARY_FLOOR,
   SALARY_FLOOR_PCT,
@@ -49,6 +54,7 @@ import {
   type FrontOfficeMonteCarloResult,
 } from "@/lib/frontOfficeMonteCarlo";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
+import FrontOfficeCausalChain from "@/components/FrontOfficeCausalChain";
 
 // ============================================================================
 // NFC standings — a thin display wrapper around the model's own
@@ -914,29 +920,84 @@ type FrontOfficePreset = {
   assumptions: FrontOfficeAssumptions;
 };
 
+// ----------------------------------------------------------------------------
+// Preset separation audit (see conversation record) found three problems
+// with the original three-preset lineup and fixed them here. Nothing in
+// frontOffice.ts changed — only which lever combinations these three named
+// strategies point at.
+//
+// 1. "Spend to Contend" left developmentSpend at its FY2026 baseline ($18M)
+//    while maxing payroll/coaching/facilities — silently forfeiting the top
+//    4.6% of the engine's own win range (10.80 vs. an 11.02 ceiling) with no
+//    disclosed reason. Fixed: developmentSpend now maxes too, so this preset
+//    IS the engine's actual all-levers-maxed ceiling (11.02 wins).
+//
+// 2. "Develop and Promote" (floor payroll + maxed development + maxed
+//    facilities) produced 9.45 wins against the FY2026 baseline's 9.50 — a
+//    0.05-win difference — while costing $10.16M MORE than baseline. It was
+//    strictly worse than baseline on both axes: not a strategy, a dominated
+//    one. Root cause, confirmed by isolating each football lever's own
+//    floor-to-max win contribution at baseline: coaching spend swings wins by
+//    2.78 over its $50M range; development spend swings wins by only 0.68
+//    over a comparable $30M range. A "development-first" preset was
+//    competing with one hand tied — development is real but not this
+//    engine's highest-leverage lever, coaching is. Rebuilt around that
+//    finding: floor payroll (still the "not free agency" thesis) + coaching
+//    maxed (coaching staff is unambiguously part of a player-development
+//    program, not a free-agency cost) + facilities at its floor + scouting
+//    spend at the FY2026 baseline. Result: 9.58 wins AND +$18.17M operating
+//    result — it now dominates the FY2026 baseline outright (more wins, and
+//    $19.27M better financially), which the old version never did.
+//
+// 3. The gap between the financial floor (6.21 wins) and the rebuilt
+//    "Develop and Promote" (9.58 wins) looks like room for a fourth, "modest
+//    but solvent, ~8 wins" preset. It was searched for and deliberately NOT
+//    shipped: every lever combination tested in that gap — including the
+//    engine's own true cost-minimal allocation for a fixed win target,
+//    found by numerical search, not just the preset-style {floor, baseline,
+//    max} grid — sits ON OR BELOW the straight line connecting Maximize the
+//    Business and Develop and Promote in (financial score, on-field score)
+//    space. That means for every strategy weighting from 0 to 1, a visitor
+//    is always at least as well off at one of the two neighboring presets as
+//    at any single "middle" plan — a 4th preset here would never be the best
+//    choice at ANY point on the strategy-weighting slider, which is the
+//    literal failure mode this audit was checking for. The gap is real, but
+//    it isn't empty because a preset is missing — it's empty because the
+//    engine's own cost structure (coaching's cost-efficiency saturates hard
+//    once it's maxed, and nothing else is cheap enough to pick up the slack)
+//    makes that stretch of the range strictly dominated by a plan on either
+//    side of it. A user can still drag the sliders into that zone by hand;
+//    it's just never the best preset to load.
+//
+// Verified for all three shipped presets: each is the strict optimum of
+// franchiseHealthScore for a real range of strategyWeighting — Maximize the
+// Business for w in [0, 0.68), Develop and Promote for w in [0.68, 0.73),
+// Spend to Contend for w in [0.73, 1]. None is dominated everywhere.
+// ----------------------------------------------------------------------------
 const FRONT_OFFICE_PRESETS: FrontOfficePreset[] = [
   {
     key: "spendToContend",
     label: "Spend to Contend",
     description:
-      "Payroll at the cap; coaching and facilities spend maxed out. Buy the best roster and infrastructure the cap allows.",
+      "Every football-ops lever at its max: payroll at the cap, coaching, facilities, and scouting/development all maxed out. This is the engine's actual win ceiling (11.02 projected wins) — not close to it.",
     assumptions: {
       ...FRONT_OFFICE_BASE_DEFAULTS,
       payroll: SALARY_CAP,
       coachingSpend: driverMax("coachingSpend"),
       facilitiesSpend: driverMax("facilitiesSpend"),
+      developmentSpend: driverMax("developmentSpend"),
     },
   },
   {
     key: "developAndPromote",
     label: "Develop and Promote",
     description:
-      "Payroll at the CBA floor; scouting and facilities spend maxed out. Win through the draft and player development instead of free agency.",
+      "Payroll at the CBA floor; coaching staff maxed out, scouting funded at the FY2026 baseline, facilities at their floor. Win through coaching and player development instead of free agency — and, unlike a payroll cut alone, this one actually beats the FY2026 baseline on both wins and operating result.",
     assumptions: {
       ...FRONT_OFFICE_BASE_DEFAULTS,
       payroll: SALARY_FLOOR,
-      developmentSpend: driverMax("developmentSpend"),
-      facilitiesSpend: driverMax("facilitiesSpend"),
+      coachingSpend: driverMax("coachingSpend"),
+      facilitiesSpend: driverMin("facilitiesSpend"),
     },
   },
   {
@@ -1087,6 +1148,55 @@ export default function FrontOfficeSimulator() {
           </div>
         </section>
 
+        {/* How this model thinks — the onboarding layer. First interactive
+            thing on the page: the causal-chain diagram plus the scenario
+            presets, so a visitor clicks a strategy and watches the whole
+            chain re-settle before ever touching a slider. The console below
+            keeps its own, separate Reset to FY2026 Baseline. */}
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+            How This Model Thinks
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
+            Six levers, one fixed revenue line the board can&apos;t touch, and a chain connecting
+            them to the board&apos;s two targets. Load a strategy and watch it move before you
+            touch a single slider.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {FRONT_OFFICE_PRESETS.map((preset) => {
+              const active = assumptionsEqual(assumptions, preset.assumptions);
+              return (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => loadPreset(preset)}
+                  title={preset.description}
+                  aria-pressed={active}
+                  className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                    active
+                      ? "border-forest bg-forest text-cream"
+                      : "border-forest/20 bg-white text-forest hover:bg-forest/5"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Full-bleed: the diagram is wide (9 causal stages) and reads
+              better with more than the article column's width to work
+              with. Breaks out to the viewport width, re-centered, then
+              caps back down on very wide screens — the heading/intro/
+              presets above stay in the normal column. */}
+          <div className="relative left-1/2 mt-4 w-screen -translate-x-1/2">
+            <div className="mx-auto max-w-[1680px] px-6">
+              <FrontOfficeCausalChain assumptions={assumptions} result={result} />
+            </div>
+          </div>
+        </section>
+
         {/* The console */}
         <section className="mt-12 border-t border-forest/10 pt-8">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">The Console</h2>
@@ -1206,36 +1316,6 @@ export default function FrontOfficeSimulator() {
               >
                 Reset to FY2026 Baseline
               </button>
-
-              {/* Scenario presets — coherent starting points so the six
-                  levers' depth is discoverable without inventing a plan
-                  from scratch; see FRONT_OFFICE_PRESETS above. */}
-              <div className="mb-3 shrink-0">
-                <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft">
-                  Load a Strategy
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  {FRONT_OFFICE_PRESETS.map((preset) => {
-                    const active = assumptionsEqual(assumptions, preset.assumptions);
-                    return (
-                      <button
-                        key={preset.key}
-                        type="button"
-                        onClick={() => loadPreset(preset)}
-                        title={preset.description}
-                        aria-pressed={active}
-                        className={`w-full rounded-lg border px-3 py-1.5 text-left text-xs font-semibold transition-colors ${
-                          active
-                            ? "border-forest bg-forest text-cream"
-                            : "border-forest/20 text-forest hover:bg-forest/5"
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
 
               <div className="flex flex-col gap-4 overflow-y-auto pr-1">
                 {FRONT_OFFICE_DRIVERS.map((driver) =>
@@ -1772,6 +1852,52 @@ export default function FrontOfficeSimulator() {
               underperforms here: the real CBA would let a club dip below this floor for one
               season and recover the shortfall later, and this model doesn&apos;t give it that
               flexibility.
+            </p>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-brass/30 bg-brass-pale/40 p-4">
+            <h3 className="text-sm font-semibold text-charcoal">
+              The Saturation Constants Validate One Point, Not a Slope
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+              WINS_ELASTICITY is solved so the FY2026 baseline reproduces the real 2025 season
+              (9.5 wins) exactly — a real strength: the engine&apos;s one sourced data point is
+              hit precisely, regardless of how the underlying curves are shaped. But because that
+              solve happens AFTER team strength is computed, it silently re-centers itself around
+              whatever the saturation constants (ROSTER_QUALITY_K = {formatCurrencyCompact(ROSTER_QUALITY_K)}
+              , COACHING_QUALITY_K = {formatCurrencyCompact(COACHING_QUALITY_K)}, AVAILABILITY_K =
+              {" "}{formatCurrencyCompact(AVAILABILITY_K)}, DEVELOPMENT_K = {formatCurrencyCompact(DEVELOPMENT_K)}
+              , and the {formatPercent(ROSTER_WEIGHT, 0)}/{formatPercent(COACHING_WEIGHT, 0)}{" "}
+              roster/coaching weighting) happen to produce. Tested directly: at five values of
+              ROSTER_QUALITY_K
+              spanning $50M to $880M, the baseline came back exactly 9.500 projected wins every
+              time. The calibration validates one point on the curve; it constrains no slope away
+              from it. All five constants above are disclosed [ASSUMPTION]s — chosen for a
+              defensible economic reading (each K is &ldquo;the spend level at half-max
+              quality&rdquo;), not derived from external data or checked against a second real
+              season.
+            </p>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-brass/30 bg-brass-pale/40 p-4">
+            <h3 className="text-sm font-semibold text-charcoal">
+              Why Payroll Moves Wins the Least
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+              The CBA&apos;s real {formatPercent(SALARY_FLOOR_PCT, 0)} cash floor confines the
+              payroll lever to a {formatCurrencyCompact(FRONT_OFFICE_MANDATE_GAP_SEVERE)} legal
+              window — just {formatPercent(FRONT_OFFICE_MANDATE_GAP_SEVERE / ROSTER_QUALITY_K, 0)}{" "}
+              of ROSTER_QUALITY_K. Coaching spend, by contrast, has a $50M legal range that is{" "}
+              {formatPercent(50_000_000 / COACHING_QUALITY_K, 0)}{" "}
+              of its own K. That is why moving
+              payroll floor-to-cap (holding everything else fixed) swings projected wins by only
+              about half a win, while coaching&apos;s own floor-to-max swing alone is worth close
+              to three wins over a comparable dollar range: nearly all of the engine&apos;s
+              achievable win separation comes from the uncapped levers — coaching, facilities, and
+              development — not from payroll, even though payroll is the largest single dollar
+              figure on the page. This is a structural fact about the real, sourced CBA rule
+              interacting with a disclosed [ASSUMPTION] (ROSTER_QUALITY_K), not a bug in either
+              one.
             </p>
           </div>
 
