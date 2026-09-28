@@ -1103,10 +1103,8 @@ const FY2026_BASELINE_RESULT = runFrontOfficeSimulation(FRONT_OFFICE_BASE_DEFAUL
 
 /**
  * Halton low-discrepancy sequence — deterministic, reproducible, and far
- * better-distributed across 8 dimensions than either a fixed grid (which
- * would need min(8 steps)^8 evaluations to reach this density) or
- * Math.random() (which reruns differently on every load). One prime base
- * per lever, in FRONT_OFFICE_DRIVERS' own order.
+ * better-distributed than either a fixed grid or Math.random() (which
+ * reruns differently on every load). One prime base per sampled dimension.
  */
 function haltonValue(index: number, base: number): number {
   let f = 1;
@@ -1119,26 +1117,65 @@ function haltonValue(index: number, base: number): number {
   }
   return r;
 }
-const STRATEGY_MAP_HALTON_BASES = [2, 3, 5, 7, 11, 13, 17, 19];
+
+// ----------------------------------------------------------------------------
+// Feasible-sample normalization (Strategy Map audit, see conversation
+// record): the Halton sample used to vary all 8 levers, which mixed
+// strategically different football allocations with arbitrary, un-optimized
+// ticket price / gameday / marketing luck — so the frontier partly measured
+// which points happened to also get a lucky draw on levers that don't even
+// affect wins, rather than pure strategic trade-off. Fixed exactly like the
+// three presets now are:
+//   - gamedaySpend fixed at its engine-confirmed floor optimum (driver min)
+//   - ticketPrice fixed at its engine-confirmed optimum (TOP_OF_FREE_ZONE_TICKET_PRICE)
+//   - marketingSpend optimized per sampled plan via the same ternary search
+//     (argmaxMarketingSpend) used to build Maximize the Business — not a
+//     hard-coded constant, since the true optimum shifts slightly (~$21.0M
+//     to ~$21.8M across the presets) depending on the other levers' effect
+//     on team strength and therefore attendance-linked revenue.
+// strategyWeighting is excluded as a sampling dimension: it affects only
+// franchiseHealthScore (confirmed in frontOffice.ts), never wins or
+// operatingResult, so it plays no role in a wins-vs-operating-result
+// frontier and is simply fixed at 0.5 to complete each sampled assumptions
+// object. That leaves exactly four sampled (Halton) dimensions — payroll,
+// coachingSpend, facilitiesSpend, developmentSpend — the only levers that
+// feed teamStrength and therefore change the strategic trade-off itself.
+// ----------------------------------------------------------------------------
+const STRATEGY_MAP_HALTON_DRIVERS: FrontOfficeDriverKey[] = [
+  "payroll",
+  "coachingSpend",
+  "facilitiesSpend",
+  "developmentSpend",
+];
+const STRATEGY_MAP_HALTON_BASES = [2, 3, 5, 7];
 const STRATEGY_MAP_SAMPLE_SIZE = 500;
+const STRATEGY_MAP_FIXED_GAMEDAY_SPEND = driverMin("gamedaySpend");
+const STRATEGY_MAP_FIXED_TICKET_PRICE = TOP_OF_FREE_ZONE_TICKET_PRICE;
 
 type StrategyMapPoint = { wins: number; operatingResult: number };
 
 /**
  * The feasible-region cloud: STRATEGY_MAP_SAMPLE_SIZE plans, each built by
- * mapping one Halton point (one coordinate per lever, index 1..500) linearly
- * onto that lever's own [min, max] from FRONT_OFFICE_DRIVERS, then run
- * through the real engine. Computed once at module load — the sample does
- * not depend on the current plan, so dragging a slider never recomputes it.
+ * mapping one Halton point (one coordinate per strategic lever, index
+ * 1..500) linearly onto that lever's own [min, max] from FRONT_OFFICE_DRIVERS,
+ * fixing gameday/ticket at their own optimum and marketing at its own
+ * per-plan optimum, then run through the real engine. Computed once at
+ * module load — the sample does not depend on the current plan, so
+ * dragging a slider never recomputes it.
  */
 function sampleFeasibleFrontOfficePlans(): StrategyMapPoint[] {
   const points: StrategyMapPoint[] = [];
   for (let i = 1; i <= STRATEGY_MAP_SAMPLE_SIZE; i++) {
-    const sampled = {} as FrontOfficeAssumptions;
-    FRONT_OFFICE_DRIVERS.forEach((driver, dimIndex) => {
+    const sampled = {
+      gamedaySpend: STRATEGY_MAP_FIXED_GAMEDAY_SPEND,
+      ticketPrice: STRATEGY_MAP_FIXED_TICKET_PRICE,
+      strategyWeighting: 0.5,
+    } as FrontOfficeAssumptions;
+    STRATEGY_MAP_HALTON_DRIVERS.forEach((key, dimIndex) => {
       const t = haltonValue(i, STRATEGY_MAP_HALTON_BASES[dimIndex]);
-      sampled[driver.key] = driver.min + t * (driver.max - driver.min);
+      sampled[key] = driverMin(key) + t * (driverMax(key) - driverMin(key));
     });
+    sampled.marketingSpend = argmaxMarketingSpend(sampled);
     const r = runFrontOfficeSimulation(sampled);
     points.push({ wins: r.wins, operatingResult: r.operatingResult });
   }
@@ -1676,7 +1713,7 @@ function StrategyMapChart({ result }: { result: FrontOfficeResult }) {
             ? `No plan among the ${STRATEGY_MAP_FRONTIER_CANDIDATES.length} evaluated feasible plans below is equal-or-better on both projected wins and operating result — within this set, everything that does better on one axis does worse on the other.`
             : `Those plans are equal-or-better on both projected wins and operating result, with at least one strictly better — a real, feasible reallocation of the same eight levers does strictly better without giving up ground elsewhere.`
         }
-        explainer={`A plan is "dominated" when another feasible plan is equal-or-better on both projected wins and operating result, with at least one strictly better. The "efficient frontier" is the sequence of actually-evaluated plans that no other evaluated plan dominates — that exact rule, run against real engine output, across ${STRATEGY_MAP_FRONTIER_CANDIDATES.length} evaluated plans (${STRATEGY_MAP_SAMPLE_SIZE} Halton-sampled, plus ten explicitly injected boundary cases: both true extremes, the FY2026 baseline, all three presets, and every payroll-floor/cap x football-lever corner). The line drawn between frontier points is a visual connector, not a claim that the plans in between were tested: some stretches of it — especially toward the wins floor and ceiling — span real gaps where nothing was evaluated. The faint cloud is the ${STRATEGY_MAP_SAMPLE_SIZE} Halton-sampled plans (generated by a deterministic sequence across every lever's real range — not a full grid, infeasible at this density across eight levers, and not random search, which would draw a different sample on every reload); the slightly larger, more solid dots are the ten injected boundary cases.`}
+        explainer={`A plan is "dominated" when another feasible plan is equal-or-better on both projected wins and operating result, with at least one strictly better. The "sampled efficient frontier" is the sequence of actually-evaluated plans that no other evaluated plan dominates — run against real engine output across ${STRATEGY_MAP_FRONTIER_CANDIDATES.length} evaluated plans (${STRATEGY_MAP_SAMPLE_SIZE} Halton-sampled, plus ten explicitly injected boundary cases: both true extremes, the FY2026 baseline, all three presets, and every payroll-floor/cap x football-lever corner). Each Halton-sampled plan varies only the four levers that actually move projected wins — payroll, coaching, facilities, and scouting/development — while ticket price and gameday spend are fixed at their own engine-confirmed profit-maximizing values (the same ones the three presets use) and marketing is optimized for that specific plan by the same search method used to build Maximize the Business; strategy weighting is left out of the sample since it affects only Franchise Health, never wins or operating result. That puts every sampled point on equal financial-efficiency footing, so the frontier reflects genuine strategic trade-off rather than which points also happened to get a lucky, unoptimized ticket price or marketing budget. The line between frontier points is a visual connector only, not a claim that the plans in between were tested, and this is a sampled frontier over a finite evaluated set, not a proof of global optimality. The faint cloud is the ${STRATEGY_MAP_SAMPLE_SIZE} Halton-sampled plans; the slightly larger, more solid dots are the ten injected boundary cases.`}
       />
     </div>
   );
