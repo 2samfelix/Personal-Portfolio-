@@ -1069,7 +1069,7 @@ const FRONT_OFFICE_PRESETS: FrontOfficePreset[] = [
     key: "buildThroughDevelopment",
     label: "Build Through Development",
     description:
-      "Invest heavily in coaching and player development, keep player payroll below the cap, and preserve strong operating economics while remaining competitive. The competitive edge comes from coaching and scouting/development spend; marketing, gameday operations, and ticket price are each set to their own engine-searched profit-maximizing point rather than a round number, since none of the three affects projected wins.",
+      "Invest heavily in coaching and player development, keep player payroll below the cap, and preserve strong operating economics while remaining competitive. The competitive edge comes from coaching and scouting/development spend; marketing, gameday operations, and ticket price are each set to their own engine-searched profit-maximizing point rather than a round number, since none of the three affects projected wins. It sits near the sampled efficient frontier — one sampled plan edges it out by a fraction of a win and about $1M, well inside this sample's resolution — chosen for what it represents (win through coaching and development, not free agency), not picked to chase that fractional edge.",
     assumptions: BUILD_THROUGH_DEVELOPMENT_ASSUMPTIONS,
     result: runFrontOfficeSimulation(BUILD_THROUGH_DEVELOPMENT_ASSUMPTIONS),
   },
@@ -2080,7 +2080,9 @@ export default function FrontOfficeSimulator() {
                 </span>
                 below) takes seeds 1-4 by record, then the next three best remaining records take
                 5-7 — so a division winner can rank above a wild card with more wins, exactly as it
-                does in the real NFL.
+                does in the real NFL. Ties are simplified: the Packers must strictly beat an
+                incumbent&apos;s win total to take a tie, not the real NFL&apos;s full
+                head-to-head/common-games/strength-of-schedule tiebreaker hierarchy.
               </p>
               <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white">
                 <table className="w-full min-w-[420px] text-left text-sm">
@@ -2651,6 +2653,21 @@ export default function FrontOfficeSimulator() {
               teams and never did, but which rounds are played at home — and therefore which
               rounds earn playoff revenue — now comes entirely from the seed above, so a hosted
               game always traces back to a real top-4 (or #1) seed you can check in the standings.
+            </p>
+            <p className="mt-3 text-sm leading-6 text-charcoal-soft">
+              Two simplifications, stated plainly rather than left implicit. First, ties: a
+              division winner is decided by wins alone, and the Packers must strictly exceed an
+              incumbent&apos;s win total to take a tie — the real NFL&apos;s full tiebreaker
+              hierarchy (head-to-head record, common games, conference record, strength of
+              schedule, and more) isn&apos;t modeled. Second, and more consequential: projected
+              wins is a continuous expectation (e.g. 11.02), while each simulated season in
+              &ldquo;Run 1,000 Seasons&rdquo; below resolves to an actual integer record. A plan
+              whose expected wins sits just above a division or playoff threshold can look
+              decisively better in that single deterministic number than it does across 1,000
+              simulated seasons, where roughly half the integer outcomes land back on the other
+              side of that same threshold, taking the modeled home-playoff revenue with them —
+              a real consequence of running a discrete, threshold-based rule on a random
+              variable, not a bug in the seeding function or the simulation.
             </p>
           </div>
 
