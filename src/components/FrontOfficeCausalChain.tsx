@@ -446,12 +446,99 @@ const RELATION_DASH: Record<EdgeRelation, string | undefined> = {
   threshold: "1.5 3.5",
 };
 
+// ============================================================================
+// Number-tween on preset load — the one motion this diagram earns: when a
+// strategy preset loads, every numeric node value counts from its old
+// reading to its new one instead of snapping, so the chain visibly
+// "re-settles" the way real causality would. Gated on `trigger` (the
+// parent's presetLoadTick, bumped only by loadPreset — never by a slider
+// nudge or reset) so ordinary dragging stays instant, exactly as before.
+//
+// Generic string tweening, not per-node math: every getValue() here already
+// returns a fully formatted string ("$290.10M", "60.6", "95.8%", "1.06x
+// league avg", "70,382", "7", "Missed"). Parsing out the leading sign,
+// symbol prefix, numeric body, and trailing unit/suffix lets one hook
+// animate all of them without touching what each node actually computes —
+// a value with no numeric body (e.g. "Missed") simply fails the parse and
+// falls back to an instant swap, which is the correct behavior for a
+// categorical result.
+// ============================================================================
+
+function parseNumericDisplay(
+  text: string
+): { prefix: string; value: number; decimals: number; suffix: string } | null {
+  const match = text.match(/^(-?)([^0-9]*)([\d,]+(?:\.\d+)?)(.*)$/);
+  if (!match) return null;
+  const [, sign, prefix, numberPart, suffix] = match;
+  const decimalMatch = numberPart.match(/\.(\d+)$/);
+  const decimals = decimalMatch ? decimalMatch[1].length : 0;
+  const magnitude = parseFloat(numberPart.replace(/,/g, ""));
+  if (Number.isNaN(magnitude)) return null;
+  return { prefix, value: sign === "-" ? -magnitude : magnitude, decimals, suffix };
+}
+
+function formatNumericDisplay(value: number, parsed: { prefix: string; decimals: number; suffix: string }): string {
+  const sign = value < 0 ? "-" : "";
+  const fixed = Math.abs(value).toFixed(parsed.decimals);
+  const [intPart, decPart] = fixed.split(".");
+  const withCommas = Number(intPart).toLocaleString("en-US");
+  return `${sign}${parsed.prefix}${decPart ? `${withCommas}.${decPart}` : withCommas}${parsed.suffix}`;
+}
+
+const NUMBER_TWEEN_DURATION_MS = 500;
+
+function useSettlingDisplay(target: string, trigger: number): string {
+  const [display, setDisplay] = useState(target);
+  const prevTargetRef = useRef(target);
+  const prevTriggerRef = useRef(trigger);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const triggerChanged = trigger !== prevTriggerRef.current;
+    const from = prevTargetRef.current;
+    prevTriggerRef.current = trigger;
+    prevTargetRef.current = target;
+
+    if (!triggerChanged || from === target) {
+      setDisplay(target);
+      return;
+    }
+    const parsedFrom = parseNumericDisplay(from);
+    const parsedTo = parseNumericDisplay(target);
+    if (!parsedFrom || !parsedTo) {
+      setDisplay(target);
+      return;
+    }
+
+    const start = performance.now();
+    const animate = (now: number) => {
+      const t = Math.min(1, (now - start) / NUMBER_TWEEN_DURATION_MS);
+      const eased = 1 - (1 - t) ** 3; // ease-out cubic — settles, doesn't bounce
+      setDisplay(formatNumericDisplay(parsedFrom.value + (parsedTo.value - parsedFrom.value) * eased, parsedTo));
+      if (t < 1) rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target, trigger]);
+
+  return display;
+}
+
+function AnimatedValue({ target, trigger }: { target: string; trigger: number }) {
+  return useSettlingDisplay(target, trigger);
+}
+
 export default function FrontOfficeCausalChain({
   assumptions,
   result,
+  presetLoadTick,
 }: {
   assumptions: FrontOfficeAssumptions;
   result: FrontOfficeResult;
+  presetLoadTick: number;
 }) {
   const [highlight, setHighlight] = useState<{ nodes: Set<ChainNodeId>; edgeKeys: Set<string> }>({
     nodes: new Set(),
@@ -573,7 +660,7 @@ export default function FrontOfficeCausalChain({
                     </span>
                   </span>
                   <span className={`font-black leading-none text-charcoal ${node.small ? "text-xs" : "text-sm"}`}>
-                    {value}
+                    <AnimatedValue target={value} trigger={presetLoadTick} />
                   </span>
                   {sub && <span className="text-[8px] leading-tight text-charcoal-soft">{sub}</span>}
                 </div>

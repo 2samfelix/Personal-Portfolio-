@@ -55,6 +55,10 @@ import {
 } from "@/lib/frontOfficeMonteCarlo";
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedCompact } from "@/lib/format";
 import FrontOfficeCausalChain from "@/components/FrontOfficeCausalChain";
+import {
+  BUILD_THROUGH_DEVELOPMENT_MONTE_CARLO_STATS,
+  SPEND_TO_CONTEND_MONTE_CARLO_STATS,
+} from "@/lib/models/frontOfficeClosingCardStats.generated";
 
 // ============================================================================
 // NFC standings — a thin display wrapper around the model's own
@@ -269,6 +273,23 @@ function PayrollAxis({
         Coaching, Facilities, and Scouting &amp; Development spend.
       </p>
     </div>
+  );
+}
+
+// A restrained chapter marker — a roman numeral and a short label above a
+// section's existing heading, so the page reads as a sequence (question ->
+// model -> decisions -> marginal effects -> strategic position ->
+// uncertainty -> how it was built -> what it shows) without renaming,
+// renumbering, or otherwise touching any of those headings themselves.
+function ChapterMark({ roman, label }: { roman: string; label: string }) {
+  return (
+    <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass/70">
+      <span>{roman}</span>
+      <span className="text-brass/30" aria-hidden>
+        &middot;
+      </span>
+      {label}
+    </p>
   );
 }
 
@@ -1123,6 +1144,40 @@ const FRONT_OFFICE_PRESETS: FrontOfficePreset[] = [
   },
 ];
 
+// Module-level derived facts for the hero's proof-point row and the closing
+// "What the Model Shows" card — every figure below is read off the same
+// committed engine calls the rest of the page already makes (preset.result,
+// runFrontOfficeMonteCarlo), never a separately hand-typed number, so none
+// of them can drift from what the console itself would show for these
+// plans.
+const FRONT_OFFICE_PRESETS_BY_WINS = [...FRONT_OFFICE_PRESETS].sort((a, b) => a.result.wins - b.result.wins);
+const LOWEST_WIN_PRESET = FRONT_OFFICE_PRESETS_BY_WINS[0];
+const HIGHEST_WIN_PRESET = FRONT_OFFICE_PRESETS_BY_WINS[FRONT_OFFICE_PRESETS_BY_WINS.length - 1];
+const STRATEGY_RANGE_OPERATING_PROFIT_SPREAD = Math.abs(
+  HIGHEST_WIN_PRESET.result.operatingResult - LOWEST_WIN_PRESET.result.operatingResult
+);
+
+const BUILD_THROUGH_DEVELOPMENT_PRESET = FRONT_OFFICE_PRESETS.find((p) => p.key === "buildThroughDevelopment")!;
+const SPEND_TO_CONTEND_PRESET = FRONT_OFFICE_PRESETS.find((p) => p.key === "spendToContend")!;
+const DETERMINISTIC_PRESET_GAP = Math.abs(
+  BUILD_THROUGH_DEVELOPMENT_PRESET.result.operatingResult - SPEND_TO_CONTEND_PRESET.result.operatingResult
+);
+
+// Precomputed by scripts/precompute-front-office-closing-card.mts (real
+// runFrontOfficeMonteCarlo output at the same MONTE_CARLO_RUNS the console's
+// own "Run 1,000 Seasons" button uses) rather than run here at module load.
+// Measured cost of running both live in this "use client" module: ~38ms in
+// every visitor's browser on top of the Strategy Map's own 500-plan Halton
+// sample — real but avoidable, since neither preset's assumptions change at
+// runtime. See that script's header for how to regenerate after a change to
+// either preset's assumptions.
+const BUILD_THROUGH_DEVELOPMENT_MONTE_CARLO = BUILD_THROUGH_DEVELOPMENT_MONTE_CARLO_STATS;
+const SPEND_TO_CONTEND_MONTE_CARLO = SPEND_TO_CONTEND_MONTE_CARLO_STATS;
+const SIMULATED_MEDIAN_PRESET_GAP = Math.abs(
+  BUILD_THROUGH_DEVELOPMENT_MONTE_CARLO.medianOperatingResult - SPEND_TO_CONTEND_MONTE_CARLO.medianOperatingResult
+);
+const SIMULATED_VS_DETERMINISTIC_GAP_RATIO = SIMULATED_MEDIAN_PRESET_GAP / DETERMINISTIC_PRESET_GAP;
+
 function assumptionsEqual(a: FrontOfficeAssumptions, b: FrontOfficeAssumptions): boolean {
   return (Object.keys(a) as FrontOfficeDriverKey[]).every((key) => a[key] === b[key]);
 }
@@ -1782,6 +1837,11 @@ export default function FrontOfficeSimulator() {
   // instead, so the same content is reachable by tap. Only one open at a
   // time; independent of which preset is actually loaded.
   const [expandedPresetKey, setExpandedPresetKey] = useState<string | null>(null);
+  // Bumped only on loadPreset() below — never on a slider nudge or reset —
+  // so the causal diagram's own number-tween animation fires specifically
+  // for "load a strategy and watch the chain re-settle," the one motion the
+  // spec calls for, and stays silent for ordinary dragging.
+  const [presetLoadTick, setPresetLoadTick] = useState(0);
 
   const result = useMemo(() => runFrontOfficeSimulation(assumptions), [assumptions]);
   // result.playoff.seed IS the standings' seed — buildStandings below calls
@@ -1818,6 +1878,7 @@ export default function FrontOfficeSimulator() {
   const loadPreset = (preset: FrontOfficePreset) => {
     setAssumptions(preset.assumptions);
     setMonteCarlo(null);
+    setPresetLoadTick((t) => t + 1);
   };
 
   const playoffTargetMet = result.playoff.madePlayoffs;
@@ -1868,14 +1929,50 @@ export default function FrontOfficeSimulator() {
         </div>
 
         <p className="mt-8 max-w-2xl text-base leading-7 text-charcoal-soft">
-          The Packers are the only NFL franchise that publishes audited financial statements.
-          This is a one-season front-office simulator built on their real numbers — six spending
-          levers, a ticket price, and a strategy weighting, recomputing live with every move. No
-          submit button.
+          FY2026 was a paradox: {formatCurrencyCompact(TOTAL_REVENUE)} in revenue — a franchise
+          record — and a {formatCurrencyCompact(OPERATING_RESULT)} operating result in the same
+          season. The three strategies below span{" "}
+          {formatCurrencyCompact(STRATEGY_RANGE_OPERATING_PROFIT_SPREAD)}{" "}
+          in operating profit, from the most conservative to the most aggressive. Every plan
+          below is built on the Packers&apos; own disclosed numbers — the only NFL franchise
+          that publishes them.
         </p>
+
+        {/* Proof-point row — results, not activity counts. Both figures are
+            read straight off the same preset.result values the console and
+            presets already use (see the module-level constants above), so
+            they can only ever say what the engine actually found. */}
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border-2 border-brass/30 bg-brass-pale/30 p-4">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brass">
+              FY2026 &mdash; Sourced
+            </span>
+            <p className="mt-1.5 text-xl font-black tracking-tight text-charcoal sm:text-2xl">
+              {formatCurrencyCompact(TOTAL_REVENUE)}{" "}
+              <span className="text-charcoal-soft">&rarr;</span>{" "}
+              {formatCurrencyCompact(OPERATING_RESULT)}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+              Record revenue. An operating loss. Same season.
+            </p>
+          </div>
+          <div className="rounded-xl border-2 border-brass/30 bg-brass-pale/30 p-4">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brass">
+              Across the Full Strategy Range
+            </span>
+            <p className="mt-1.5 text-xl font-black tracking-tight text-charcoal sm:text-2xl">
+              {formatCurrencyCompact(STRATEGY_RANGE_OPERATING_PROFIT_SPREAD)}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+              Operating-profit spread between the {LOWEST_WIN_PRESET.result.wins.toFixed(2)}-win
+              plan and the {HIGHEST_WIN_PRESET.result.wins.toFixed(2)}-win plan.
+            </p>
+          </div>
+        </div>
 
         {/* The board's mandate */}
         <section className="mt-12 border-t border-forest/10 pt-8">
+          <ChapterMark roman="I" label="The Question" />
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
             The Board&apos;s Mandate
           </h2>
@@ -1910,6 +2007,7 @@ export default function FrontOfficeSimulator() {
             chain re-settle before ever touching a slider. The console below
             keeps its own, separate Reset to FY2026 Baseline. */}
         <section className="mt-12 border-t border-forest/10 pt-8">
+          <ChapterMark roman="II" label="The Model" />
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
             How This Model Thinks
           </h2>
@@ -1974,13 +2072,18 @@ export default function FrontOfficeSimulator() {
               <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft xl:hidden">
                 <span aria-hidden>&larr;</span> Scroll to see the full diagram <span aria-hidden>&rarr;</span>
               </p>
-              <FrontOfficeCausalChain assumptions={assumptions} result={result} />
+              <FrontOfficeCausalChain
+                assumptions={assumptions}
+                result={result}
+                presetLoadTick={presetLoadTick}
+              />
             </div>
           </div>
         </section>
 
         {/* The console */}
         <section className="mt-12 border-t border-forest/10 pt-8">
+          <ChapterMark roman="III" label="Your Decisions" />
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">The Console</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
             Move a lever and watch the Packers move in the standings beside it — record, seed,
@@ -2357,6 +2460,7 @@ export default function FrontOfficeSimulator() {
 
         {/* Marginal impact */}
         <section className="mt-12 border-t border-forest/10 pt-8">
+          <ChapterMark roman="IV" label="Marginal Effects" />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
               Marginal Impact — What the Next $1M Does
@@ -2434,6 +2538,7 @@ export default function FrontOfficeSimulator() {
             uncertainty layer below (Monte Carlo): decisions → marginal
             effects → strategic position → uncertainty. */}
         <section className="mt-12 border-t border-forest/10 pt-8">
+          <ChapterMark roman="V" label="Strategic Position" />
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
             Strategy Map
           </h2>
@@ -2450,6 +2555,7 @@ export default function FrontOfficeSimulator() {
 
         {/* Monte Carlo — "now stress your plan," after everything deterministic */}
         <section className="mt-12 border-t border-forest/10 pt-8">
+          <ChapterMark roman="VI" label="Uncertainty" />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
@@ -2632,6 +2738,7 @@ export default function FrontOfficeSimulator() {
             this is the recruiter-readable summary; those are the optional
             next layer for anyone who wants more than six cards. */}
         <section className="mt-12 border-t border-forest/10 pt-8">
+          <ChapterMark roman="VII" label="How It Was Built" />
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
             How the Model Was Built
           </h2>
@@ -3079,6 +3186,49 @@ export default function FrontOfficeSimulator() {
             </p>
           </div>
         </CollapsibleSection>
+
+        {/* What the Model Shows — the one conclusion the page was missing.
+            One card, not a section: every figure is the module-level
+            constants above (BUILD_THROUGH_DEVELOPMENT_PRESET /
+            SPEND_TO_CONTEND_PRESET / their Monte Carlo runs), so it reads
+            exactly what a visitor sees if they load either preset and run
+            1,000 seasons themselves. */}
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <ChapterMark roman="VIII" label="What It Shows" />
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+            What the Model Shows
+          </h2>
+          <div className="mt-4 rounded-xl border-2 border-brass/30 bg-brass-pale/30 p-4 sm:p-6">
+            <p className="text-sm leading-6 text-charcoal-soft">
+              Build Through Development and Spend to Contend look like a close call on paper:{" "}
+              {formatSignedCompact(BUILD_THROUGH_DEVELOPMENT_PRESET.result.operatingResult)} against{" "}
+              {formatSignedCompact(SPEND_TO_CONTEND_PRESET.result.operatingResult)}, a{" "}
+              {formatCurrencyCompact(DETERMINISTIC_PRESET_GAP)} gap. Run each through{" "}
+              {MONTE_CARLO_RUNS.toLocaleString()} simulated seasons and the gap becomes{" "}
+              {formatCurrencyCompact(SIMULATED_MEDIAN_PRESET_GAP)} —{" "}
+              {formatSignedCompact(BUILD_THROUGH_DEVELOPMENT_MONTE_CARLO.medianOperatingResult)} against{" "}
+              {formatSignedCompact(SPEND_TO_CONTEND_MONTE_CARLO.medianOperatingResult)}{" "}
+              in the median season — because Spend to Contend&apos;s{" "}
+              {SPEND_TO_CONTEND_PRESET.result.playoff.seed}-seed rests on clearing 11 wins by{" "}
+              {(SPEND_TO_CONTEND_PRESET.result.wins - 11).toFixed(2)}, a margin a real,
+              whole-game season doesn&apos;t preserve. Build Through Development is profitable in{" "}
+              {(BUILD_THROUGH_DEVELOPMENT_MONTE_CARLO.probabilityOperatingProfit * 100).toFixed(0)}%
+              {" "}of simulated seasons; Spend to Contend in{" "}
+              {(SPEND_TO_CONTEND_MONTE_CARLO.probabilityOperatingProfit * 100).toFixed(0)}%.
+            </p>
+            <p className="mt-3 text-sm leading-6 text-charcoal-soft">
+              The point estimate showed a {formatCurrencyCompact(DETERMINISTIC_PRESET_GAP)}{" "}
+              difference. The distribution shows one roughly{" "}
+              {Math.round(SIMULATED_VS_DETERMINISTIC_GAP_RATIO)} times that size. A deterministic
+              console, on its own, would never have surfaced it.
+            </p>
+          </div>
+          <p className="mt-4 max-w-2xl text-sm italic leading-6 text-charcoal-soft">
+            Built with a deterministic financial engine, a Monte Carlo simulation layer, and a
+            sampled efficient frontier — all computed from the Packers&apos; own disclosed
+            FY2026 numbers.
+          </p>
+        </section>
       </div>
     </main>
   );

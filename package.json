@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "precompute:front-office-closing-card": "node --experimental-strip-types --import ./scripts/register-loader.mjs scripts/precompute-front-office-closing-card.mts"
   },
   "dependencies": {
     "next": "16.2.12",
