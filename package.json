@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run precompute:front-office",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "precompute:front-office-closing-card": "node --experimental-strip-types --import ./scripts/register-loader.mjs scripts/precompute-front-office-closing-card.mts"
+    "precompute:front-office": "npm run precompute:front-office-closing-card && npm run precompute:front-office-strategy-map",
+    "precompute:front-office-closing-card": "node --experimental-strip-types --import ./scripts/register-loader.mjs scripts/precompute-front-office-closing-card.mts",
+    "precompute:front-office-strategy-map": "node --experimental-strip-types --import ./scripts/register-loader.mjs scripts/precompute-front-office-strategy-map.mts"
   },
   "dependencies": {
     "next": "16.2.12",

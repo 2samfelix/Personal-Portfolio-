@@ -59,6 +59,10 @@ import {
   BUILD_THROUGH_DEVELOPMENT_MONTE_CARLO_STATS,
   SPEND_TO_CONTEND_MONTE_CARLO_STATS,
 } from "@/lib/models/frontOfficeClosingCardStats.generated";
+import {
+  STRATEGY_MAP_FEASIBLE_SAMPLE_DATA,
+  STRATEGY_MAP_INJECTED_ANCHORS_DATA,
+} from "@/lib/models/frontOfficeStrategyMapSample.generated";
 
 // ============================================================================
 // NFC standings — a thin display wrapper around the model's own
@@ -1196,87 +1200,19 @@ function assumptionsEqual(a: FrontOfficeAssumptions, b: FrontOfficeAssumptions):
  * plan rather than being a separately-sourced number. */
 const FY2026_BASELINE_RESULT = runFrontOfficeSimulation(FRONT_OFFICE_BASE_DEFAULTS);
 
-/**
- * Halton low-discrepancy sequence — deterministic, reproducible, and far
- * better-distributed than either a fixed grid or Math.random() (which
- * reruns differently on every load). One prime base per sampled dimension.
- */
-function haltonValue(index: number, base: number): number {
-  let f = 1;
-  let r = 0;
-  let i = index;
-  while (i > 0) {
-    f = f / base;
-    r += f * (i % base);
-    i = Math.floor(i / base);
-  }
-  return r;
-}
-
-// ----------------------------------------------------------------------------
-// Feasible-sample normalization (Strategy Map audit, see conversation
-// record): the Halton sample used to vary all 8 levers, which mixed
-// strategically different football allocations with arbitrary, un-optimized
-// ticket price / gameday / marketing luck — so the frontier partly measured
-// which points happened to also get a lucky draw on levers that don't even
-// affect wins, rather than pure strategic trade-off. Fixed exactly like the
-// three presets now are:
-//   - gamedaySpend fixed at its engine-confirmed floor optimum (driver min)
-//   - ticketPrice fixed at its engine-confirmed optimum (TOP_OF_FREE_ZONE_TICKET_PRICE)
-//   - marketingSpend optimized per sampled plan via the same ternary search
-//     (argmaxMarketingSpend) used to build Maximize the Business — not a
-//     hard-coded constant, since the true optimum shifts slightly (~$21.0M
-//     to ~$21.8M across the presets) depending on the other levers' effect
-//     on team strength and therefore attendance-linked revenue.
-// strategyWeighting is excluded as a sampling dimension: it affects only
-// franchiseHealthScore (confirmed in frontOffice.ts), never wins or
-// operatingResult, so it plays no role in a wins-vs-operating-result
-// frontier and is simply fixed at 0.5 to complete each sampled assumptions
-// object. That leaves exactly four sampled (Halton) dimensions — payroll,
-// coachingSpend, facilitiesSpend, developmentSpend — the only levers that
-// feed teamStrength and therefore change the strategic trade-off itself.
-// ----------------------------------------------------------------------------
-const STRATEGY_MAP_HALTON_DRIVERS: FrontOfficeDriverKey[] = [
-  "payroll",
-  "coachingSpend",
-  "facilitiesSpend",
-  "developmentSpend",
-];
-const STRATEGY_MAP_HALTON_BASES = [2, 3, 5, 7];
 const STRATEGY_MAP_SAMPLE_SIZE = 500;
-const STRATEGY_MAP_FIXED_GAMEDAY_SPEND = driverMin("gamedaySpend");
-const STRATEGY_MAP_FIXED_TICKET_PRICE = TOP_OF_FREE_ZONE_TICKET_PRICE;
 
 type StrategyMapPoint = { wins: number; operatingResult: number };
 
-/**
- * The feasible-region cloud: STRATEGY_MAP_SAMPLE_SIZE plans, each built by
- * mapping one Halton point (one coordinate per strategic lever, index
- * 1..500) linearly onto that lever's own [min, max] from FRONT_OFFICE_DRIVERS,
- * fixing gameday/ticket at their own optimum and marketing at its own
- * per-plan optimum, then run through the real engine. Computed once at
- * module load — the sample does not depend on the current plan, so
- * dragging a slider never recomputes it.
- */
-function sampleFeasibleFrontOfficePlans(): StrategyMapPoint[] {
-  const points: StrategyMapPoint[] = [];
-  for (let i = 1; i <= STRATEGY_MAP_SAMPLE_SIZE; i++) {
-    const sampled = {
-      gamedaySpend: STRATEGY_MAP_FIXED_GAMEDAY_SPEND,
-      ticketPrice: STRATEGY_MAP_FIXED_TICKET_PRICE,
-      strategyWeighting: 0.5,
-    } as FrontOfficeAssumptions;
-    STRATEGY_MAP_HALTON_DRIVERS.forEach((key, dimIndex) => {
-      const t = haltonValue(i, STRATEGY_MAP_HALTON_BASES[dimIndex]);
-      sampled[key] = driverMin(key) + t * (driverMax(key) - driverMin(key));
-    });
-    sampled.marketingSpend = argmaxMarketingSpend(sampled);
-    const r = runFrontOfficeSimulation(sampled);
-    points.push({ wins: r.wins, operatingResult: r.operatingResult });
-  }
-  return points;
-}
-const STRATEGY_MAP_FEASIBLE_SAMPLE = sampleFeasibleFrontOfficePlans();
+// The 500-plan Halton-sampled feasible cloud, precomputed by
+// scripts/precompute-front-office-strategy-map.mts (real engine output,
+// nothing hand-typed — see that script and frontOfficePureAssumptions.ts's
+// sampleFeasibleFrontOfficePlans for the exact sampling algorithm) instead
+// of rebuilt here at module load in every visitor's browser. Measured cost
+// of running it live: ~240ms of blocking JS per visit, on a cloud that
+// never depends on the current plan and so never needs to be recomputed
+// anyway.
+const STRATEGY_MAP_FEASIBLE_SAMPLE: StrategyMapPoint[] = STRATEGY_MAP_FEASIBLE_SAMPLE_DATA;
 
 /**
  * Non-dominated (efficient) frontier: a point survives only if no other
@@ -1310,66 +1246,12 @@ function computeEfficientFrontier(points: StrategyMapPoint[]): StrategyMapPoint[
   return frontier.sort((a, b) => a.wins - b.wins);
 }
 
-// Corner configurations not already named elsewhere: floor/cap payroll
-// crossed with the football levers' own min/max, leaving marketing, gameday,
-// ticket price, and strategy weighting at the FY2026 baseline — deliberately
-// naive corners, unlike Spend to Contend itself (which, after the local-
-// efficiency audit below, has those three levers at their own searched
-// optimum, not baseline). "Payroll cap + football levers maxed" is still
-// aliased to SPEND_TO_CONTEND_ASSUMPTIONS rather than redefined here, so
-// this one corner reuses Spend to Contend's actual (optimized) values
-// instead of the naive-baseline convention the other three corners use.
-const PAYROLL_FLOOR_FOOTBALL_MIN_ASSUMPTIONS: FrontOfficeAssumptions = {
-  ...FRONT_OFFICE_BASE_DEFAULTS,
-  payroll: SALARY_FLOOR,
-  coachingSpend: driverMin("coachingSpend"),
-  facilitiesSpend: driverMin("facilitiesSpend"),
-  developmentSpend: driverMin("developmentSpend"),
-};
-const PAYROLL_FLOOR_FOOTBALL_MAX_ASSUMPTIONS: FrontOfficeAssumptions = {
-  ...FRONT_OFFICE_BASE_DEFAULTS,
-  payroll: SALARY_FLOOR,
-  coachingSpend: driverMax("coachingSpend"),
-  facilitiesSpend: driverMax("facilitiesSpend"),
-  developmentSpend: driverMax("developmentSpend"),
-};
-const PAYROLL_CAP_FOOTBALL_MIN_ASSUMPTIONS: FrontOfficeAssumptions = {
-  ...FRONT_OFFICE_BASE_DEFAULTS,
-  payroll: SALARY_CAP,
-  coachingSpend: driverMin("coachingSpend"),
-  facilitiesSpend: driverMin("facilitiesSpend"),
-  developmentSpend: driverMin("developmentSpend"),
-};
-
-type StrategyMapAnchor = { key: string; assumptions: FrontOfficeAssumptions };
-
-/**
- * The ten explicitly injected boundary/reference plans (Strategy Map audit,
- * item 1): both true extremes, the FY2026 baseline, the three presets, and
- * all four payroll x football-lever corners. Every one is a real,
- * already-committed assumptions object run through the same
- * runFrontOfficeSimulation the rest of the page uses — none of these values
- * are fabricated or interpolated. These feed the frontier/dominance
- * calculation regardless of whether the Halton sample happened to sample
- * anywhere near them.
- */
-const STRATEGY_MAP_INJECTED_ANCHOR_ASSUMPTIONS: StrategyMapAnchor[] = [
-  { key: "allMin", assumptions: FLOOR_WIN_ASSUMPTIONS },
-  { key: "allMax", assumptions: CEILING_WIN_ASSUMPTIONS },
-  { key: "fy2026Baseline", assumptions: FRONT_OFFICE_BASE_DEFAULTS },
-  { key: "maximizeBusiness", assumptions: MAXIMIZE_BUSINESS_ASSUMPTIONS },
-  { key: "buildThroughDevelopment", assumptions: BUILD_THROUGH_DEVELOPMENT_ASSUMPTIONS },
-  { key: "spendToContend", assumptions: SPEND_TO_CONTEND_ASSUMPTIONS },
-  { key: "payrollFloorFootballMin", assumptions: PAYROLL_FLOOR_FOOTBALL_MIN_ASSUMPTIONS },
-  { key: "payrollFloorFootballMax", assumptions: PAYROLL_FLOOR_FOOTBALL_MAX_ASSUMPTIONS },
-  { key: "payrollCapFootballMin", assumptions: PAYROLL_CAP_FOOTBALL_MIN_ASSUMPTIONS },
-  { key: "payrollCapFootballMax", assumptions: SPEND_TO_CONTEND_ASSUMPTIONS },
-];
-const STRATEGY_MAP_INJECTED_ANCHORS: (StrategyMapPoint & { key: string })[] =
-  STRATEGY_MAP_INJECTED_ANCHOR_ASSUMPTIONS.map(({ key, assumptions }) => {
-    const r = runFrontOfficeSimulation(assumptions);
-    return { key, wins: r.wins, operatingResult: r.operatingResult };
-  });
+// The ten explicitly injected boundary/reference plans (both extremes, the
+// FY2026 baseline, the three presets, and all four payroll x football-lever
+// corners), precomputed by the same script alongside the feasible sample —
+// see frontOfficePureAssumptions.ts's STRATEGY_MAP_INJECTED_ANCHOR_ASSUMPTIONS
+// for the exact ten assumption objects each key maps to.
+const STRATEGY_MAP_INJECTED_ANCHORS: (StrategyMapPoint & { key: string })[] = STRATEGY_MAP_INJECTED_ANCHORS_DATA;
 
 // The subset of injected anchors worth a distinct (if unlabeled) mark in the
 // cloud: the true floor/ceiling and the four payroll x football-lever

@@ -5,7 +5,7 @@
 // card's two named presets, so the 1,000-season runs for each
 // (2000 simulated seasons total) happen once here rather than in
 // every visitor's browser. Every field is real runFrontOfficeMonteCarlo
-// output for the exact assumptions in frontOfficeClosingCardPresets.ts —
+// output for the exact assumptions in frontOfficePureAssumptions.ts —
 // nothing hand-typed. See scripts/precompute-front-office-closing-card.mts.
 
 export const BUILD_THROUGH_DEVELOPMENT_MONTE_CARLO_STATS = {
