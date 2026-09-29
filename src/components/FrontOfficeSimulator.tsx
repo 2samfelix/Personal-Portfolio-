@@ -144,6 +144,17 @@ function formatDriverValue(driver: DriverConfig<string>, rawValue: number): stri
   return Math.round(rawValue).toLocaleString();
 }
 
+// Display-only shorthand for labels that wrap awkwardly in the label/value
+// row at phone widths — the model's own driver.label (used in Marginal
+// Impact and elsewhere) is untouched; this changes only what this one
+// slider heading renders as. "Strategy Weighting (Financial <-> On-Field)"
+// was wrapping mid-parenthetical on narrow screens; the direction is
+// already restated as a live percentage in the Franchise Health card and
+// the Strategy Map, so the parenthetical isn't the only place it lives.
+const SLIDER_DISPLAY_LABEL: Partial<Record<FrontOfficeDriverKey, string>> = {
+  strategyWeighting: "Strategy Weighting",
+};
+
 function SliderField({
   driver,
   value,
@@ -156,10 +167,11 @@ function SliderField({
   onChange: (value: number) => void;
 }) {
   const delta = vsBaseline(value, baseline);
+  const displayLabel = SLIDER_DISPLAY_LABEL[driver.key] ?? driver.label;
   return (
     <label className="flex flex-col gap-1.5">
       <span className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
-        <span>{driver.label}</span>
+        <span>{displayLabel}</span>
         <span className="text-charcoal">{formatDriverValue(driver, value)}</span>
       </span>
       <input
@@ -2083,6 +2095,36 @@ export default function FrontOfficeSimulator() {
               >
                 Reset to FY2026 Baseline
               </button>
+
+              {/* Live results strip — while dragging the lever stack below,
+                  the outcomes that actually matter can scroll out of view on
+                  a short phone screen, making every change feel invisible.
+                  Sticky only below xl (1280px): at xl+ the whole aside is
+                  already pinned via xl:sticky above, so a second nested
+                  sticky context isn't needed there. It sticks only within
+                  this aside — once the visitor scrolls past the controls
+                  into standings/P&L, this scrolls away with it rather than
+                  floating over content it no longer describes. top-20 clears
+                  the site header's own sticky bar at every width it applies. */}
+              <div className="sticky top-20 z-10 mb-3 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-forest/20 bg-white px-3 py-2 shadow-sm xl:static xl:top-auto xl:z-auto xl:shadow-none">
+                <span className="text-sm font-bold text-charcoal">{result.wins.toFixed(2)} Wins</span>
+                <span className="text-sm font-bold text-charcoal">
+                  {formatSignedCompact(result.operatingResult)}
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    TONE_CLASS[
+                      playoffTargetMet && financialTargetMet
+                        ? "good"
+                        : playoffTargetMet || financialTargetMet
+                          ? "neutral"
+                          : "bad"
+                    ]
+                  }`}
+                >
+                  {(playoffTargetMet ? 1 : 0) + (financialTargetMet ? 1 : 0)}/2 Met
+                </span>
+              </div>
 
               <div className="flex flex-col gap-4 overflow-y-auto pr-1">
                 {FRONT_OFFICE_DRIVERS.filter((driver) => driver.key !== "payroll").map((driver) => (
