@@ -1741,6 +1741,12 @@ export default function FrontOfficeSimulator() {
   // row (so it's compact enough to sit beside the sliders at a glance) —
   // expandable to all 16 on request.
   const [standingsExpanded, setStandingsExpanded] = useState(false);
+  // Each preset's full description lives in its `title` attribute (a hover
+  // tooltip) for desktop mouse users — invisible on touch, where nothing
+  // hovers. This tracks which preset's description is expanded inline
+  // instead, so the same content is reachable by tap. Only one open at a
+  // time; independent of which preset is actually loaded.
+  const [expandedPresetKey, setExpandedPresetKey] = useState<string | null>(null);
 
   const result = useMemo(() => runFrontOfficeSimulation(assumptions), [assumptions]);
   // result.playoff.seed IS the standings' seed — buildStandings below calls
@@ -1878,30 +1884,47 @@ export default function FrontOfficeSimulator() {
             touch a single slider.
           </p>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap items-start gap-2">
             {FRONT_OFFICE_PRESETS.map((preset) => {
               const active = assumptionsEqual(assumptions, preset.assumptions);
+              const infoOpen = expandedPresetKey === preset.key;
               return (
-                <button
-                  key={preset.key}
-                  type="button"
-                  onClick={() => loadPreset(preset)}
-                  title={preset.description}
-                  aria-pressed={active}
-                  className={`flex flex-col items-start gap-0.5 rounded-lg border px-4 py-2 text-left transition-colors ${
-                    active
-                      ? "border-forest bg-forest text-cream"
-                      : "border-forest/20 bg-white text-forest hover:bg-forest/5"
-                  }`}
-                >
-                  <span className="text-sm font-semibold">{preset.label}</span>
-                  {/* Engine-derived, not a second estimate — read straight off
-                      preset.result, computed once at module load by calling
-                      runFrontOfficeSimulation on this preset's own assumptions. */}
-                  <span className={`text-[11px] font-medium ${active ? "text-cream/80" : "text-charcoal-soft"}`}>
-                    {preset.result.wins.toFixed(2)} Wins · {formatSignedCompact(preset.result.operatingResult)}
-                  </span>
-                </button>
+                <div key={preset.key} className="flex max-w-xs flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => loadPreset(preset)}
+                    title={preset.description}
+                    aria-pressed={active}
+                    className={`flex flex-col items-start gap-0.5 rounded-lg border px-4 py-2 text-left transition-colors ${
+                      active
+                        ? "border-forest bg-forest text-cream"
+                        : "border-forest/20 bg-white text-forest hover:bg-forest/5"
+                    }`}
+                  >
+                    <span className="text-sm font-semibold">{preset.label}</span>
+                    {/* Engine-derived, not a second estimate — read straight off
+                        preset.result, computed once at module load by calling
+                        runFrontOfficeSimulation on this preset's own assumptions. */}
+                    <span className={`text-[11px] font-medium ${active ? "text-cream/80" : "text-charcoal-soft"}`}>
+                      {preset.result.wins.toFixed(2)} Wins · {formatSignedCompact(preset.result.operatingResult)}
+                    </span>
+                  </button>
+                  {/* Tap-accessible equivalent of the button's own title=
+                      tooltip above — the tooltip never fires on touch, so
+                      this is the only way a phone/tablet visitor reads what
+                      each preset actually represents. */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedPresetKey(infoOpen ? null : preset.key)}
+                    aria-expanded={infoOpen}
+                    className="self-start text-[11px] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
+                  >
+                    {infoOpen ? "Hide details" : "What is this?"}
+                  </button>
+                  {infoOpen && (
+                    <p className="text-[11px] leading-5 text-charcoal-soft">{preset.description}</p>
+                  )}
+                </div>
               );
             })}
           </div>
