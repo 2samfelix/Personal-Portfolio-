@@ -71,15 +71,15 @@ type StandingsRow = NfcFieldTeam & {
   seedLabel: string | null;
 };
 
-function formatProjectedWins(wins: number): string {
-  return `${wins.toFixed(2)} projected wins`;
+function formatExpectedWins(wins: number): string {
+  return `${wins.toFixed(2)} expected wins`;
 }
 
 function buildStandings(result: FrontOfficeResult): StandingsRow[] {
   const field = buildNfcField(result.wins); // always exactly 16 teams — see buildNfcField's own doc comment
   const rows: StandingsRow[] = field.map((t) => ({
     ...t,
-    displayRecord: t.isPackers ? formatProjectedWins(result.wins) : t.record!,
+    displayRecord: t.isPackers ? formatExpectedWins(result.wins) : t.record!,
     seedLabel: t.seed !== null ? `${t.seed}${t.isPackers ? " (modeled)" : ""}` : null,
   }));
 
@@ -408,7 +408,7 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
   return (
     <div className="rounded-xl border border-forest/15 bg-white p-3">
       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
-        <span>Projected Wins vs. Playoff Line</span>
+        <span>Expected Wins vs. Playoff Line</span>
         <span className="text-charcoal">{wins.toFixed(2)} / 17</span>
       </div>
       <div className="relative mt-3 h-3 w-full overflow-visible rounded-full bg-mist">
@@ -637,6 +637,7 @@ function MonteCarloChartCaption({
   alertLead,
   alertExplanation,
   explainer,
+  explainerCollapsible,
 }: {
   statLabel: string;
   statValue: string;
@@ -645,7 +646,14 @@ function MonteCarloChartCaption({
   alertLead: string;
   alertExplanation: string;
   explainer: string;
+  // The Strategy Map's own explainer runs long (sampling methodology, not a
+  // quick read) — collapsed by default there so it doesn't sit at the same
+  // visual weight as the recruiter-readable stat/alert above it. Every other
+  // caller's explainer is short enough to stay always-visible, so this
+  // defaults to false rather than changing behavior everywhere at once.
+  explainerCollapsible?: boolean;
 }) {
+  const [explainerOpen, setExplainerOpen] = useState(!explainerCollapsible);
   return (
     <div className="mt-3 flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-forest/15 bg-white px-4 py-3">
@@ -660,7 +668,21 @@ function MonteCarloChartCaption({
       <div className={`rounded-xl px-4 py-2.5 text-sm leading-6 ${ALERT_STYLE[tone]}`}>
         <span className="font-bold">{alertLead}</span> {alertExplanation}
       </div>
-      <p className="text-xs leading-5 text-charcoal-soft">{explainer}</p>
+      {explainerCollapsible ? (
+        <div>
+          <button
+            type="button"
+            onClick={() => setExplainerOpen((o) => !o)}
+            aria-expanded={explainerOpen}
+            className="text-[11px] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
+          >
+            {explainerOpen ? "Hide sampling methodology" : "Show sampling methodology"}
+          </button>
+          {explainerOpen && <p className="mt-1.5 text-xs leading-5 text-charcoal-soft">{explainer}</p>}
+        </div>
+      ) : (
+        <p className="text-xs leading-5 text-charcoal-soft">{explainer}</p>
+      )}
     </div>
   );
 }
@@ -1087,7 +1109,7 @@ const FRONT_OFFICE_PRESETS: FrontOfficePreset[] = [
     key: "buildThroughDevelopment",
     label: "Build Through Development",
     description:
-      "Invest heavily in coaching and player development, keep player payroll below the cap, and preserve strong operating economics while remaining competitive. The competitive edge comes from coaching and scouting/development spend; marketing, gameday operations, and ticket price are each set to their own engine-searched profit-maximizing point rather than a round number, since none of the three affects projected wins. It sits near the sampled efficient frontier — one sampled plan edges it out by a fraction of a win and about $1M, well inside this sample's resolution — chosen for what it represents (win through coaching and development, not free agency), not picked to chase that fractional edge.",
+      "Invest heavily in coaching and player development, keep player payroll below the cap, and preserve strong operating economics while remaining competitive. The competitive edge comes from coaching and scouting/development spend; marketing, gameday operations, and ticket price are each set to their own engine-searched profit-maximizing point rather than a round number, since none of the three affects expected wins. It sits near the sampled efficient frontier — one sampled plan edges it out by a fraction of a win and about $1M, well inside this sample's resolution — chosen for what it represents (win through coaching and development, not free agency), not picked to chase that fractional edge.",
     assumptions: BUILD_THROUGH_DEVELOPMENT_ASSUMPTIONS,
     result: runFrontOfficeSimulation(BUILD_THROUGH_DEVELOPMENT_ASSUMPTIONS),
   },
@@ -1095,7 +1117,7 @@ const FRONT_OFFICE_PRESETS: FrontOfficePreset[] = [
     key: "spendToContend",
     label: "Spend to Contend",
     description:
-      "Every football-ops lever at its max: payroll at the cap, coaching, facilities, and scouting/development all maxed out. This is the engine's actual win ceiling (11.02 projected wins) — not close to it. Marketing, gameday operations, and ticket price are each set to their own engine-searched profit-maximizing point rather than the FY2026 baseline, since none of the three affects projected wins — pushing football investment to the competitive ceiling still costs real operating profit compared to the other two presets, but far less than leaving those three revenue levers unoptimized would suggest.",
+      "Every football-ops lever at its max: payroll at the cap, coaching, facilities, and scouting/development all maxed out. This is the engine's actual win ceiling (11.02 expected wins) — not close to it. Marketing, gameday operations, and ticket price are each set to their own engine-searched profit-maximizing point rather than the FY2026 baseline, since none of the three affects expected wins — pushing football investment to the competitive ceiling still costs real operating profit compared to the other two presets, but far less than leaving those three revenue levers unoptimized would suggest.",
     assumptions: SPEND_TO_CONTEND_ASSUMPTIONS,
     result: runFrontOfficeSimulation(SPEND_TO_CONTEND_ASSUMPTIONS),
   },
@@ -1735,6 +1757,7 @@ function StrategyMapChart({ result }: { result: FrontOfficeResult }) {
             : `Those plans are equal-or-better on both projected wins and operating result, with at least one strictly better — a real, feasible reallocation of the same eight levers does strictly better without giving up ground elsewhere.`
         }
         explainer={`A plan is "dominated" when another feasible plan is equal-or-better on both projected wins and operating result, with at least one strictly better. The "sampled efficient frontier" is the sequence of actually-evaluated plans that no other evaluated plan dominates — run against real engine output across ${STRATEGY_MAP_FRONTIER_CANDIDATES.length} evaluated plans (${STRATEGY_MAP_SAMPLE_SIZE} Halton-sampled, plus ten explicitly injected boundary cases: both true extremes, the FY2026 baseline, all three presets, and every payroll-floor/cap x football-lever corner). Each Halton-sampled plan varies only the four levers that actually move projected wins — payroll, coaching, facilities, and scouting/development — while ticket price and gameday spend are fixed at their own engine-confirmed profit-maximizing values (the same ones the three presets use) and marketing is optimized for that specific plan by the same search method used to build Maximize the Business; strategy weighting is left out of the sample since it affects only Franchise Health, never wins or operating result. That puts every sampled point on equal financial-efficiency footing, so the frontier reflects genuine strategic trade-off rather than which points also happened to get a lucky, unoptimized ticket price or marketing budget. The line between frontier points is a visual connector only, not a claim that the plans in between were tested, and this is a sampled frontier over a finite evaluated set, not a proof of global optimality. The faint cloud is the ${STRATEGY_MAP_SAMPLE_SIZE} Halton-sampled plans; the slightly larger, more solid dots are the ten injected boundary cases.`}
+        explainerCollapsible
       />
     </div>
   );
@@ -1967,7 +1990,7 @@ export default function FrontOfficeSimulator() {
 
           {/* KPI row — above both columns, so it's in the same glance as either one */}
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <KpiCard label="Projected Wins" value={result.wins.toFixed(2)} sub="of 17 games" />
+            <KpiCard label="Expected Wins" value={result.wins.toFixed(2)} sub="of 17 games" />
             <KpiCard
               label="Seed & Result"
               value={result.playoff.seed !== null ? `${result.playoff.seed} Seed` : "Missed"}
@@ -1994,11 +2017,14 @@ export default function FrontOfficeSimulator() {
               tone={healthTone(result.franchiseHealth)}
             />
           </div>
+          <p className="mt-1.5 text-[11px] leading-4 text-charcoal-soft">
+            Expected wins are a continuous season average, not a predicted final record.
+          </p>
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MandateTarget
               label="Playoff berth"
-              detail={`${result.wins.toFixed(2)} projected wins`}
+              detail={`${result.wins.toFixed(2)} expected wins`}
               met={playoffTargetMet}
             />
             <MandateTarget
@@ -2025,7 +2051,6 @@ export default function FrontOfficeSimulator() {
             <p className="mt-2 text-base font-bold leading-6 text-charcoal">{verdict.headline}</p>
             <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">{verdict.detail}</p>
             <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
-              Generated deterministically from live model outputs — not AI-written.{" "}
               {verdict.quotingProbabilities
                 ? "Quoting the last 1,000-season run for this exact plan."
                 : "Quoting this plan's single-season point estimate — run 1,000 seasons below to see it restated as odds."}
@@ -2356,9 +2381,8 @@ export default function FrontOfficeSimulator() {
           </div>
           <p className="mt-2 text-xs leading-5 text-charcoal-soft">
             Impact of one more $1M on each spend lever, from the current plan, on{" "}
-            {MARGINAL_METRIC_TABS.find((t) => t.key === marginalMetric)?.label.toLowerCase()}. This
-            is where the tool stops being a game and starts being an analyst&apos;s instrument —
-            every row is a full engine re-run, not an estimate.
+            {MARGINAL_METRIC_TABS.find((t) => t.key === marginalMetric)?.label.toLowerCase()}. Every
+            row is a full engine re-run, not an estimate.
           </p>
           <ul className="mt-3 flex flex-col gap-2.5">
             {(() => {
@@ -2530,10 +2554,8 @@ export default function FrontOfficeSimulator() {
                   {formatCurrencyCompact(monteCarlo.p10OperatingResult)}
                 </div>
                 <p className="mt-1 text-xs leading-5 text-charcoal-soft">
-                  1 season in 10 comes in at or below this. This is the number a real board would
-                  ask for, and the one most people don&apos;t think to compute. (For reference,
-                  the 90th percentile — a good-luck season — is{" "}
-                  {formatCurrencyCompact(monteCarlo.p90OperatingResult)}.)
+                  1 season in 10 comes in at or below this. (For reference, the 90th percentile —
+                  a good-luck season — is {formatCurrencyCompact(monteCarlo.p90OperatingResult)}.)
                 </p>
               </div>
 
@@ -2601,6 +2623,219 @@ export default function FrontOfficeSimulator() {
           )}
         </section>
 
+        {/* How the Model Was Built — a credibility/explanation section, not
+            another analytical feature. Six compact, scannable cards; no new
+            calculation, no accordion, same card language as the rest of the
+            page (KpiCard/MandateTarget's rounded-xl border-forest/15
+            bg-white treatment). Sits ahead of the two deep-dive accordions
+            below (Model Mechanics, Assumptions & Limitations) on purpose —
+            this is the recruiter-readable summary; those are the optional
+            next layer for anyone who wants more than six cards. */}
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+            How the Model Was Built
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
+            What&apos;s real, what&apos;s calculated, what&apos;s calibrated, and what&apos;s
+            assumed — in six cards instead of a technical paper.
+          </p>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Real Financial Base</h3>
+              <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">
+                The model starts from the Green Bay Packers&apos; publicly disclosed FY2026
+                financials — a rare level of transparency for an NFL franchise. The modeled P&amp;L
+                reconciles to that real base: {formatCurrencyCompact(TOTAL_REVENUE)} in revenue and
+                a {formatCurrencyCompact(OPERATING_RESULT)} operating result at the FY2026 baseline,
+                exactly. Every lever moves away from that real starting point, not a hypothetical
+                one.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Decision Engine</h3>
+              <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">
+                Payroll and Scouting/Development combine into Roster Quality; Coaching sets
+                Coaching Quality; Facilities set Availability. Those three combine into Team
+                Strength, which drives Expected Wins — and with it, this plan&apos;s real NFC seed
+                and playoff revenue. Marketing, Gameday Operations, and Ticket Price separately
+                drive commercial revenue. Revenue and Cost net into Operating Result — the same
+                chain the causal diagram above visualizes live.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Monte Carlo</h3>
+              <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">
+                The console above is one deterministic plan — a single expected season.
+                &ldquo;Run 1,000 Seasons&rdquo; turns that same plan into odds by resampling wins
+                and attendance. One real consequence: projected wins is a continuous expectation,
+                but a simulated season resolves to an integer record, so a plan sitting just above
+                a division or playoff threshold can show a discontinuous jump in seed and playoff
+                revenue across the 1,000 seasons — a threshold effect built into the model rather
+                than a smooth transition.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Strategy Map</h3>
+              <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">
+                The Strategy Map plots 500 deterministic Halton-sampled plans across the four
+                levers that actually move wins — payroll, coaching, facilities, development — while
+                ticket price and gameday spend sit at their own engine-derived profit-maximizing
+                values and marketing is optimized per sampled plan. Ten explicit boundary cases are
+                added on top. The frontier is the sequence of actually-evaluated, non-dominated
+                plans in that set — a <em>sampled</em> efficient frontier, not proof of a global
+                optimum.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4 sm:col-span-2 lg:col-span-1">
+              <h3 className="text-sm font-semibold text-charcoal">Sourced / Calibrated / Assumed</h3>
+              <dl className="mt-1.5 space-y-2.5 text-sm leading-6 text-charcoal-soft">
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-forest">
+                    Sourced
+                  </dt>
+                  <dd>
+                    The Packers&apos; FY2026 financials, the NFL salary floor (90% of the cap) and
+                    hard cap, and the other 15 NFC teams&apos; real 2025 records.
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-forest">
+                    Calibrated
+                  </dt>
+                  <dd>
+                    Selected parameters are fitted so the FY2026 baseline reproduces the real
+                    9.5-win, {formatCurrencyCompact(OPERATING_RESULT)} reference point exactly.
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-forest">
+                    Assumed
+                  </dt>
+                  <dd>
+                    The shape of each spending curve, the roster-vs-coaching weighting inside Team
+                    Strength, and ticket-price elasticity — disclosed modeling choices, not
+                    externally validated coefficients.
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Limitations</h3>
+              <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm leading-6 text-charcoal-soft">
+                <li>One NFL season, not a multi-year cap simulation.</li>
+                <li>A front-office allocation model, not a player-level roster simulator.</li>
+                <li>Simplified tiebreakers, not the NFL&apos;s full official hierarchy.</li>
+                <li>Response curves are decision-model assumptions, not proven causal estimates.</li>
+                <li>Outputs are decision-support scenarios, not predictions.</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="mt-4 max-w-2xl text-sm italic leading-6 text-charcoal-soft">
+            The goal isn&apos;t to predict the NFL perfectly — it&apos;s to make the financial and
+            competitive consequences of front-office decisions explicit.
+          </p>
+        </section>
+
+        {/* Model Mechanics — the actual response-curve formulas, so the
+            causal diagram's arrows and the qualitative "Decision Engine"
+            card above have a citable functional form behind them, not just
+            a paragraph. Every constant below is read from the committed
+            engine constants (frontOffice.ts) through the page's existing
+            imports — nothing here is hand-typed or could silently drift
+            from the real model. Collapsed by default: optional for anyone
+            who wants the math, not required to follow the rest of the page.
+            This replaces the constant-by-constant listing that used to live
+            inline in the "Saturation Constants" card below, rather than
+            adding a second place that states the same numbers. */}
+        <CollapsibleSection
+          title="Model Mechanics — The Actual Formulas"
+          summary="The exact saturating-curve formulas and constants behind Roster Quality, Coaching Quality, Availability, Team Strength, and Fixed Overhead — for anyone who wants the math behind the diagram, not just the shape of it. Click to expand."
+        >
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Roster Quality</h3>
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+                rosterQuality = 100 × effectivePayroll / (effectivePayroll + {formatCurrencyCompact(ROSTER_QUALITY_K)})
+              </p>
+              <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                effectivePayroll is payroll after the Development Effect multiplier (right) is
+                applied. A saturating curve, scaled 0–100 — each additional payroll dollar buys
+                less quality than the last.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Development Effect</h3>
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+                developmentMultiplier = 1 + {formatPercent(DEVELOPMENT_BOOST_MAX, 0)} × devSpend / (devSpend + {formatCurrencyCompact(DEVELOPMENT_K)})
+              </p>
+              <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                Multiplies payroll before Roster Quality is computed, capped at a{" "}
+                {formatPercent(DEVELOPMENT_BOOST_MAX, 0)} boost — itself saturating the same way.
+                Development spend has no other effect on the model.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Coaching Quality</h3>
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+                coachingQuality = 100 × coachingSpend / (coachingSpend + {formatCurrencyCompact(COACHING_QUALITY_K)})
+              </p>
+              <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                Same saturating form as Roster Quality, on coaching spend alone, with about a
+                sixth of Roster Quality&apos;s half-max constant — which is why coaching dollars
+                move quality faster per dollar (see &ldquo;Why Payroll Moves Wins the Least&rdquo;
+                below).
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Availability</h3>
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+                availability = {formatPercent(AVAILABILITY_MIN, 0)} + {formatPercent(AVAILABILITY_MAX - AVAILABILITY_MIN, 0)} × facilitiesSpend / (facilitiesSpend + {formatCurrencyCompact(AVAILABILITY_K)})
+              </p>
+              <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                Bounded between {formatPercent(AVAILABILITY_MIN, 0)} and{" "}
+                {formatPercent(AVAILABILITY_MAX, 0)}. Facilities spend narrows the gap between an
+                injury-depleted roster and a fully healthy one — it can&apos;t do more than that.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Team Strength</h3>
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+                teamStrength = ({formatPercent(ROSTER_WEIGHT, 0)} × rosterQuality + {formatPercent(COACHING_WEIGHT, 0)} × coachingQuality) × availability
+              </p>
+              <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                Roster Quality counts more than twice as much as Coaching Quality, before
+                Availability scales the whole blend down.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-forest/15 bg-white p-4">
+              <h3 className="text-sm font-semibold text-charcoal">Fixed Overhead</h3>
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+                fixedOverhead = totalOperatingCost − (payroll + coaching + facilities +
+                development + marketing + gameday)
+              </p>
+              <p className="mt-2 text-xs leading-5 text-charcoal-soft">
+                Fixed at {formatCurrencyCompact(FIXED_OVERHEAD)} ({formatPercent(FIXED_OVERHEAD_SHARE_OF_REVENUE, 0)}{" "}
+                of revenue) for every plan — computed once from the FY2026 baseline and never
+                recalculated per lever. See &ldquo;Fixed Overhead is a Derived Residual&rdquo; in
+                Assumptions &amp; Limitations for what that means for this page&apos;s
+                operating-result numbers.
+              </p>
+            </div>
+          </div>
+        </CollapsibleSection>
+
         {/* Assumptions & Limitations — collapsed by default, reference material */}
         <CollapsibleSection
           title="Assumptions & Limitations"
@@ -2629,11 +2864,23 @@ export default function FrontOfficeSimulator() {
             </h3>
             <p className="mt-2 text-sm leading-6 text-charcoal-soft">
               At {formatPercent(FIXED_OVERHEAD_SHARE_OF_REVENUE, 0)}{" "}
-              of total revenue ({formatCurrencyCompact(FIXED_OVERHEAD)} at baseline), Fixed Overhead is the largest
+              of total revenue ({formatCurrencyCompact(FIXED_OVERHEAD)}{" "}
+              at baseline), Fixed Overhead is the largest
               cost line in the model and does not move with any lever. It is not independently
               sourced or assumed — it is defined as whatever remains after the five assumed
-              discretionary cost lines are subtracted from the real, derived operating-cost total,
-              so it silently absorbs all of the imprecision in those five assumptions.
+              discretionary cost lines are subtracted from the real, derived operating-cost total
+              (see Model Mechanics above for the exact formula), so it silently absorbs all of the
+              imprecision in those five assumptions. Any single plan&apos;s absolute operating-result
+              level inherits that same imprecision.
+            </p>
+            <p className="mt-3 text-sm leading-6 text-charcoal-soft">
+              That is why this page treats operating result as a comparison, not a standalone
+              forecast. Fixed Overhead is computed once, from the FY2026 baseline, and held at the
+              exact same dollar figure for every plan you build — it never recomputes per lever.
+              That means it cancels out exactly of any difference between two plans, or between a
+              plan and FY2026, even though it never cancels out of one plan&apos;s absolute level.
+              The Board&apos;s Verdict, the Strategy Map, and the Monte Carlo readouts all key off
+              deltas and beats/misses against a reference point for exactly this reason.
             </p>
           </div>
 
@@ -2688,16 +2935,12 @@ export default function FrontOfficeSimulator() {
               (9.5 wins) exactly — a real strength: the engine&apos;s one sourced data point is
               hit precisely, regardless of how the underlying curves are shaped. But because that
               solve happens AFTER team strength is computed, it silently re-centers itself around
-              whatever the saturation constants (ROSTER_QUALITY_K = {formatCurrencyCompact(ROSTER_QUALITY_K)}
-              , COACHING_QUALITY_K = {formatCurrencyCompact(COACHING_QUALITY_K)}, AVAILABILITY_K =
-              {" "}{formatCurrencyCompact(AVAILABILITY_K)}, DEVELOPMENT_K = {formatCurrencyCompact(DEVELOPMENT_K)}
-              , and the {formatPercent(ROSTER_WEIGHT, 0)}/{formatPercent(COACHING_WEIGHT, 0)}{" "}
-              roster/coaching weighting) happen to produce. Tested directly: at five values of
-              ROSTER_QUALITY_K
-              spanning $50M to $880M, the baseline came back exactly 9.500 projected wins every
-              time. The calibration validates one point on the curve; it constrains no slope away
-              from it. All five constants above are disclosed [ASSUMPTION]s — chosen for a
-              defensible economic reading (each K is &ldquo;the spend level at half-max
+              whatever the saturation constants happen to produce (see Model Mechanics above for
+              the exact constants and formulas). Tested directly: at five values of
+              ROSTER_QUALITY_K spanning $50M to $880M, the baseline came back exactly 9.500
+              expected wins every time. The calibration validates one point on the curve; it
+              constrains no slope away from it — each constant is a disclosed [ASSUMPTION], chosen
+              for a defensible economic reading (each K is &ldquo;the spend level at half-max
               quality&rdquo;), not derived from external data or checked against a second real
               season.
             </p>
@@ -2836,123 +3079,6 @@ export default function FrontOfficeSimulator() {
             </p>
           </div>
         </CollapsibleSection>
-
-        {/* How the Model Was Built — a credibility/explanation section, not
-            another analytical feature. Six compact, scannable cards; no new
-            calculation, no accordion, same card language as the rest of the
-            page (KpiCard/MandateTarget's rounded-xl border-forest/15
-            bg-white treatment). */}
-        <section className="mt-12 border-t border-forest/10 pt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
-            How the Model Was Built
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
-            What&apos;s real, what&apos;s calculated, what&apos;s calibrated, and what&apos;s
-            assumed — in six cards instead of a technical paper.
-          </p>
-
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-xl border border-forest/15 bg-white p-4">
-              <h3 className="text-sm font-semibold text-charcoal">Real Financial Base</h3>
-              <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">
-                The model starts from the Green Bay Packers&apos; publicly disclosed FY2026
-                financials — a rare level of transparency for an NFL franchise. The modeled P&amp;L
-                reconciles to that real base: {formatCurrencyCompact(TOTAL_REVENUE)} in revenue and
-                a {formatCurrencyCompact(OPERATING_RESULT)} operating result at the FY2026 baseline,
-                exactly. Every lever moves away from that real starting point, not a hypothetical
-                one.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-forest/15 bg-white p-4">
-              <h3 className="text-sm font-semibold text-charcoal">Decision Engine</h3>
-              <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">
-                Payroll and Scouting/Development combine into Roster Quality; Coaching sets
-                Coaching Quality; Facilities set Availability. Those three combine into Team
-                Strength, which drives Projected Wins — and with it, this plan&apos;s real NFC seed
-                and playoff revenue. Marketing, Gameday Operations, and Ticket Price separately
-                drive commercial revenue. Revenue and Cost net into Operating Result — the same
-                chain the causal diagram above visualizes live.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-forest/15 bg-white p-4">
-              <h3 className="text-sm font-semibold text-charcoal">Monte Carlo</h3>
-              <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">
-                The console above is one deterministic plan — a single expected season.
-                &ldquo;Run 1,000 Seasons&rdquo; turns that same plan into odds by resampling wins
-                and attendance. One real consequence: projected wins is a continuous expectation,
-                but a simulated season resolves to an integer record, so a plan sitting just above
-                a division or playoff threshold can show a discontinuous jump in seed and playoff
-                revenue across the 1,000 seasons — a threshold effect built into the model rather
-                than a smooth transition.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-forest/15 bg-white p-4">
-              <h3 className="text-sm font-semibold text-charcoal">Strategy Map</h3>
-              <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">
-                The Strategy Map plots 500 deterministic Halton-sampled plans across the four
-                levers that actually move wins — payroll, coaching, facilities, development — while
-                ticket price and gameday spend sit at their own engine-derived profit-maximizing
-                values and marketing is optimized per sampled plan. Ten explicit boundary cases are
-                added on top. The frontier is the sequence of actually-evaluated, non-dominated
-                plans in that set — a <em>sampled</em> efficient frontier, not proof of a global
-                optimum.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-forest/15 bg-white p-4 sm:col-span-2 lg:col-span-1">
-              <h3 className="text-sm font-semibold text-charcoal">Sourced / Calibrated / Assumed</h3>
-              <dl className="mt-1.5 space-y-2.5 text-sm leading-6 text-charcoal-soft">
-                <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-forest">
-                    Sourced
-                  </dt>
-                  <dd>
-                    The Packers&apos; FY2026 financials, the NFL salary floor (90% of the cap) and
-                    hard cap, and the other 15 NFC teams&apos; real 2025 records.
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-forest">
-                    Calibrated
-                  </dt>
-                  <dd>
-                    Selected parameters are fitted so the FY2026 baseline reproduces the real
-                    9.5-win, {formatCurrencyCompact(OPERATING_RESULT)} reference point exactly.
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-forest">
-                    Assumed
-                  </dt>
-                  <dd>
-                    The shape of each spending curve, the roster-vs-coaching weighting inside Team
-                    Strength, and ticket-price elasticity — disclosed modeling choices, not
-                    externally validated coefficients.
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            <div className="rounded-xl border border-forest/15 bg-white p-4">
-              <h3 className="text-sm font-semibold text-charcoal">Limitations</h3>
-              <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm leading-6 text-charcoal-soft">
-                <li>One NFL season, not a multi-year cap simulation.</li>
-                <li>A front-office allocation model, not a player-level roster simulator.</li>
-                <li>Simplified tiebreakers, not the NFL&apos;s full official hierarchy.</li>
-                <li>Response curves are decision-model assumptions, not proven causal estimates.</li>
-                <li>Outputs are decision-support scenarios, not predictions.</li>
-              </ul>
-            </div>
-          </div>
-
-          <p className="mt-4 max-w-2xl text-sm italic leading-6 text-charcoal-soft">
-            The goal isn&apos;t to predict the NFL perfectly — it&apos;s to make the financial and
-            competitive consequences of front-office decisions explicit.
-          </p>
-        </section>
       </div>
     </main>
   );

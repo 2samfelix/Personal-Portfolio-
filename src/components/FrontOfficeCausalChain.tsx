@@ -141,7 +141,7 @@ const NODES: ChainNode[] = [
 
   { id: "teamStrength", label: "Team Strength", kind: "derived", col: 2, row: 1.8,
     getValue: (_a, r) => r.teamStrength.toFixed(1), getSub: (_a, r) => `${r.strengthRatio.toFixed(2)}x league avg` },
-  { id: "wins", label: "Projected Wins", kind: "derived", col: 3, row: 1.8,
+  { id: "wins", label: "Expected Wins", kind: "derived", col: 3, row: 1.8,
     getValue: (_a, r) => r.wins.toFixed(2), getSub: () => "of 17 games" },
   { id: "seed", label: "NFC Seed", kind: "derived", col: 4, row: 1.8,
     getValue: (_a, r) => (r.playoff.seed !== null ? `${r.playoff.seed}` : "Missed") },
