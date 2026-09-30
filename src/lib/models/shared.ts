@@ -183,3 +183,54 @@ export function formatUsdCompact(value: number): string {
 export function formatPct(value: number, digits = 1): string {
   return `${(value * 100).toFixed(digits)}%`;
 }
+
+// ============================================================================
+// Seeded Monte Carlo primitives — shared by every industry's simulation
+// layer (SaaS's src/lib/monteCarlo.ts and Front Office's
+// src/lib/frontOfficeMonteCarlo.ts). None of this is industry-specific: a
+// deterministic string-to-seed hash, a small seedable PRNG, a
+// uniform-to-normal transform, and a percentile reader over a sorted
+// array. Each industry's simulation file supplies its own variance model
+// (which inputs get jittered and by how much) and calls these once.
+// ============================================================================
+
+// Deterministic string hash (djb2 variant) — turns a JSON-stringified
+// assumptions object into a fixed seed so the *same* inputs always
+// reproduce the *same* simulation, a property required for verification.
+export function hashStringToSeed(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 33) ^ s.charCodeAt(i);
+  }
+  return h >>> 0;
+}
+
+// mulberry32 — small, fast, seedable PRNG. Not cryptographic; not meant to
+// be, it just needs to be reproducible given the same seed.
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Box-Muller transform: turns two uniform(0,1) draws from the seeded PRNG
+// into one standard-normal draw.
+export function standardNormal(rng: () => number): number {
+  const u1 = Math.max(rng(), 1e-9);
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+export function percentile(sortedAscending: number[], p: number): number {
+  if (sortedAscending.length === 0) return 0;
+  const idx = (sortedAscending.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sortedAscending[lo];
+  return sortedAscending[lo] + (sortedAscending[hi] - sortedAscending[lo]) * (idx - lo);
+}

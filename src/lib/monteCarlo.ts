@@ -4,6 +4,7 @@ import {
   type SaaSAssumptions,
   type SaaSCompanyBaseline,
 } from "@/lib/models/saas";
+import { hashStringToSeed, mulberry32, percentile, standardNormal } from "@/lib/models/shared";
 
 // Monte Carlo mode reruns the same runSaaSForecast() engine many times with
 // randomly perturbed assumptions — it is not a second forecasting model. It
@@ -58,53 +59,12 @@ export type MonteCarloResult = {
   probabilityRunwayBelow12Months: number;
 };
 
-// Deterministic string hash (djb2 variant) — turns the current assumptions
-// into a fixed seed so the *same* inputs always reproduce the *same*
-// simulation, a property explicitly required for verification.
-function hashString(s: string): number {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) {
-    h = (h * 33) ^ s.charCodeAt(i);
-  }
-  return h >>> 0;
-}
-
-// mulberry32 — small, fast, seedable PRNG. Not cryptographic; not meant to
-// be, it just needs to be reproducible given the same seed.
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// Box-Muller transform: turns two uniform(0,1) draws from the seeded PRNG
-// into one standard-normal draw.
-function standardNormal(rng: () => number): number {
-  const u1 = Math.max(rng(), 1e-9);
-  const u2 = rng();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
 function clamp(value: number, [min, max]: readonly [number, number]): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function percentile(sortedAscending: number[], p: number): number {
-  if (sortedAscending.length === 0) return 0;
-  const idx = (sortedAscending.length - 1) * p;
-  const lo = Math.floor(idx);
-  const hi = Math.ceil(idx);
-  if (lo === hi) return sortedAscending[lo];
-  return sortedAscending[lo] + (sortedAscending[hi] - sortedAscending[lo]) * (idx - lo);
-}
-
 export function seedForAssumptions(assumptions: SaaSAssumptions, simulations: number): number {
-  return hashString(JSON.stringify(assumptions)) ^ simulations;
+  return hashStringToSeed(JSON.stringify(assumptions)) ^ simulations;
 }
 
 function summarize(

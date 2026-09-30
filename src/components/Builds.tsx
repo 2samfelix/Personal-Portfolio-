@@ -28,8 +28,58 @@ function BuildCard({ build }: { build: Project }) {
   );
 }
 
+function FeaturedBuildCard({ build }: { build: Project }) {
+  return (
+    <Link
+      href={build.link!}
+      className="flex flex-col overflow-hidden rounded-2xl border border-forest/15 bg-white transition-colors hover:border-forest/35"
+    >
+      <div className="aspect-[1208/335] w-full overflow-hidden border-b border-forest/10 bg-cream">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={build.visual}
+          alt={`${build.title} preview`}
+          className="h-full w-full object-cover object-top"
+        />
+      </div>
+      <div className="flex flex-col gap-3 p-6 sm:p-8">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass">
+            Interactive Demo
+          </span>
+          <span className="text-xs font-medium uppercase tracking-wide text-charcoal-soft">
+            {build.category}
+          </span>
+        </div>
+        <h3 className="text-2xl font-bold tracking-tight text-charcoal">
+          {build.title}
+        </h3>
+        <p className="max-w-2xl text-sm leading-6 text-charcoal-soft">
+          {build.description ?? build.summary}
+        </p>
+        <ul className="flex flex-wrap gap-1.5">
+          {build.tools.map((tool) => (
+            <li
+              key={tool}
+              className="rounded-full bg-forest/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-forest"
+            >
+              {tool}
+            </li>
+          ))}
+        </ul>
+        <span className="mt-1 inline-block text-sm font-semibold text-forest">
+          {build.ctaLabel ?? "Try it →"}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 export default function Builds() {
   if (builds.length === 0) return null;
+
+  const featured = builds.filter((build) => build.visual);
+  const rest = builds.filter((build) => !build.visual);
 
   return (
     <section id="interactive-tools" className="border-t border-forest/10 bg-cream">
@@ -42,10 +92,18 @@ export default function Builds() {
           and the decision logic stated, not just described.
         </p>
 
-        <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {builds.map((build) => (
-            <BuildCard key={build.slug} build={build} />
+        <div className="mt-14 flex flex-col gap-4">
+          {featured.map((build) => (
+            <FeaturedBuildCard key={build.slug} build={build} />
           ))}
+
+          {rest.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {rest.map((build) => (
+                <BuildCard key={build.slug} build={build} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>
