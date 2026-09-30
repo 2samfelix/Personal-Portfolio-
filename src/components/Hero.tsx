@@ -1,6 +1,10 @@
 import { siteConfig } from "@/lib/site-config";
 
-const badges = ["3 Financial Models Built", "SEC-Sourced Data", "11-Tab Linked Model"];
+const badges = [
+  "SEC-Sourced Financials",
+  "$3.64B Synergy Breakeven Modeled",
+  "Monte Carlo & Scenario Analysis",
+];
 
 export default function Hero() {
   return (
@@ -10,26 +14,26 @@ export default function Hero() {
           <span className="text-xs font-semibold uppercase tracking-[0.3em] text-charcoal-soft">
             Sam Felix &mdash; Financial Analyst
           </span>
-          <h1 className="text-6xl font-black leading-[0.95] tracking-tight sm:text-7xl">
-            I build financial models{" "}
-            <span className="text-brass">to answer real business questions.</span>
+          <h1 className="text-5xl font-black leading-[1.05] tracking-tight sm:text-7xl sm:leading-[0.95]">
+            Good financial models don&apos;t end in a number.{" "}
+            <span className="text-brass">They end in a decision.</span>
           </h1>
           <p className="max-w-xl text-lg leading-8 text-charcoal-soft">
-            I&apos;m a business analyst and junior accountant with
-            hands-on experience in payroll, reconciliations, and financial
-            reporting — and I build independent financial models outside
-            of work to practice the modeling and analysis skills FP&amp;A
-            and financial analyst roles run on.
+            I build financial models from real company filings, then push
+            them further into interactive tools that test scenarios,
+            trade-offs, and risk. From forecasting and valuation to capital
+            allocation and M&amp;A, the goal is the same: structure the
+            decision and find the number that matters.
           </p>
 
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div className="flex flex-wrap gap-2 pt-2 sm:gap-3">
             {badges.map((badge) => (
               <div
                 key={badge}
-                className="flex items-center gap-2 rounded-xl border border-forest/20 bg-white px-4 py-2"
+                className="flex items-center gap-1.5 rounded-full border border-forest/20 bg-white px-3 py-1.5 sm:gap-2 sm:rounded-xl sm:px-4 sm:py-2"
               >
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brass" />
-                <span className="text-xs font-semibold uppercase tracking-wide text-charcoal">
+                <span className="h-1 w-1 shrink-0 rounded-full bg-brass sm:h-1.5 sm:w-1.5" />
+                <span className="text-[10px] font-semibold uppercase tracking-normal text-charcoal sm:text-xs sm:tracking-wide">
                   {badge}
                 </span>
               </div>
@@ -41,7 +45,7 @@ export default function Hero() {
               href="#work"
               className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
             >
-              Explore My Work &rarr;
+              Explore the Work &rarr;
             </a>
             <a
               href={siteConfig.resumeUrl}
@@ -50,14 +54,6 @@ export default function Hero() {
               className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
             >
               Download Resume
-            </a>
-            <a
-              href={siteConfig.linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
-            >
-              LinkedIn
             </a>
           </div>
         </div>
