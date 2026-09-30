@@ -235,9 +235,9 @@ export const builds: Project[] = [
     title: "Front Office",
     category: "NFL Strategy & Financial Simulation",
     description:
-      "Run one season from the front office: allocate six operating decisions, balance competitive performance against financial results, and watch the effects flow through roster quality, projected wins, playoff outcomes, revenue, and operating profit.",
+      "The Packers posted $753.00M in record revenue — and still closed the season with a $1.10M operating loss. This simulator runs the front office that produced that paradox: six spending decisions, a hard salary cap, and a live P&L built on Green Bay's real, audited FY2026 financials. Move the levers and see if you can do better.",
     summary:
-      "You have a hard cap and a revenue ceiling you don't control. What's the plan? A Green Bay Packers front-office simulator built on their real, audited FY2026 financials — six spending levers, a binding salary cap, a live NFC standings and P&L, and a 1,000-season Monte Carlo stress test.",
+      "$753.00M in record revenue. A $1.10M operating loss. Same season. A Green Bay Packers front-office simulator built on their real, audited FY2026 financials — six spending levers, a hard salary cap, and a 1,000-season Monte Carlo stress test.",
     tools: ["Strategy", "Financial Modeling", "Monte Carlo", "Interactive"],
     year: "2026",
     status: "live",
