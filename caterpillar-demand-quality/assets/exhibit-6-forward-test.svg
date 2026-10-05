@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 258" role="img"
+     aria-label="Forward test: what would strengthen the thesis, what would weaken it, and the demand pull-forward alternative.">
+  <style>
+    svg { --ink:#1a1a1a; --ink-2:#6b6b6b; --data-muted:#b5b5b5; --grid:#e5e5e5;
+          --pos:#2e7d32; --neg:#c62828; }
+    @media (prefers-color-scheme: dark) {
+      svg { --ink:#ededed; --ink-2:#a3a3a3; --data-muted:#777777; --grid:#333333;
+            --pos:#66bb6a; --neg:#ef5350; } }
+    .t { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .lead { font-size:11px; fill:var(--ink-2); }
+    .hd { font-size:13px; font-weight:600; fill:var(--ink); }
+    .bd { font-size:12px; fill:var(--ink-2); }
+  </style>
+  <g class="t">
+    <text class="lead" x="64" y="20">Stated as inference, not finding. All three describe H2 2026, which had not been reported when this was written.</text>
+    <rect x="64" y="30" width="3" height="37" fill="var(--pos)"/><text class="hd" x="80" y="44">Strengthens the thesis</text><text class="bd" x="80" y="63">Retail growth remains elevated while dealer inventory growth continues to slow or turns negative.</text><line x1="64" x2="716" y1="79" y2="79" stroke="var(--grid)"/><rect x="64" y="83" width="3" height="54" fill="var(--neg)"/><text class="hd" x="80" y="97">Weakens the thesis</text><text class="bd" x="80" y="116">Retail growth falls materially in H2 while dealer inventories draw down, suggesting Q2's 22% was a</text><text class="bd" x="80" y="133">temporary spike rather than evidence of durable end demand.</text><line x1="64" x2="716" y1="149" y2="149" stroke="var(--grid)"/><rect x="64" y="153" width="3" height="71" fill="var(--data-muted)"/><text class="hd" x="80" y="167">Alternative: demand pull-forward</text><text class="bd" x="80" y="186">Positive tariff-related price realization may have encouraged some customers to purchase earlier than</text><text class="bd" x="80" y="203">planned, inflating Q2 retail at the expense of H2. A hypothesis, not a proven fact. H2 retail behaviour</text><text class="bd" x="80" y="220">should distinguish durable demand from pull-forward.</text>
+  </g>
+</svg>
