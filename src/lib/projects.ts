@@ -215,6 +215,58 @@ export const flagshipProjects: Project[] = [
       ],
     },
   },
+  {
+    slug: "caterpillar-demand-quality",
+    title: "Caterpillar, Inc.",
+    category: "Demand Quality & Segment Disclosure Analysis",
+    description:
+      "A segment-level test of whether Caterpillar's 2026 Construction Industries growth came from real end-user demand or dealer restocking, built on eight quarters of disclosed figures with a four-level classification on every figure.",
+    summary:
+      "Construction Industries growth was still heavily supported by dealer restocking in Q1 2026, but by Q2 the mix had shifted materially toward end-user demand — the shipping-to-retail gap narrowed from 24.3 points to 7.8.",
+    tools: ["Segment Analysis", "SEC Filings", "Earnings-Call Transcripts", "Demand Quality"],
+    year: "2026",
+    status: "live",
+    icon: "04",
+    visual: "/project-visuals/caterpillar.png",
+    githubUrl: "https://github.com/2samfelix/Personal-Portfolio-/tree/main/caterpillar-demand-quality",
+    headlineStat: "$1.5B → $0.4B dealer build",
+    caseStudy: {
+      question:
+        "Was Caterpillar's 2026 Construction Industries growth driven by real end-user demand or dealer restocking?",
+      overview:
+        "An eight-quarter (Q3 2024 – Q2 2026) segment-level analysis of Caterpillar's Construction Industries growth, testing whether the 2026 growth reflects real end-user demand or dealer restocking. Built on Caterpillar's own disclosed segment bridges, dealer-inventory disclosures, and retail sales statistics, with every figure classified SOURCED, DERIVED, CALC, or NOT DISCLOSED.",
+      dataSources:
+        "Caterpillar quarterly earnings releases (Q3 2024 – Q2 2026), Ex 99.2 Rolling 3-Month Retail Sales Statistics, and the Q1 and Q2 2026 Forms 10-Q (accessions 0000018230-26-000021 and -000046), sourced from SEC EDGAR and Caterpillar's investor-relations releases. Management commentary not reproduced in a filing is identified as earnings-call commentary and supported by transcript sources.",
+      approach:
+        "Segment-level sales bridges (volume, price realization, currency, inter-segment) reconciled to zero across all 32 quarter-segment checks; a reported-vs-retail gap tracked as a directional indicator of dealer stocking rather than a precise inventory measure; and a comparability log testing for segment renames, restatements, and disclosure-basis changes before any figure is charted as a continuous series.",
+      assumptions: [
+        "The reported-vs-retail gap is treated as directional and relative, not a precise dollar measurement of dealer inventory.",
+        "No figure in the underlying dataset is assumed: every figure is classified SOURCED, DERIVED, CALC, or NOT DISCLOSED, with INFERRED used only in notes.",
+        "Ex-tariff margin is presented as an upper bound on underlying performance, not as an efficiency or cost-control finding.",
+      ],
+      findings: [
+        "The disclosed Construction Industries dealer-inventory build fell from $1.5B in Q1 2026 to $400M in Q2 2026, while management's own language shifted from naming dealer inventories first to naming end users first.",
+        "The reported-vs-retail gap narrowed from 24.3 points in Q1 2026 to 7.8 points in Q2 2026, even as reported CI sales growth barely moved (38.1% to 34.8%).",
+        "Volume, not price, produced the 2026 growth: price realization was negative every quarter from Q3 2024 through Q4 2025 and turned positive only in Q1 2026.",
+        "The Q4 2025 margin trough of 14.9% was a tariff cost shock rather than an efficiency or cost-control deterioration; the derived ex-tariff margin of approximately 20.9% is an upper bound on underlying performance.",
+        "All 32 segment-quarter reconciliation bridges return exactly zero, and 16 logged comparability issues (segment renames, a prior-year restatement, a retail-basis wording change) are tested rather than smoothed over.",
+      ],
+      takeaway:
+        "If Caterpillar follows through on the expected dealer-inventory drawdown while end-user demand remains healthy, dealer stocking should contribute less to reported Construction Industries growth in H2 2026. An alternative hypothesis — tariff-driven demand pull-forward into Q2 — remains untested until H2 results are reported.",
+      deliverables: [
+        {
+          label: "Case Study",
+          format: "PDF",
+          url: "https://raw.githubusercontent.com/2samfelix/Personal-Portfolio-/main/caterpillar-demand-quality/analysis/Caterpillar_Demand_Quality_Case_Study.pdf",
+        },
+        {
+          label: "Operating Dataset",
+          format: "XLSX",
+          url: "https://raw.githubusercontent.com/2samfelix/Personal-Portfolio-/main/caterpillar-demand-quality/model/CAT_8Q_Operating_Dataset.xlsx",
+        },
+      ],
+    },
+  },
 ];
 
 export const builds: Project[] = [
