@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 452" role="img"
+     aria-label="Construction Industries price-adjusted sales growth against retail sales to end users, eight quarters. The gap narrowed from 24.3 points in Q1 2026 to 7.8 points in Q2 2026.">
+  <style>
+    svg { --ink:#1a1a1a; --ink-2:#6b6b6b; --data-muted:#b5b5b5;
+          --accent:#2563eb; --grid:#e5e5e5; --axis:#999999; }
+    .t  { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .ttl{ font-size:16px; font-weight:600; fill:var(--ink); }
+    .sub{ font-size:12px; fill:var(--ink-2); }
+    .ax { font-size:11px; fill:var(--ink-2); }
+    .gap{ font-size:12px; font-weight:600; fill:var(--accent); }
+    .not{ font-size:11px; fill:var(--ink); }
+    .cap{ font-size:10px; fill:var(--ink-2); }
+  </style>
+  <g class="t">
+    <text class="ttl" x="28" y="30">The shipping-to-retail gap narrowed from 24.3 points to 7.8 in Q2 2026</text>
+    <text class="sub" x="28" y="52">Construction Industries, year-over-year growth. Band = shipments above retail: a directional read on dealer stocking.</text>
+    <line x1="64" x2="716" y1="305.2" y2="305.2" stroke="var(--grid)"/><text class="ax" x="56" y="309.2" text-anchor="end">-20%</text><line x1="64" x2="716" y1="271.5" y2="271.5" stroke="var(--grid)"/><text class="ax" x="56" y="275.5" text-anchor="end">-10%</text><line x1="64" x2="716" y1="237.8" y2="237.8" stroke="var(--axis)" stroke-width="1.5"/><text class="ax" x="56" y="241.8" text-anchor="end">0%</text><line x1="64" x2="716" y1="204.0" y2="204.0" stroke="var(--grid)"/><text class="ax" x="56" y="208.0" text-anchor="end">10%</text><line x1="64" x2="716" y1="170.2" y2="170.2" stroke="var(--grid)"/><text class="ax" x="56" y="174.2" text-anchor="end">20%</text><line x1="64" x2="716" y1="136.5" y2="136.5" stroke="var(--grid)"/><text class="ax" x="56" y="140.5" text-anchor="end">30%</text><line x1="64" x2="716" y1="102.8" y2="102.8" stroke="var(--grid)"/><text class="ax" x="56" y="106.8" text-anchor="end">40%</text>
+    <path data-claude-anchor="band" d="M64.0 262.1 L157.1 248.9 L250.3 284.3 L343.4 239.4 L436.6 201.6 L529.7 182.4 L622.9 132.1 L716.0 137.2 L716.0 163.5 L622.9 214.1 L529.7 200.6 L436.6 214.1 L343.4 231.0 L250.3 227.6 L157.1 247.9 L64.0 261.4 Z" fill="var(--accent)" fill-opacity="0.13"/>
+    <path data-claude-anchor="series-retail" d="M64.0 261.4 L157.1 247.9 L250.3 227.6 L343.4 231.0 L436.6 214.1 L529.7 200.6 L622.9 214.1 L716.0 163.5" fill="none" stroke="var(--data-muted)" stroke-width="2"/>
+    <path data-claude-anchor="series-adj" d="M64.0 262.1 L157.1 248.9 L250.3 284.3 L343.4 239.4 L436.6 201.6 L529.7 182.4 L622.9 132.1 L716.0 137.2" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+    <g data-claude-anchor="points-retail"><circle cx="64.0" cy="261.4" r="3" fill="var(--data-muted)"/><circle cx="157.1" cy="247.9" r="3" fill="var(--data-muted)"/><circle cx="250.3" cy="227.6" r="3" fill="var(--data-muted)"/><circle cx="343.4" cy="231.0" r="3" fill="var(--data-muted)"/><circle cx="436.6" cy="214.1" r="3" fill="var(--data-muted)"/><circle cx="529.7" cy="200.6" r="3" fill="var(--data-muted)"/><circle cx="622.9" cy="214.1" r="3" fill="var(--data-muted)"/><circle cx="716.0" cy="163.5" r="3" fill="var(--data-muted)"/></g>
+    <g data-claude-anchor="points-adj"><circle cx="64.0" cy="262.1" r="3.5" fill="var(--accent)"/><circle cx="157.1" cy="248.9" r="3.5" fill="var(--accent)"/><circle cx="250.3" cy="284.3" r="3.5" fill="var(--accent)"/><circle cx="343.4" cy="239.4" r="3.5" fill="var(--accent)"/><circle cx="436.6" cy="201.6" r="3.5" fill="var(--accent)"/><circle cx="529.7" cy="182.4" r="3.5" fill="var(--accent)"/><circle cx="622.9" cy="132.1" r="3.5" fill="var(--accent)"/><circle cx="716.0" cy="137.2" r="3.5" fill="var(--accent)"/></g>
+    <g data-claude-anchor="gap-6"><line x1="622.9" x2="622.9" y1="132.1" y2="214.1" stroke="var(--accent)" stroke-width="1.2"/><line x1="618.9" x2="626.9" y1="132.1" y2="132.1" stroke="var(--accent)" stroke-width="1.2"/><line x1="618.9" x2="626.9" y1="214.1" y2="214.1" stroke="var(--accent)" stroke-width="1.2"/><text class="gap" x="613.9" y="177.1" text-anchor="end">24.3 pts</text></g>
+    <g data-claude-anchor="gap-7"><line x1="716.0" x2="716.0" y1="137.2" y2="163.5" stroke="var(--accent)" stroke-width="1.2"/><line x1="712.0" x2="720.0" y1="137.2" y2="137.2" stroke="var(--accent)" stroke-width="1.2"/><line x1="712.0" x2="720.0" y1="163.5" y2="163.5" stroke="var(--accent)" stroke-width="1.2"/><text class="gap" x="707.0" y="154.3" text-anchor="end">7.8 pts</text></g>
+    <text class="not" x="250.3" y="306.3" text-anchor="middle">Destocking: dealer inventory +$0.1B</text>
+    <text class="not" x="250.3" y="321.3" text-anchor="middle">against +$1.4B a year earlier</text>
+    <text class="ax" x="64.0" y="334" text-anchor="middle">Q3 24</text><text class="ax" x="157.1" y="334" text-anchor="middle">Q4 24</text><text class="ax" x="250.3" y="334" text-anchor="middle">Q1 25</text><text class="ax" x="343.4" y="334" text-anchor="middle">Q2 25</text><text class="ax" x="436.6" y="334" text-anchor="middle">Q3 25</text><text class="ax" x="529.7" y="334" text-anchor="middle">Q4 25</text><text class="ax" x="622.9" y="334" text-anchor="middle">Q1 26</text><text class="ax" x="716.0" y="334" text-anchor="middle">Q2 26</text>
+    <rect x="64"  y="356" width="20" height="3" fill="var(--accent)"/>
+    <text class="ax" x="92" y="362">CI growth, price-adjusted</text>
+    <rect x="248" y="357" width="20" height="2" fill="var(--data-muted)"/>
+    <text class="ax" x="276" y="362">Retail to end users</text>
+    
+    
+    <rect x="396" y="352" width="20" height="11" fill="var(--accent)" fill-opacity="0.13"/>
+    <text class="ax" x="424" y="362">Directional gap</text>
+    <g data-claude-anchor="caption" class="x-caption">
+      <text class="cap" x="64" y="392">The band is DIRECTIONAL, not a measured inventory amount. Retail is reported in price-neutral dollars based on unit sales, so price</text>
+      <text class="cap" x="64" y="406">realization is stripped from the blue line for comparability. The two series do not reconcile arithmetically — they differ in price basis,</text>
+      <text class="cap" x="64" y="420">scope, parts and services, and possibly currency. Disclosed CI dealer build: +$1.5B in Q1 2026, +$0.4B in Q2 2026 (Exhibit 3).</text>
+      <text class="cap" x="64" y="440">Caterpillar quarterly earnings releases and Ex 99.2 retail sales statistics, Q3 2024 – Q2 2026</text>
+    </g>
+  </g>
+</svg>

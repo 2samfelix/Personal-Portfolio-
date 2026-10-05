@@ -6,6 +6,7 @@ import ProjectPage from "@/components/ProjectPage";
 import NikeProjectPage from "@/components/NikeProjectPage";
 import ArmProjectPage from "@/components/ArmProjectPage";
 import MicrosoftActivisionProjectPage from "@/components/MicrosoftActivisionProjectPage";
+import CaterpillarProjectPage from "@/components/CaterpillarProjectPage";
 import {
   flagshipProjects,
   getAdjacentProjects,
@@ -51,6 +52,8 @@ export default async function Page({
         <ArmProjectPage project={project} prev={prev} next={next} />
       ) : slug === "microsoft-activision" ? (
         <MicrosoftActivisionProjectPage project={project} prev={prev} next={next} />
+      ) : slug === "caterpillar-demand-quality" ? (
+        <CaterpillarProjectPage project={project} prev={prev} next={next} />
       ) : (
         <ProjectPage project={project} prev={prev} next={next} />
       )}
