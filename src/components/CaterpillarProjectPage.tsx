@@ -32,21 +32,58 @@ const LIMITATIONS = [
 const DOCS_BASE =
   "https://github.com/2samfelix/Personal-Portfolio-/blob/main/caterpillar-demand-quality/docs";
 
+// Exhibits render at a 620px floor width below the 720px breakpoint (see the
+// horizontal-scroll treatment). Below that breakpoint the SVG's own baked-in
+// title/subtitle region is cropped out of the scrollable viewport — shifted
+// up via a negative margin sized from the SVG's own viewBox geometry — and
+// replaced by native HTML text above it, so the title is never clipped and
+// never duplicated. At 720px and up the crop is removed and the SVG renders
+// exactly as authored.
+const EXHIBIT_RENDER_WIDTH = 620;
+const EXHIBIT_NATURAL_WIDTH = 760;
+const CROP_SCALE = EXHIBIT_RENDER_WIDTH / EXHIBIT_NATURAL_WIDTH;
+
 function ExhibitFigure({
   src,
   alt,
   eyebrow,
+  title,
+  subtitle,
+  naturalHeight,
+  headerHeight,
 }: {
   src: string;
   alt: string;
   eyebrow: string;
+  title: string;
+  subtitle: string;
+  naturalHeight: number;
+  headerHeight: number;
 }) {
+  const croppedHeight = Math.round((naturalHeight - headerHeight) * CROP_SCALE);
+  const headerOffset = Math.round(headerHeight * CROP_SCALE);
+
   return (
     <div className="mt-4">
       <p className="text-xs font-semibold uppercase tracking-widest text-brass">{eyebrow}</p>
-      <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white p-4 sm:p-6">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={alt} className="w-full min-w-[620px]" />
+      <div className="mt-3 rounded-xl border border-forest/15 bg-white p-4 sm:p-6">
+        {/* Mobile-only title/subtitle: hidden at >=720px, where the SVG carries its own. */}
+        <div className="min-[720px]:hidden">
+          <p className="text-base font-semibold text-charcoal">{title}</p>
+          <p className="mb-3 mt-1 text-xs leading-5 text-charcoal-soft">{subtitle}</p>
+        </div>
+        <div
+          className="overflow-x-auto overflow-y-hidden min-[720px]:!h-auto min-[720px]:overflow-y-visible"
+          style={{ height: croppedHeight }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={alt}
+            className="w-full min-w-[620px] min-[720px]:!mt-0"
+            style={{ marginTop: -headerOffset }}
+          />
+        </div>
       </div>
       <p className="mt-1.5 text-right text-xs italic text-charcoal-soft min-[720px]:hidden">
         Swipe to view chart &rarr;
@@ -127,6 +164,10 @@ export default function CaterpillarProjectPage({
             eyebrow="Exhibit 2"
             src="/caterpillar/exhibit-2-demand-quality-gap.svg"
             alt="Construction Industries price-adjusted sales growth against retail sales to end users, eight quarters. The gap narrowed from 24.3 points in Q1 2026 to 7.8 points in Q2 2026."
+            title="The shipping-to-retail gap narrowed from 24.3 points to 7.8 in Q2 2026"
+            subtitle="Construction Industries, year-over-year growth. Band = shipments above retail: a directional read on dealer stocking."
+            naturalHeight={452}
+            headerHeight={70}
           />
         </section>
 
@@ -174,6 +215,10 @@ export default function CaterpillarProjectPage({
             eyebrow="Exhibit 3"
             src="/caterpillar/exhibit-3-dealer-inventory-record.svg"
             alt="Disclosed dealer-inventory change by quarter. The Construction Industries build collapsed from 1.5 billion dollars in Q1 2026 to 400 million in Q2 2026."
+            title="Construction Industries dealer build collapsed from $1.5B to $0.4B in Q2 2026"
+            subtitle="Disclosed dealer-inventory change. Every quarter has two slots; a hatched stub means that figure was never disclosed."
+            naturalHeight={456}
+            headerHeight={70}
           />
         </section>
 
@@ -186,6 +231,10 @@ export default function CaterpillarProjectPage({
             eyebrow="Exhibit 4"
             src="/caterpillar/exhibit-4-operating-bridge.svg"
             alt="Construction Industries sales change by component, eight quarters. Volume produces the 2026 growth; price realization turns positive only in 2026."
+            title="Volume produces the 2026 growth; price turns positive only in 2026"
+            subtitle="Construction Industries sales change against the prior-year quarter, $ millions. Stacked bars are component contributions; the diamond is the net reported change."
+            naturalHeight={452}
+            headerHeight={86}
           />
         </section>
 
