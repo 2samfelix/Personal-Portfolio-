@@ -10,7 +10,8 @@
     "lint": "eslint",
     "precompute:front-office": "npm run precompute:front-office-closing-card && npm run precompute:front-office-strategy-map",
     "precompute:front-office-closing-card": "node --experimental-strip-types --import ./scripts/register-loader.mjs scripts/precompute-front-office-closing-card.mts",
-    "precompute:front-office-strategy-map": "node --experimental-strip-types --import ./scripts/register-loader.mjs scripts/precompute-front-office-strategy-map.mts"
+    "precompute:front-office-strategy-map": "node --experimental-strip-types --import ./scripts/register-loader.mjs scripts/precompute-front-office-strategy-map.mts",
+    "verify:caterpillar-exhibits": "node scripts/verify-caterpillar-exhibit-text.mjs"
   },
   "dependencies": {
     "next": "16.2.12",

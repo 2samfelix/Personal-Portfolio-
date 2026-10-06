@@ -39,6 +39,14 @@ const DOCS_BASE =
 // replaced by native HTML text above it, so the title is never clipped and
 // never duplicated. At 720px and up the crop is removed and the SVG renders
 // exactly as authored.
+//
+// The title/subtitle props below are a second copy of text already baked
+// into each SVG as <text class="ttl">/<text class="sub"> elements, and the
+// two are never visible at the same time (HTML below 720px, SVG at and
+// above), so they can silently drift if one is edited without the other.
+// Run `npm run verify:caterpillar-exhibits` after touching either side —
+// it diffs these props against the actual <text> content of the SVGs in
+// public/caterpillar/ and fails if they no longer match verbatim.
 const EXHIBIT_RENDER_WIDTH = 620;
 const EXHIBIT_NATURAL_WIDTH = 760;
 const CROP_SCALE = EXHIBIT_RENDER_WIDTH / EXHIBIT_NATURAL_WIDTH;
@@ -55,9 +63,27 @@ function ExhibitFigure({
   src: string;
   alt: string;
   eyebrow: string;
+  /** Must match the SVG's `<text class="ttl">` content verbatim — see the note above. */
   title: string;
+  /** Must match the SVG's `<text class="sub">` content verbatim (joined with a single space if the SVG splits it across lines) — see the note above. */
   subtitle: string;
+  /**
+   * The SVG's own `viewBox` height, in user units. Depends entirely on that
+   * exhibit's internal layout — if the SVG is regenerated with a taller or
+   * shorter canvas, this silently goes stale and the mobile crop will be
+   * wrong. Read it from the SVG's `viewBox="0 0 W H"` attribute.
+   */
   naturalHeight: number;
+  /**
+   * The y-coordinate (SVG user units) below which the plot/footer content
+   * begins — i.e., how much of the top of the SVG is the title+subtitle
+   * block being cropped out on mobile. Depends on the number of subtitle
+   * lines in that specific SVG (one line ≈ 70, two lines ≈ 86 in this
+   * family of exhibits) and silently goes stale if a subtitle wraps to a
+   * different number of lines, as Exhibit 4's did this week. Re-derive by
+   * reading the y of the last title/subtitle `<text>` element in the SVG
+   * and adding a small margin before the first gridline.
+   */
   headerHeight: number;
 }) {
   const croppedHeight = Math.round((naturalHeight - headerHeight) * CROP_SCALE);
@@ -160,6 +186,13 @@ export default function CaterpillarProjectPage({
         {/* 3. Hero demand-quality chart */}
         <section className="mt-12 border-t border-forest/10 pt-12">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Demand Quality</h2>
+          {/*
+            title/subtitle must match exhibit-2-demand-quality-gap.svg's own
+            <text class="ttl">/<text class="sub"> verbatim — see the note on
+            ExhibitFigure. headerHeight=70: single-line subtitle ending ~y=52,
+            plus margin before the first gridline at y=102.8. Verify with
+            `npm run verify:caterpillar-exhibits`.
+          */}
           <ExhibitFigure
             eyebrow="Exhibit 2"
             src="/caterpillar/exhibit-2-demand-quality-gap.svg"
@@ -211,6 +244,13 @@ export default function CaterpillarProjectPage({
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
             Filed Evidence: What Caterpillar Actually Disclosed
           </h2>
+          {/*
+            title/subtitle must match exhibit-3-dealer-inventory-record.svg's
+            own <text class="ttl">/<text class="sub"> verbatim — see the note
+            on ExhibitFigure. headerHeight=70: single-line subtitle ending
+            ~y=52, plus margin before the first gridline at y=112.1. Verify
+            with `npm run verify:caterpillar-exhibits`.
+          */}
           <ExhibitFigure
             eyebrow="Exhibit 3"
             src="/caterpillar/exhibit-3-dealer-inventory-record.svg"
@@ -227,6 +267,17 @@ export default function CaterpillarProjectPage({
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
             Operating Drivers: What Produced the Reported Sales Change
           </h2>
+          {/*
+            title/subtitle must match exhibit-4-operating-bridge.svg's own
+            <text class="ttl">/<text class="sub"> verbatim (the SVG splits the
+            subtitle across two <text> lines at y=52/y=68; join with a single
+            space here) — see the note on ExhibitFigure. headerHeight=86:
+            two-line subtitle ending ~y=68, plus margin before the first
+            gridline at y=119.4. This changed from 70 to 86 when the v2 fix
+            wrapped the subtitle onto two lines — re-check it any time this
+            SVG is regenerated. Verify with
+            `npm run verify:caterpillar-exhibits`.
+          */}
           <ExhibitFigure
             eyebrow="Exhibit 4"
             src="/caterpillar/exhibit-4-operating-bridge.svg"
