@@ -4,7 +4,7 @@ import type { Project } from "@/lib/projects";
 const VERIFICATION_STRIP = [
   { value: "8", label: "Quarters analysed, Q3 2024 – Q2 2026" },
   { value: "32 / 32", label: "Segment bridges reconcile to zero" },
-  { value: "4", label: "Classification levels on every figure" },
+  { value: "0", label: "Assumed figures" },
   { value: "16", label: "Comparability issues logged and tested" },
 ];
 
@@ -16,11 +16,52 @@ const EVIDENCE_ROWS: [string, string, string][] = [
   ["Reported CI sales growth", "38.1%", "34.8%"],
 ];
 
+// Q2 2026's 340 bps is the figure SOURCED verbatim from the Q2 2026 earnings
+// call (CFO Kyle Epley); the $284M dollar drag is DERIVED from it, not the
+// other way around. 343 (the bps recomputed back from the rounded $284M) is
+// a rounding artifact of that conversion and is not the disclosed number —
+// do not substitute it back in.
 const MARGIN_ROWS: [string, string, string, string][] = [
   ["Reported segment margin", "14.9%", "21.4%", "23.3%"],
   ["Disclosed tariff drag, $m", "420", "362", "284"],
-  ["Tariff drag, bps of margin", "604", "509", "343"],
-  ["Margin excluding that drag, derived", "~20.9%", "~26.5%", "~26.7%"],
+  ["Tariff drag, bps of margin", "604", "509", "340"],
+  ["Margin excluding that drag, derived", "20.9%", "26.5%", "26.7%"],
+];
+
+// Workbook source: Analysis tab, rows 40-43, columns B-I. Only four of the
+// eight quarters carry a disclosed dollar figure to test the gap against;
+// the other four (B, C, E, G) have no row 41/42 values in the workbook and
+// are omitted here rather than shown as blank or zero. Q3 2025 (column F)
+// has no disclosed dollar figure either, but Caterpillar's narrative
+// disclosure (an increase against a prior-year decrease) is carried through
+// explicitly per row 47's verdict — not coerced into a number or left blank.
+// The Verdict row is reformatted (not reworded) from the workbook's own
+// per-quarter notes: Q1 2025 from row 45, Q3 2025 from row 47, Q1 2026 from
+// row 48, Q2 2026 from row 46.
+const PRESSURE_TEST_ROWS: [string, string, string, string, string][] = [
+  ["Implied stocking swing", "−$1,078M", "+$233M", "+$1,258M", "+$485M"],
+  [
+    "Disclosed build, this quarter",
+    "$100M",
+    "Increase (no dollar disclosed)",
+    "$1,500M",
+    "$400M",
+  ],
+  [
+    "Disclosed build, prior-year quarter",
+    "$1,400M",
+    "Decrease (no dollar disclosed)",
+    "slight decrease (unquantified)",
+    "decrease (unquantified)",
+  ],
+  ["Scope", "Company-wide", "—", "CI", "CI"],
+  [
+    "Verdict",
+    "FITS — 83% of the company-wide swing",
+    "Sign agrees; magnitude untestable",
+    "UNDERSTATES by roughly $290M",
+    "FITS — $485M implied vs $400M disclosed build; prior-year decrease unquantified",
+  ],
 ];
 
 const LIMITATIONS = [
@@ -202,6 +243,13 @@ export default function CaterpillarProjectPage({
             naturalHeight={452}
             headerHeight={70}
           />
+          <p className="mt-6 text-base font-semibold text-charcoal">Q1 2025 is the control case</p>
+          <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+            The same pattern runs the other way a year earlier. Retail sales to end users rose 3% while
+            price-adjusted CI shipments fell 13.8%, as dealer inventory accumulation slowed sharply. That
+            historical quarter is why I treat the reported-vs-retail gap as a directional signal rather than a
+            story fitted to Q1 and Q2 2026.
+          </p>
         </section>
 
         {/* 4. Q1 2026 vs Q2 2026 evidence table */}
@@ -239,6 +287,52 @@ export default function CaterpillarProjectPage({
           </div>
         </section>
 
+        {/* Pressure test: does the directional proxy hold up? */}
+        <section className="mt-12 border-t border-forest/10 pt-12">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+            Does the Directional Proxy Hold Up?
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-charcoal-soft">
+            I pressure-tested the reported-vs-retail signal against the four quarters where Caterpillar disclosed
+            dealer-inventory changes. The direction agrees in all four, but the magnitude does not reconcile
+            precisely, and this is not an accounting identity. In Q1 2026 the gap-based estimate of $1,258M falls
+            roughly $290M short of the implied year-over-year swing — Caterpillar&apos;s disclosed $1.5B
+            Construction Industries build against a slight decrease in the prior-year quarter. Price-basis
+            differences explain part of that shortfall, while parts/services, currency and other scope
+            differences prevent a precise reconciliation. Disclosure scope is not fully like-for-like across the
+            four tests, so the result supports direction rather than a precise segment-level reconciliation.
+          </p>
+          <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
+            <table className="w-full min-w-[520px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-forest/15">
+                  <th className="px-4 py-3 font-semibold text-charcoal">Construction Industries</th>
+                  <th className="px-4 py-3 text-right font-semibold text-charcoal">Q1 2025</th>
+                  <th className="px-4 py-3 text-right font-semibold text-charcoal">Q3 2025</th>
+                  <th className="px-4 py-3 text-right font-semibold text-charcoal">Q1 2026</th>
+                  <th className="px-4 py-3 text-right font-semibold text-charcoal">Q2 2026</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PRESSURE_TEST_ROWS.map(([label, q1_25, q3_25, q1_26, q2_26]) => (
+                  <tr key={label} className="border-b border-forest/10 last:border-0">
+                    <td className="px-4 py-3 text-charcoal-soft">{label}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-charcoal">{q1_25}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-charcoal">{q3_25}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-charcoal">{q1_26}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-charcoal">{q2_26}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-charcoal-soft">
+            Source: underlying workbook Analysis tab, based on Caterpillar dealer-inventory disclosures. Q1 2025
+            compares a CI-derived estimate against a company-wide disclosure; CI-level dollars were not disclosed
+            that quarter. Q3 2025 is testable on direction only; no dollar amount was disclosed.
+          </p>
+        </section>
+
         {/* 5. Dealer-inventory disclosure record */}
         <section className="mt-12 border-t border-forest/10 pt-12">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
@@ -260,6 +354,13 @@ export default function CaterpillarProjectPage({
             naturalHeight={456}
             headerHeight={70}
           />
+          <p className="mt-6 text-base font-semibold text-charcoal">Why this matters</p>
+          <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+            The $1.5B → $400M decline is the hardest evidence in the analysis because it comes directly from
+            Caterpillar&apos;s disclosed Construction Industries dealer-inventory figures. Showing all eight
+            quarters also makes clear where dollar disclosure exists and where it does not; missing disclosure is
+            not treated as zero.
+          </p>
         </section>
 
         {/* 6. Operating drivers */}
@@ -287,6 +388,12 @@ export default function CaterpillarProjectPage({
             naturalHeight={452}
             headerHeight={86}
           />
+          <p className="mt-6 text-base font-semibold text-charcoal">Why this matters</p>
+          <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+            Volume, not price, produced the 2026 sales growth. Price realization was negative through Q4 2025 and
+            turned positive only in Q1 2026. That makes the demand-quality question central: the key issue is
+            where the additional volume went — to end users or into dealer inventory.
+          </p>
         </section>
 
         {/* 7. Forward judgment */}
@@ -334,8 +441,8 @@ export default function CaterpillarProjectPage({
             Margin Context, and What the Analysis Cannot Claim
           </h2>
           <p className="mt-3 text-sm leading-6 text-charcoal-soft">
-            The Q4 2025 margin trough was a tariff cost shock rather than operating deterioration, and the 2026
-            recovery is partly that shock receding.
+            The Q4 2025 margin trough was driven largely by tariff costs rather than an underlying efficiency or
+            cost-control deterioration, and the 2026 recovery is partly that pressure receding.
           </p>
           <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
             <table className="w-full min-w-[420px] text-left text-sm">

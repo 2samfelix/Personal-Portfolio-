@@ -10,7 +10,7 @@ Caterpillar's Construction Industries growth was still heavily supported by deal
 
 - **8** quarters analysed, Q3 2024 – Q2 2026
 - **32 / 32** segment bridges reconcile to zero
-- **4** classification levels on every figure in the dataset
+- **0** assumed figures
 - **16** comparability issues logged and tested
 
 A bridge is Caterpillar's own disclosed volume, price realization, currency, and inter-segment components reconciled against its reported sales change, tested for each of four segments across eight quarters. Reconciliation demonstrates internal consistency with those components, not that the right line items were chosen.
