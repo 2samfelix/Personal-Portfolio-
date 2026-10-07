@@ -11,7 +11,11 @@
     "precompute:front-office": "npm run precompute:front-office-closing-card && npm run precompute:front-office-strategy-map",
     "precompute:front-office-closing-card": "node --experimental-strip-types --import ./scripts/register-loader.mjs scripts/precompute-front-office-closing-card.mts",
     "precompute:front-office-strategy-map": "node --experimental-strip-types --import ./scripts/register-loader.mjs scripts/precompute-front-office-strategy-map.mts",
-    "verify:caterpillar-exhibits": "node scripts/verify-caterpillar-exhibit-text.mjs"
+    "verify:caterpillar-exhibits": "node scripts/verify-caterpillar-exhibit-text.mjs",
+    "caterpillar:exhibits": "node caterpillar-demand-quality/build/render-svg-exhibits.mjs",
+    "caterpillar:exhibit5": "node caterpillar-demand-quality/build/render-exhibit5.mjs",
+    "caterpillar:pdf": "node caterpillar-demand-quality/build/render-pdf.mjs",
+    "caterpillar:build": "npm run caterpillar:exhibits && npm run caterpillar:exhibit5 && npm run caterpillar:pdf"
   },
   "dependencies": {
     "next": "16.2.12",
@@ -25,6 +29,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
+    "playwright": "1.63.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

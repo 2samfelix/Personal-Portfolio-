@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Project } from "@/lib/projects";
 
 const VERIFICATION_STRIP = [
-  { value: "8", label: "Quarters analysed, Q3 2024 – Q2 2026" },
+  { value: "8", label: "Quarters analyzed, Q3 2024 – Q2 2026" },
   { value: "32 / 32", label: "Segment bridges reconcile to zero" },
   { value: "0", label: "Assumed figures" },
   { value: "16", label: "Comparability issues logged and tested" },
@@ -429,7 +429,7 @@ export default function CaterpillarProjectPage({
               <p className="mt-1 text-sm leading-6 text-charcoal-soft">
                 Positive tariff-related price realization may have encouraged some customers to purchase earlier
                 than planned, inflating Q2 retail at the expense of H2. A hypothesis, not a proven fact. H2 retail
-                behaviour should distinguish durable demand from pull-forward.
+                behavior should distinguish durable demand from pull-forward.
               </p>
             </div>
           </div>
@@ -467,8 +467,10 @@ export default function CaterpillarProjectPage({
             </table>
           </div>
           <p className="mt-4 text-xs leading-5 text-charcoal-soft">
-            Q4 2025 and Q1 2026 drags are dollar figures disclosed in the earnings releases. Q2 2026 is sourced as
-            340 bps from the Q2 2026 earnings call and converted to dollars here.{" "}
+            Q4 2025 and Q1 2026 drags are dollar figures disclosed in the earnings releases, and their bps are
+            derived as the ex-tariff margin computed from raw dollars less Caterpillar&apos;s rounded reported
+            margin — so they differ by 2–3 bps from drag ÷ sales. Q2 2026 is the reverse: Caterpillar disclosed
+            340 bps on the earnings call, converted to dollars here.{" "}
             <span className="font-bold">
               Ex-tariff margin is an upper bound on underlying performance
             </span>
