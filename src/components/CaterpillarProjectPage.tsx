@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Project } from "@/lib/projects";
 
 const VERIFICATION_STRIP = [
-  { value: "8", label: "Quarters analysed, Q3 2024 – Q2 2026" },
+  { value: "8", label: "Quarters analyzed, Q3 2024 – Q2 2026" },
   { value: "32 / 32", label: "Segment bridges reconcile to zero" },
   { value: "0", label: "Assumed figures" },
   { value: "16", label: "Comparability issues logged and tested" },
@@ -169,7 +169,8 @@ export default function CaterpillarProjectPage({
   next: Project;
 }) {
   const cs = project.caseStudy!;
-  const pdfDeliverable = cs.deliverables.find((d) => d.format === "PDF");
+  const pdfDeliverable = cs.deliverables.find((d) => d.label === "Case Study");
+  const presentationDeliverable = cs.deliverables.find((d) => d.label === "Presentation");
   const xlsxDeliverable = cs.deliverables.find((d) => d.format === "XLSX");
 
   return (
@@ -179,50 +180,199 @@ export default function CaterpillarProjectPage({
           &larr; Back to Projects
         </Link>
 
-        {/* 1. Question + one-sentence finding */}
-        <div className="mt-8">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">{project.category}</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-charcoal sm:text-5xl">{project.title}</h1>
-          <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">
-            <span className="font-semibold text-charcoal">Question: </span>
-            {cs.question}
-          </p>
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            {project.tools.map((tool) => (
-              <span
-                key={tool}
-                className="rounded-full bg-forest/10 px-3 py-1 text-xs font-medium uppercase tracking-wide text-forest"
+        {/* Hero */}
+        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-center lg:gap-12">
+          <div>
+            <h1 className="text-4xl font-black tracking-tight text-charcoal sm:text-5xl">
+              Caterpillar Demand Quality
+            </h1>
+            <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">
+              Was Caterpillar&apos;s 2026 Construction Industries growth driven by real end-user demand or dealer
+              restocking?
+            </p>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-charcoal-soft">
+              An eight-quarter operating analysis using Caterpillar filings, dealer-inventory disclosures, retail
+              sales statistics, and segment bridges to test whether reported growth was becoming more durable.
+            </p>
+          </div>
+
+          {/* On mobile this sits between the description and CTAs (DOM order,
+              grid-cols-1); on desktop lg:row-span-2 pulls it into the right
+              column, vertically centered beside the text+CTAs stack. */}
+          <div className="rounded-2xl border border-forest/20 bg-forest/5 p-8 lg:row-span-2">
+            <div>
+              <p className="text-3xl font-black tracking-tight text-forest sm:text-4xl">$1.5B → $400M</p>
+              <p className="mt-2 text-sm leading-5 text-charcoal-soft">
+                Construction Industries dealer-inventory build, Q1 → Q2 2026
+              </p>
+            </div>
+            <div className="mt-8">
+              <p className="text-3xl font-black tracking-tight text-forest sm:text-4xl">7% → 22%</p>
+              <p className="mt-2 text-sm leading-5 text-charcoal-soft">Retail sales growth to end users</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <a
+              href="#analysis"
+              className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+            >
+              View the analysis ↓
+            </a>
+            {pdfDeliverable && (
+              <a
+                href={pdfDeliverable.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
               >
-                {tool}
-              </span>
-            ))}
-            <span className="ml-2 text-xs text-charcoal-soft">{project.year}</span>
+                Open case study ↗
+              </a>
+            )}
           </div>
         </div>
 
-        <div className="mt-10 rounded-2xl border border-forest/20 bg-forest/5 p-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">Finding</p>
-          <p className="mt-3 text-xl font-semibold leading-8 text-charcoal">
-            Caterpillar&apos;s Construction Industries growth was still heavily supported by dealer restocking in
-            Q1 2026, but by Q2 the mix had shifted materially toward end-user demand.
-          </p>
+        {/* Question / Approach / Finding */}
+        <div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-forest/15 bg-white p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brass">01 — The Question</p>
+            <p className="mt-3 text-base leading-7 text-charcoal">
+              Caterpillar&apos;s reported sales count machines shipped to dealers, not machines sold to end users.
+              Reported growth alone cannot tell you which one was growing.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-forest/15 bg-white p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brass">02 — The Approach</p>
+            <p className="mt-3 text-base leading-7 text-charcoal">
+              I reconciled eight quarters of segment sales bridges, dealer-inventory disclosures, and retail sales
+              data, then pressure-tested the reported-vs-retail signal against the quarters where Caterpillar
+              disclosed inventory changes.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-forest/30 bg-forest/5 p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brass">03 — The Finding</p>
+            <p className="mt-3 text-base font-semibold leading-7 text-charcoal">
+              The mix shifted materially toward end-user demand in Q2 2026: the disclosed dealer build fell from
+              $1.5B to $400M while retail sales growth increased from 7% to 22%.
+            </p>
+          </div>
         </div>
 
-        {/* 2. Verification strip */}
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {VERIFICATION_STRIP.map((stat) => (
-            <div key={stat.label} className="rounded-xl border border-forest/15 bg-white p-4">
-              <span className="block text-2xl font-black text-charcoal">{stat.value}</span>
-              <span className="mt-1 block text-xs leading-5 text-charcoal-soft">{stat.label}</span>
+        {/* What I built */}
+        <div className="mt-16">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">What I Built</h2>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-forest/15 bg-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-base font-bold text-charcoal">Full Case Study</p>
+                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
+                  PDF
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+                Seven-page written analysis covering the thesis, evidence, pressure test, forward judgment,
+                limitations, and methodology.
+              </p>
+              {pdfDeliverable && (
+                <a
+                  href={pdfDeliverable.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-block text-sm font-semibold text-forest hover:text-forest-dark"
+                >
+                  Open case study ↗
+                </a>
+              )}
             </div>
-          ))}
+
+            <div className="rounded-2xl border border-forest/15 bg-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-base font-bold text-charcoal">Presentation</p>
+                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
+                  PDF
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+                Nine-page executive presentation distilling the question, evidence, finding, pressure test,
+                operating drivers, and forward judgment.
+              </p>
+              {presentationDeliverable && (
+                <a
+                  href={presentationDeliverable.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-block text-sm font-semibold text-forest hover:text-forest-dark"
+                >
+                  Open presentation ↗
+                </a>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-forest/15 bg-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-base font-bold text-charcoal">Operating Workbook</p>
+                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
+                  XLSX
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+                Eight-quarter operating dataset with sourced figures, reconciliation checks, comparability log,
+                and the underlying pressure test.
+              </p>
+              {xlsxDeliverable && (
+                <a
+                  href={xlsxDeliverable.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-block text-sm font-semibold text-forest hover:text-forest-dark"
+                >
+                  Download workbook ↗
+                </a>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-forest/15 bg-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-base font-bold text-charcoal">GitHub Project</p>
+                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
+                  REPOSITORY
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+                Source documentation, exhibits, methodology, reproducible artifact pipeline, and downloadable
+                project files.
+              </p>
+              {project.githubUrl && (
+                <a
+                  href={project.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-block text-sm font-semibold text-forest hover:text-forest-dark"
+                >
+                  View GitHub ↗
+                </a>
+              )}
+            </div>
+          </div>
         </div>
-        <p className="mt-3 text-xs leading-5 text-charcoal-soft">
-          A bridge is Caterpillar&apos;s own disclosed volume, price realization, currency and inter-segment
-          components reconciled against its reported sales change, tested for each of four segments across eight
-          quarters. Reconciliation demonstrates internal consistency with those components, not that the right
-          line items were chosen.
-        </p>
+
+        {/* Verification strip */}
+        <div id="analysis" className="mt-16 scroll-mt-8">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {VERIFICATION_STRIP.map((stat) => (
+              <div key={stat.label} className="rounded-xl border border-forest/15 bg-white p-4">
+                <span className="block text-2xl font-black text-charcoal">{stat.value}</span>
+                <span className="mt-1 block text-xs leading-5 text-charcoal-soft">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs leading-5 text-charcoal-soft">
+            A bridge is Caterpillar&apos;s own disclosed volume, price realization, currency and inter-segment
+            components reconciled against its reported sales change, tested for each of four segments across eight
+            quarters. Reconciliation demonstrates internal consistency with those components, not that the right
+            line items were chosen.
+          </p>
+        </div>
 
         {/* 3. Hero demand-quality chart */}
         <section className="mt-12 border-t border-forest/10 pt-12">
@@ -429,7 +579,7 @@ export default function CaterpillarProjectPage({
               <p className="mt-1 text-sm leading-6 text-charcoal-soft">
                 Positive tariff-related price realization may have encouraged some customers to purchase earlier
                 than planned, inflating Q2 retail at the expense of H2. A hypothesis, not a proven fact. H2 retail
-                behaviour should distinguish durable demand from pull-forward.
+                behavior should distinguish durable demand from pull-forward.
               </p>
             </div>
           </div>
@@ -467,8 +617,10 @@ export default function CaterpillarProjectPage({
             </table>
           </div>
           <p className="mt-4 text-xs leading-5 text-charcoal-soft">
-            Q4 2025 and Q1 2026 drags are dollar figures disclosed in the earnings releases. Q2 2026 is sourced as
-            340 bps from the Q2 2026 earnings call and converted to dollars here.{" "}
+            Q4 2025 and Q1 2026 drags are dollar figures disclosed in the earnings releases, and their bps are
+            derived as the ex-tariff margin computed from raw dollars less Caterpillar&apos;s rounded reported
+            margin — so they differ by 2–3 bps from drag ÷ sales. Q2 2026 is the reverse: Caterpillar disclosed
+            340 bps on the earnings call, converted to dollars here.{" "}
             <span className="font-bold">
               Ex-tariff margin is an upper bound on underlying performance
             </span>
@@ -529,41 +681,54 @@ export default function CaterpillarProjectPage({
           </div>
         </section>
 
-        {/* 11. Download links */}
-        <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Downloads</h2>
-          <div className="mt-4 flex flex-wrap gap-4">
+        {/* Compact bottom downloads line */}
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <p className="text-sm text-charcoal-soft">
+            Downloads:{" "}
             {pdfDeliverable && (
               <a
                 href={pdfDeliverable.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+                className="font-semibold text-forest hover:text-forest-dark"
               >
-                Download PDF &rarr;
+                Case Study ↗
               </a>
             )}
+            {" · "}
+            {presentationDeliverable && (
+              <a
+                href={presentationDeliverable.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-forest hover:text-forest-dark"
+              >
+                Presentation ↗
+              </a>
+            )}
+            {" · "}
             {xlsxDeliverable && (
               <a
                 href={xlsxDeliverable.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
+                className="font-semibold text-forest hover:text-forest-dark"
               >
-                Download Workbook &rarr;
+                Workbook ↗
               </a>
             )}
+            {" · "}
             {project.githubUrl && (
               <a
                 href={project.githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
+                className="font-semibold text-forest hover:text-forest-dark"
               >
-                View GitHub Folder &#8599;
+                GitHub ↗
               </a>
             )}
-          </div>
+          </p>
         </section>
 
         {/* Prev / Next */}

@@ -8,7 +8,7 @@ Caterpillar's Construction Industries growth was still heavily supported by deal
 
 ## 3. Key evidence
 
-- **8** quarters analysed, Q3 2024 – Q2 2026
+- **8** quarters analyzed, Q3 2024 – Q2 2026
 - **32 / 32** segment bridges reconcile to zero
 - **0** assumed figures
 - **16** comparability issues logged and tested
@@ -52,7 +52,7 @@ If Caterpillar follows through on the expected dealer-inventory drawdown while e
 
 - **Strengthens the thesis** — Retail growth remains elevated while dealer inventory growth continues to slow or turns negative.
 - **Weakens the thesis** — Retail growth falls materially in H2 while dealer inventories draw down, suggesting Q2's 22% was a temporary spike rather than evidence of durable end demand.
-- **Alternative: demand pull-forward** — Positive tariff-related price realization may have encouraged some customers to purchase earlier than planned, inflating Q2 retail at the expense of H2. A hypothesis, not a proven fact. H2 retail behaviour should distinguish durable demand from pull-forward.
+- **Alternative: demand pull-forward** — Positive tariff-related price realization may have encouraged some customers to purchase earlier than planned, inflating Q2 retail at the expense of H2. A hypothesis, not a proven fact. H2 retail behavior should distinguish durable demand from pull-forward.
 
 **What I expected to corroborate — and didn't:** inventory-heavy Q1 2026 growth was expected to show up as unusually weak cash conversion. It didn't — Q1 is seasonally weak and Q1 2026 operating cash flow was stronger than Q1 2025, so cash flow does not independently confirm the stocking thesis. It is reported here because leaving it out would be selective.
 
