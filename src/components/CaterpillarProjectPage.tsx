@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { Project } from "@/lib/projects";
+import { ProjectHero } from "@/components/project/ProjectHero";
+import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
+import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
 
 const VERIFICATION_STRIP = [
   { value: "8", label: "Quarters analyzed, Q3 2024 – Q2 2026" },
@@ -180,181 +183,76 @@ export default function CaterpillarProjectPage({
           &larr; Back to Projects
         </Link>
 
-        {/* Hero */}
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-center lg:gap-12">
-          <div>
-            <h1 className="text-4xl font-black tracking-tight text-charcoal sm:text-5xl">
-              Caterpillar Demand Quality
-            </h1>
-            <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">
-              Was Caterpillar&apos;s 2026 Construction Industries growth driven by real end-user demand or dealer
-              restocking?
-            </p>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-charcoal-soft">
-              An eight-quarter operating analysis using Caterpillar filings, dealer-inventory disclosures, retail
-              sales statistics, and segment bridges to test whether reported growth was becoming more durable.
-            </p>
-          </div>
+        <ProjectHero
+          title="Caterpillar Demand Quality"
+          question="Was Caterpillar's 2026 Construction Industries growth driven by real end-user demand or dealer restocking?"
+          description="An eight-quarter operating analysis using Caterpillar filings, dealer-inventory disclosures, retail sales statistics, and segment bridges to test whether reported growth was becoming more durable."
+          metrics={[
+            {
+              value: "$1.5B → $400M",
+              label: "Construction Industries dealer-inventory build, Q1 → Q2 2026",
+            },
+            { value: "7% → 22%", label: "Retail sales growth to end users" },
+          ]}
+          ctas={[
+            { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
+            ...(pdfDeliverable
+              ? [{ label: "Open case study ↗", href: pdfDeliverable.url, variant: "secondary" as const, external: true }]
+              : []),
+          ]}
+        />
 
-          {/* On mobile this sits between the description and CTAs (DOM order,
-              grid-cols-1); on desktop lg:row-span-2 pulls it into the right
-              column, vertically centered beside the text+CTAs stack. */}
-          <div className="rounded-2xl border border-forest/20 bg-forest/5 p-8 lg:row-span-2">
-            <div>
-              <p className="text-3xl font-black tracking-tight text-forest sm:text-4xl">$1.5B → $400M</p>
-              <p className="mt-2 text-sm leading-5 text-charcoal-soft">
-                Construction Industries dealer-inventory build, Q1 → Q2 2026
-              </p>
-            </div>
-            <div className="mt-8">
-              <p className="text-3xl font-black tracking-tight text-forest sm:text-4xl">7% → 22%</p>
-              <p className="mt-2 text-sm leading-5 text-charcoal-soft">Retail sales growth to end users</p>
-            </div>
-          </div>
+        <QuestionApproachFinding
+          question={{
+            label: "01 — The Question",
+            body: "Caterpillar's reported sales count machines shipped to dealers, not machines sold to end users. Reported growth alone cannot tell you which one was growing.",
+          }}
+          approach={{
+            label: "02 — The Approach",
+            body: "I reconciled eight quarters of segment sales bridges, dealer-inventory disclosures, and retail sales data, then pressure-tested the reported-vs-retail signal against the quarters where Caterpillar disclosed inventory changes.",
+          }}
+          finding={{
+            label: "03 — The Finding",
+            body: "The mix shifted materially toward end-user demand in Q2 2026: the disclosed dealer build fell from $1.5B to $400M while retail sales growth increased from 7% to 22%.",
+          }}
+        />
 
-          <div className="flex flex-wrap items-center gap-4">
-            <a
-              href="#analysis"
-              className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
-            >
-              View the analysis ↓
-            </a>
-            {pdfDeliverable && (
-              <a
-                href={pdfDeliverable.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
-              >
-                Open case study ↗
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Question / Approach / Finding */}
-        <div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-forest/15 bg-white p-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-brass">01 — The Question</p>
-            <p className="mt-3 text-base leading-7 text-charcoal">
-              Caterpillar&apos;s reported sales count machines shipped to dealers, not machines sold to end users.
-              Reported growth alone cannot tell you which one was growing.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-forest/15 bg-white p-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-brass">02 — The Approach</p>
-            <p className="mt-3 text-base leading-7 text-charcoal">
-              I reconciled eight quarters of segment sales bridges, dealer-inventory disclosures, and retail sales
-              data, then pressure-tested the reported-vs-retail signal against the quarters where Caterpillar
-              disclosed inventory changes.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-forest/30 bg-forest/5 p-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-brass">03 — The Finding</p>
-            <p className="mt-3 text-base font-semibold leading-7 text-charcoal">
-              The mix shifted materially toward end-user demand in Q2 2026: the disclosed dealer build fell from
-              $1.5B to $400M while retail sales growth increased from 7% to 22%.
-            </p>
-          </div>
-        </div>
-
-        {/* What I built */}
-        <div className="mt-16">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">What I Built</h2>
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-forest/15 bg-white p-6">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-base font-bold text-charcoal">Full Case Study</p>
-                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
-                  PDF
-                </span>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-                Seven-page written analysis covering the thesis, evidence, pressure test, forward judgment,
-                limitations, and methodology.
-              </p>
-              {pdfDeliverable && (
-                <a
-                  href={pdfDeliverable.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-block text-sm font-semibold text-forest hover:text-forest-dark"
-                >
-                  Open case study ↗
-                </a>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-forest/15 bg-white p-6">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-base font-bold text-charcoal">Presentation</p>
-                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
-                  PDF
-                </span>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-                Nine-page executive presentation distilling the question, evidence, finding, pressure test,
-                operating drivers, and forward judgment.
-              </p>
-              {presentationDeliverable && (
-                <a
-                  href={presentationDeliverable.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-block text-sm font-semibold text-forest hover:text-forest-dark"
-                >
-                  Open presentation ↗
-                </a>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-forest/15 bg-white p-6">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-base font-bold text-charcoal">Operating Workbook</p>
-                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
-                  XLSX
-                </span>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-                Eight-quarter operating dataset with sourced figures, reconciliation checks, comparability log,
-                and the underlying pressure test.
-              </p>
-              {xlsxDeliverable && (
-                <a
-                  href={xlsxDeliverable.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-block text-sm font-semibold text-forest hover:text-forest-dark"
-                >
-                  Download workbook ↗
-                </a>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-forest/15 bg-white p-6">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-base font-bold text-charcoal">GitHub Project</p>
-                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
-                  REPOSITORY
-                </span>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-                Source documentation, exhibits, methodology, reproducible artifact pipeline, and downloadable
-                project files.
-              </p>
-              {project.githubUrl && (
-                <a
-                  href={project.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-block text-sm font-semibold text-forest hover:text-forest-dark"
-                >
-                  View GitHub ↗
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
+        <WhatIBuiltGrid
+          items={[
+            {
+              title: "Full Case Study",
+              format: "PDF",
+              description:
+                "Seven-page written analysis covering the thesis, evidence, pressure test, forward judgment, limitations, and methodology.",
+              href: pdfDeliverable?.url,
+              ctaLabel: "Open case study ↗",
+            },
+            {
+              title: "Presentation",
+              format: "PDF",
+              description:
+                "Nine-page executive presentation distilling the question, evidence, finding, pressure test, operating drivers, and forward judgment.",
+              href: presentationDeliverable?.url,
+              ctaLabel: "Open presentation ↗",
+            },
+            {
+              title: "Operating Workbook",
+              format: "XLSX",
+              description:
+                "Eight-quarter operating dataset with sourced figures, reconciliation checks, comparability log, and the underlying pressure test.",
+              href: xlsxDeliverable?.url,
+              ctaLabel: "Download workbook ↗",
+            },
+            {
+              title: "GitHub Project",
+              format: "REPOSITORY",
+              description:
+                "Source documentation, exhibits, methodology, reproducible artifact pipeline, and downloadable project files.",
+              href: project.githubUrl,
+              ctaLabel: "View GitHub ↗",
+            },
+          ]}
+        />
 
         {/* Verification strip */}
         <div id="analysis" className="mt-16 scroll-mt-8">
