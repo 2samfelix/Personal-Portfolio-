@@ -260,6 +260,11 @@ export const flagshipProjects: Project[] = [
           url: "https://raw.githubusercontent.com/2samfelix/Personal-Portfolio-/main/caterpillar-demand-quality/analysis/Caterpillar_Demand_Quality_Case_Study.pdf",
         },
         {
+          label: "Presentation",
+          format: "PDF",
+          url: "https://raw.githubusercontent.com/2samfelix/Personal-Portfolio-/main/caterpillar-demand-quality/presentation/Caterpillar_Demand_Quality_Presentation.pdf",
+        },
+        {
           label: "Operating Dataset",
           format: "XLSX",
           url: "https://raw.githubusercontent.com/2samfelix/Personal-Portfolio-/main/caterpillar-demand-quality/model/CAT_8Q_Operating_Dataset.xlsx",

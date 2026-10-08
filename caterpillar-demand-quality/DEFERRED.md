@@ -5,11 +5,24 @@ Future passes should read and update this file rather than relying on chat
 history. Each item below should be removed (or checked off and dated) once it
 is actually applied — do not let this file silently go stale.
 
-**Status: every item tracked in this file has been resolved.** There is no
-open/deferred work outstanding as of this note. The entries below are kept
-as the audit trail of what was wrong and how it was corrected, not as a
-to-do list — if a future pass finds new issues, add a new open section
-above this one rather than editing these closed entries.
+**Status:** one open item below (the presentation PDF's lack of a source in
+the build pipeline). Every other item tracked in this file is resolved; the
+"Resolved" entries are kept as the audit trail of what was wrong and how it
+was corrected, not as a to-do list.
+
+## Open
+
+- **Presentation PDF has no source in the reproducible build pipeline.**
+  `caterpillar-demand-quality/presentation/Caterpillar_Demand_Quality_Presentation.pdf`
+  is an uploaded artifact, not a generated one — unlike the case-study PDF
+  and the exhibit PNGs, there is no HTML/CSS/SVG source for it under
+  `caterpillar-demand-quality/build/` and no npm script regenerates it.
+  Its analytical figures (the $1.5B→$400M and 7%→22% headline numbers, the
+  pressure-test table, the margin/operating-driver figures, etc.) must be
+  **re-checked manually against the workbook** whenever analytical content
+  changes elsewhere in this project — the build pipeline cannot catch drift
+  in this file the way it can for the case-study PDF. Building a
+  presentation-generation pipeline is explicitly out of scope for now.
 
 ## Resolved
 
