@@ -19,13 +19,9 @@ import {
   formatNikeBillions,
   formatNikePercent,
 } from "@/components/nike/NikeCharts";
-
-const formatIcon: Record<string, string> = {
-  XLSX: "📊",
-  PDF: "📄",
-  PPTX: "📑",
-  DOCX: "📝",
-};
+import { ProjectHero } from "@/components/project/ProjectHero";
+import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
+import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
 
 const DELIVERABLE_DETAIL: Record<string, string> = {
   "Financial Model":
@@ -120,6 +116,9 @@ export default function NikeProjectPage({
   next: Project;
 }) {
   const cs = project.caseStudy!;
+  const financialModelDeliverable = cs.deliverables.find((d) => d.label === "Financial Model");
+  const fullReportDeliverable = cs.deliverables.find((d) => d.label === "Full Report");
+  const executiveSummaryDeliverable = cs.deliverables.find((d) => d.label === "Executive Summary");
 
   const naSeries = HISTORY_AND_FORECAST.map((p) => NORTH_AMERICA_REVENUE[p]);
   const gcSeries = HISTORY_AND_FORECAST.map((p) => GREATER_CHINA_REVENUE[p]);
@@ -149,38 +148,71 @@ export default function NikeProjectPage({
           &larr; Back to Projects
         </Link>
 
-        {/* Hero */}
-        <div className="mt-8">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">{project.category}</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-charcoal sm:text-5xl">{project.title}</h1>
-          <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">
-            <span className="font-semibold text-charcoal">Question: </span>
-            {cs.question}
-          </p>
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            {project.tools.map((tool) => (
-              <span key={tool} className="rounded-full bg-forest/10 px-3 py-1 text-xs font-medium uppercase tracking-wide text-forest">
-                {tool}
-              </span>
-            ))}
-            <span className="ml-2 text-xs text-charcoal-soft">{project.year}</span>
-          </div>
-        </div>
+        <ProjectHero
+          title="Nike North America Recovery"
+          question="How quickly must North America recover to offset continued weakness in Greater China?"
+          description="A driver-based three-statement model and forecast for Nike, stress-tested across bull, base, and bear scenarios."
+          metrics={[
+            {
+              value: "$439M cushion",
+              label: "Base-case North America revenue cushion vs. Greater China's modeled decline, FY2028E",
+            },
+            { value: "$43.7B → $52.2B", label: "FY2029E consolidated revenue, bear → bull range" },
+          ]}
+          ctas={[{ label: "View the analysis ↓", href: "#analysis", variant: "primary" }]}
+        />
 
-        {/* Answer — directly under the question */}
-        <div className="mt-10 rounded-2xl border border-forest/20 bg-forest/5 p-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">Answer</p>
-          <p className="mt-3 text-xl font-semibold leading-8 text-charcoal">{project.summary}</p>
-        </div>
+        <QuestionApproachFinding
+          question={{
+            label: "01 — The Question",
+            body: "How quickly must North America recover to offset continued weakness in Greater China?",
+          }}
+          approach={{
+            label: "02 — The Approach",
+            body: "I built a fully linked three-statement model with segment revenue forecast bottom-up by geography, then stress-tested the North America offset under bull, base, and bear scenarios across the entire linked model, including the balance sheet.",
+          }}
+          finding={{
+            label: "03 — The Finding",
+            body: "The offset holds under the base case: North America's modeled ~4.25% annualized growth clears the ~3.2% required to cover Greater China's decline, a $439M cushion. But FY2029E consolidated revenue still spans $43.7B (bear) to $52.2B (bull) — this is a thesis that survives stress-testing under the base case, not a single-point forecast with room for execution slippage.",
+          }}
+        />
 
-        {/* Takeaway */}
-        <div className="mt-6 rounded-2xl border border-forest/15 bg-white p-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">Takeaway</p>
-          <p className="mt-3 text-lg font-medium leading-8 text-charcoal">{cs.takeaway}</p>
-        </div>
+        <WhatIBuiltGrid
+          items={[
+            {
+              title: "Financial Model",
+              format: "XLSX",
+              description: DELIVERABLE_DETAIL["Financial Model"],
+              href: financialModelDeliverable?.url,
+              ctaLabel: "Download model ↗",
+            },
+            {
+              title: "Full Report",
+              format: "DOCX",
+              description: DELIVERABLE_DETAIL["Full Report"],
+              href: fullReportDeliverable?.url,
+              ctaLabel: "Open report ↗",
+            },
+            {
+              title: "Executive Summary",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Executive Summary"],
+              href: executiveSummaryDeliverable?.url,
+              ctaLabel: "Open summary ↗",
+            },
+            {
+              title: "GitHub Project",
+              format: "REPOSITORY",
+              description:
+                "Source documentation, the full model, and the written report, all in the public repository for this analysis.",
+              href: project.githubUrl,
+              ctaLabel: "View GitHub ↗",
+            },
+          ]}
+        />
 
         {/* Headline chart */}
-        <div className="mt-10">
+        <div id="analysis" className="mt-16 scroll-mt-8">
           <ChartSection label="North America vs. Greater China Revenue, FY2024A–FY2029E" first>
             <SegmentTrajectoryChart
               periods={HISTORY_AND_FORECAST}
@@ -201,53 +233,6 @@ export default function NikeProjectPage({
             />
           </ChartSection>
         </div>
-
-        {/* Deliverables — moved above the fold */}
-        <section className="mt-10 border-t border-forest/10 pt-10">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Deliverables</h2>
-          <p className="mt-3 text-sm leading-6 text-charcoal-soft">
-            Every number and chart on this page traces back to a specific cell in the model below —
-            open it and check the assumptions yourself. The willingness to be audited is part of the signal.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {cs.deliverables.map((d) => (
-              <a
-                key={d.label}
-                href={d.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-col gap-2 rounded-xl border border-forest/15 bg-white p-4 transition-colors hover:border-forest/35"
-              >
-                <span className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-3">
-                    <span className="text-xl">{formatIcon[d.format]}</span>
-                    <span>
-                      <span className="block text-sm font-semibold text-charcoal">{d.label}</span>
-                      <span className="block text-xs uppercase tracking-wide text-charcoal-soft">{d.format}</span>
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-sm font-semibold text-forest">
-                    {d.format === "PDF" ? "Open →" : "Download →"}
-                  </span>
-                </span>
-                {DELIVERABLE_DETAIL[d.label] && (
-                  <span className="text-xs leading-5 text-charcoal-soft">{DELIVERABLE_DETAIL[d.label]}</span>
-                )}
-              </a>
-            ))}
-          </div>
-
-          {project.githubUrl && (
-            <a
-              href={project.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
-            >
-              View GitHub Repository &#8599;
-            </a>
-          )}
-        </section>
 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">

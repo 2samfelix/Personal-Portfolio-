@@ -23,13 +23,9 @@ import {
   formatPercent,
   formatUsdM,
 } from "@/components/msft-atvi/MsftAtviCharts";
-
-const formatIcon: Record<string, string> = {
-  XLSX: "📊",
-  PDF: "📄",
-  PPTX: "📑",
-  DOCX: "📝",
-};
+import { ProjectHero } from "@/components/project/ProjectHero";
+import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
+import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
 
 const DELIVERABLE_DETAIL: Record<string, string> = {
   "M&A Model":
@@ -41,12 +37,6 @@ const DELIVERABLE_DETAIL: Record<string, string> = {
   "Presentation Deck":
     "A slide walkthrough of the transaction, the purchase price allocation, the EPS bridge, and the synergy breakeven finding.",
 };
-
-const ANSWER =
-  "With zero synergies the deal dilutes Microsoft's EPS by 4.07% in Year 1. Getting to EPS-neutral requires about $3.64B of annual pre-tax synergies — roughly 48% of Activision's entire FY2022 revenue. That is an exceptionally high bar for a cost-synergy story.";
-
-const TAKEAWAY =
-  "The dilution is almost entirely the opportunity cost of cash, not operational weakness at either company. Strip that out and the model reproduces Microsoft's own reported pro forma EPS to the cent. The deal is defensible as a long-duration strategic investment; it is not defensible on a conventional cost-synergy basis.";
 
 type BadgeTone = "good" | "neutral" | "bad";
 
@@ -112,6 +102,10 @@ function ChartSection({ label, children, first = false }: { label: string; child
 
 export default function MicrosoftActivisionProjectPage({ project, prev, next }: { project: Project; prev: Project; next: Project }) {
   const cs = project.caseStudy!;
+  const maModelDeliverable = cs.deliverables.find((d) => d.label === "M&A Model");
+  const fullReportDeliverable = cs.deliverables.find((d) => d.label === "Full Report");
+  const executiveSummaryDeliverable = cs.deliverables.find((d) => d.label === "Executive Summary");
+  const presentationDeckDeliverable = cs.deliverables.find((d) => d.label === "Presentation Deck");
 
   const bridgeSteps = [
     { label: "Microsoft Standalone", sublabel: "$9.68/share", value: EPS_BRIDGE.msftStandaloneNetIncome, kind: "anchor" as const },
@@ -128,38 +122,78 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
           &larr; Back to Projects
         </Link>
 
-        {/* Hero */}
-        <div className="mt-8">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">{project.category}</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-charcoal sm:text-5xl">{project.title}</h1>
-          <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">
-            <span className="font-semibold text-charcoal">Question: </span>
-            Was the deal financially justified, and how much in annual synergies did it take to break even?
-          </p>
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            {project.tools.map((tool) => (
-              <span key={tool} className="rounded-full bg-forest/10 px-3 py-1 text-xs font-medium uppercase tracking-wide text-forest">
-                {tool}
-              </span>
-            ))}
-            <span className="ml-2 text-xs text-charcoal-soft">{project.year}</span>
-          </div>
-        </div>
+        <ProjectHero
+          title="Microsoft × Activision Deal Economics"
+          question="Was the deal financially justified, and how much in annual synergies did it take to break even?"
+          description="An accretion/dilution model and strategic analysis of Microsoft's acquisition of Activision Blizzard."
+          metrics={[
+            { value: "-4.07%", label: "Year-1 EPS dilution at zero synergies" },
+            {
+              value: "$3.64B synergy hurdle",
+              label: "Annual pre-tax synergies required for EPS neutrality (~48% of Activision's FY2022 revenue)",
+            },
+          ]}
+          ctas={[{ label: "View the analysis ↓", href: "#analysis", variant: "primary" }]}
+        />
 
-        {/* Answer */}
-        <div className="mt-10 rounded-2xl border border-forest/20 bg-forest/5 p-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">Answer</p>
-          <p className="mt-3 text-xl font-semibold leading-8 text-charcoal">{ANSWER}</p>
-        </div>
+        <QuestionApproachFinding
+          question={{
+            label: "01 — The Question",
+            body: "Was the deal financially justified, and how much in annual synergies did it take to break even?",
+          }}
+          approach={{
+            label: "02 — The Approach",
+            body: "I built a purchase price allocation from Microsoft's final (not preliminary) disclosure, then solved an accretion/dilution bridge and a synergy-breakeven analysis directly against Microsoft's standalone EPS, reconciled against Microsoft's own reported pro forma figures.",
+          }}
+          finding={{
+            label: "03 — The Finding",
+            body: "With zero synergies, the deal dilutes Microsoft's EPS by 4.07% in Year 1 — driven by foregone interest income and new intangible amortization, not operating weakness. Reaching EPS-neutral requires about $3.64B of annual pre-tax synergies, roughly 48% of Activision's entire FY2022 revenue: an exceptionally high bar for a conventional cost-synergy story.",
+          }}
+        />
 
-        {/* Takeaway */}
-        <div className="mt-6 rounded-2xl border border-forest/15 bg-white p-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">Takeaway</p>
-          <p className="mt-3 text-lg font-medium leading-8 text-charcoal">{TAKEAWAY}</p>
-        </div>
+        <WhatIBuiltGrid
+          items={[
+            {
+              title: "M&A Model",
+              format: "XLSX",
+              description: DELIVERABLE_DETAIL["M&A Model"],
+              href: maModelDeliverable?.url,
+              ctaLabel: "Download model ↗",
+            },
+            {
+              title: "Full Report",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Full Report"],
+              href: fullReportDeliverable?.url,
+              ctaLabel: "Open report ↗",
+            },
+            {
+              title: "Executive Summary",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Executive Summary"],
+              href: executiveSummaryDeliverable?.url,
+              ctaLabel: "Open summary ↗",
+            },
+            {
+              title: "Presentation Deck",
+              format: "PPTX",
+              description: DELIVERABLE_DETAIL["Presentation Deck"],
+              href: presentationDeckDeliverable?.url,
+              ctaLabel: "Open deck ↗",
+            },
+            {
+              title: "GitHub Project",
+              format: "REPOSITORY",
+              description:
+                "Source documentation, the full M&A model, and the written report, all in the public repository for this analysis.",
+              href: project.githubUrl,
+              ctaLabel: "View GitHub ↗",
+            },
+          ]}
+        />
 
         {/* Headline chart */}
-        <div className="mt-10">
+        <div id="analysis" className="mt-16 scroll-mt-8">
           <ChartSection label="EPS Bridge: Microsoft Standalone to Pro Forma (Year 1, No Synergies)" first>
             <EpsBridgeWaterfall steps={bridgeSteps} />
             <ChartCaption
@@ -214,49 +248,6 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
             deploying $61.8B of cash. Microsoft&apos;s GAAP pro forma cannot include foregone interest income — it isn&apos;t a
             GAAP line. This model includes it deliberately, because it is economically real. (Accretion Dilution!B18, B15, B26, B27.)
           </p>
-        </section>
-
-        {/* Deliverables */}
-        <section className="mt-10 border-t border-forest/10 pt-10">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Deliverables</h2>
-          <p className="mt-3 text-sm leading-6 text-charcoal-soft">
-            Every number and chart on this page traces back to a specific cell in the model below —
-            open it and check the assumptions yourself. The willingness to be audited is part of the signal.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {cs.deliverables.map((d) => (
-              <a
-                key={d.label}
-                href={d.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-col gap-2 rounded-xl border border-forest/15 bg-white p-4 transition-colors hover:border-forest/35"
-              >
-                <span className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-3">
-                    <span className="text-xl">{formatIcon[d.format]}</span>
-                    <span>
-                      <span className="block text-sm font-semibold text-charcoal">{d.label}</span>
-                      <span className="block text-xs uppercase tracking-wide text-charcoal-soft">{d.format}</span>
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-sm font-semibold text-forest">{d.format === "PDF" ? "Open →" : "Download →"}</span>
-                </span>
-                {DELIVERABLE_DETAIL[d.label] && <span className="text-xs leading-5 text-charcoal-soft">{DELIVERABLE_DETAIL[d.label]}</span>}
-              </a>
-            ))}
-          </div>
-
-          {project.githubUrl && (
-            <a
-              href={project.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
-            >
-              View GitHub Repository &#8599;
-            </a>
-          )}
         </section>
 
         {/* Overview */}
