@@ -31,13 +31,9 @@ import {
   formatUsd,
   formatUsdCompact,
 } from "@/components/arm/ArmCharts";
-
-const formatIcon: Record<string, string> = {
-  XLSX: "📊",
-  PDF: "📄",
-  PPTX: "📑",
-  DOCX: "📝",
-};
+import { ProjectHero } from "@/components/project/ProjectHero";
+import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
+import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
 
 const DELIVERABLE_DETAIL: Record<string, string> = {
   "Valuation Model":
@@ -49,12 +45,6 @@ const DELIVERABLE_DETAIL: Record<string, string> = {
   "Strategy Deck":
     "A slide walkthrough of the transaction, the comps, the valuation range, and the return decomposition.",
 };
-
-const ANSWER =
-  "No, and not close. Three independent fundamentals-based methods — the 2023 comparable-company analysis, the actual IPO transaction, and a 2026 DCF built entirely on today's actuals — cluster between $43 and $52, with the DCF landing at $51.54. The market prices Arm at $272.21, roughly 5.3x that cluster.";
-
-const TAKEAWAY =
-  "Arm priced at $51.00 against a comp-implied range of roughly $43–$45 per ADS — an 11–15% premium to the closest public comparables that looks conservative, not aggressive, in hindsight. Arm's 5.34x total return since IPO decomposes into 1.67x from EPS growth and 3.20x from P/E expansion: the market re-rated the business roughly twice as much as it grew, which means today's shares carry more re-rating risk than the IPO price did.";
 
 type BadgeTone = "good" | "neutral" | "bad";
 
@@ -120,6 +110,10 @@ function ChartSection({ label, children, first = false }: { label: string; child
 
 export default function ArmProjectPage({ project, prev, next }: { project: Project; prev: Project; next: Project }) {
   const cs = project.caseStudy!;
+  const valuationModelDeliverable = cs.deliverables.find((d) => d.label === "Valuation Model");
+  const fullReportDeliverable = cs.deliverables.find((d) => d.label === "Full Report");
+  const executiveSummaryDeliverable = cs.deliverables.find((d) => d.label === "Executive Summary");
+  const strategyDeckDeliverable = cs.deliverables.find((d) => d.label === "Strategy Deck");
 
   return (
     <main className="bg-cream">
@@ -128,38 +122,78 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
           &larr; Back to Projects
         </Link>
 
-        {/* Hero */}
-        <div className="mt-8">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">{project.category}</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-charcoal sm:text-5xl">{project.title}</h1>
-          <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">
-            <span className="font-semibold text-charcoal">Question: </span>
-            {cs.question}
-          </p>
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            {project.tools.map((tool) => (
-              <span key={tool} className="rounded-full bg-forest/10 px-3 py-1 text-xs font-medium uppercase tracking-wide text-forest">
-                {tool}
-              </span>
-            ))}
-            <span className="ml-2 text-xs text-charcoal-soft">{project.year}</span>
-          </div>
-        </div>
+        <ProjectHero
+          title="Arm Valuation Gap"
+          question="Do Arm's fundamentals justify a stock price of $272 — more than 5x where three independent valuation methods land?"
+          description="An IPO valuation for Arm Holdings combining comparable company analysis, a DCF, and strategic positioning research."
+          metrics={[
+            {
+              value: "$51.54 → $272.21",
+              label: "DCF-implied fair value (2026) vs. current market price",
+            },
+            { value: "5.3x", label: "Market price as a multiple of the DCF-implied value" },
+          ]}
+          ctas={[{ label: "View the analysis ↓", href: "#analysis", variant: "primary" }]}
+        />
 
-        {/* Answer */}
-        <div className="mt-10 rounded-2xl border border-forest/20 bg-forest/5 p-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">Answer</p>
-          <p className="mt-3 text-xl font-semibold leading-8 text-charcoal">{ANSWER}</p>
-        </div>
+        <QuestionApproachFinding
+          question={{
+            label: "01 — The Question",
+            body: "Do Arm's fundamentals justify a stock price of $272 — more than 5x where three independent valuation methods land?",
+          }}
+          approach={{
+            label: "02 — The Approach",
+            body: "I ran three independent valuation methods — a comparable company analysis at the IPO pricing date, the actual IPO transaction, and a DCF built entirely from today's fundamentals — then decomposed Arm's total shareholder return since IPO into EPS growth versus P/E multiple expansion.",
+          }}
+          finding={{
+            label: "03 — The Finding",
+            body: "All three methods cluster between $35 and $52 — the DCF lands at $51.54, almost exactly the original $51.00 IPO price. The market prices Arm at $272.21, roughly 5.3x that cluster: not a disagreement at the margin, but a valuation built on a multiple no comp-based or DCF method in this analysis supports.",
+          }}
+        />
 
-        {/* Takeaway */}
-        <div className="mt-6 rounded-2xl border border-forest/15 bg-white p-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">Takeaway</p>
-          <p className="mt-3 text-lg font-medium leading-8 text-charcoal">{TAKEAWAY}</p>
-        </div>
+        <WhatIBuiltGrid
+          items={[
+            {
+              title: "Valuation Model",
+              format: "XLSX",
+              description: DELIVERABLE_DETAIL["Valuation Model"],
+              href: valuationModelDeliverable?.url,
+              ctaLabel: "Download model ↗",
+            },
+            {
+              title: "Full Report",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Full Report"],
+              href: fullReportDeliverable?.url,
+              ctaLabel: "Open report ↗",
+            },
+            {
+              title: "Executive Summary",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Executive Summary"],
+              href: executiveSummaryDeliverable?.url,
+              ctaLabel: "Open summary ↗",
+            },
+            {
+              title: "Strategy Deck",
+              format: "PPTX",
+              description: DELIVERABLE_DETAIL["Strategy Deck"],
+              href: strategyDeckDeliverable?.url,
+              ctaLabel: "Open deck ↗",
+            },
+            {
+              title: "GitHub Project",
+              format: "REPOSITORY",
+              description:
+                "Source documentation, the full valuation model, and the written report, all in the public repository for this analysis.",
+              href: project.githubUrl,
+              ctaLabel: "View GitHub ↗",
+            },
+          ]}
+        />
 
         {/* Headline chart */}
-        <div className="mt-10">
+        <div id="analysis" className="mt-16 scroll-mt-8">
           <ChartSection label="Valuation Football Field: IPO Price vs. Comp-Implied Range vs. Market" first>
             <FootballFieldChart
               items={FOOTBALL_FIELD}
@@ -178,49 +212,6 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
             />
           </ChartSection>
         </div>
-
-        {/* Deliverables */}
-        <section className="mt-10 border-t border-forest/10 pt-10">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Deliverables</h2>
-          <p className="mt-3 text-sm leading-6 text-charcoal-soft">
-            Every number and chart on this page traces back to a specific cell in the model below —
-            open it and check the assumptions yourself. The willingness to be audited is part of the signal.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {cs.deliverables.map((d) => (
-              <a
-                key={d.label}
-                href={d.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-col gap-2 rounded-xl border border-forest/15 bg-white p-4 transition-colors hover:border-forest/35"
-              >
-                <span className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-3">
-                    <span className="text-xl">{formatIcon[d.format]}</span>
-                    <span>
-                      <span className="block text-sm font-semibold text-charcoal">{d.label}</span>
-                      <span className="block text-xs uppercase tracking-wide text-charcoal-soft">{d.format}</span>
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-sm font-semibold text-forest">{d.format === "PDF" ? "Open →" : "Download →"}</span>
-                </span>
-                {DELIVERABLE_DETAIL[d.label] && <span className="text-xs leading-5 text-charcoal-soft">{DELIVERABLE_DETAIL[d.label]}</span>}
-              </a>
-            ))}
-          </div>
-
-          {project.githubUrl && (
-            <a
-              href={project.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
-            >
-              View GitHub Repository &#8599;
-            </a>
-          )}
-        </section>
 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">
