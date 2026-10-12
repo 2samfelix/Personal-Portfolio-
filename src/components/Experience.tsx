@@ -95,11 +95,20 @@ const COURSEWORK_GROUPS: CourseworkGroup[] = [
 
 const COURSEWORK_COLUMN_COUNT = Math.max(...COURSEWORK_GROUPS.map((g) => g.courses.length));
 
+function SubsectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="text-xs font-semibold uppercase tracking-widest text-brass">{children}</h3>
+      <span className="mt-2 block h-0.5 w-10 bg-brass" />
+    </div>
+  );
+}
+
 export default function Experience() {
   return (
     <section id="experience" className="bg-cream">
-      <div className="mx-auto w-full max-w-5xl px-6 py-28 sm:py-40">
-        {/* Intro */}
+      {/* Intro + Professional Experience — base cream */}
+      <div className="mx-auto w-full max-w-5xl px-6 pt-28 sm:pt-40">
         <div className="max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-widest text-brass">Experience</p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
@@ -110,9 +119,8 @@ export default function Experience() {
           </p>
         </div>
 
-        {/* Professional Experience */}
-        <div className="mt-20">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-brass">Professional Experience</h3>
+        <div className="mt-24">
+          <SubsectionHeading>Professional Experience</SubsectionHeading>
 
           <div className="relative mt-8 border-l-2 border-forest/15 pl-8">
             <span className="absolute left-0 top-1.5 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-brass" />
@@ -148,12 +156,14 @@ export default function Experience() {
             </ul>
           </div>
         </div>
+      </div>
 
-        {/* Leadership & Activities */}
-        <div className="mt-16 border-t border-forest/10 pt-12">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-brass">Leadership &amp; Activities</h3>
+      {/* Leadership & Activities — subtle mist wash */}
+      <div className="mt-24 bg-mist/60 py-16 sm:py-20">
+        <div className="mx-auto w-full max-w-5xl px-6">
+          <SubsectionHeading>Leadership &amp; Activities</SubsectionHeading>
 
-          <div className="mt-6 grid grid-cols-1 gap-x-12 gap-y-8 sm:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-x-12 gap-y-8 sm:grid-cols-2">
             {LEADERSHIP.map((entry) => (
               <div key={entry.org} className="relative border-l border-forest/10 pl-6">
                 <span className="absolute left-0 top-1 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-brass/60" />
@@ -178,11 +188,13 @@ export default function Experience() {
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Education */}
-        <div className="mt-16 border-t border-forest/10 pt-12">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-brass">Education</h3>
-          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      {/* Education — back to base cream */}
+      <div className="bg-cream py-16 sm:py-20">
+        <div className="mx-auto w-full max-w-5xl px-6">
+          <SubsectionHeading>Education</SubsectionHeading>
+          <div className="mt-8 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <div>
               <h4 className="text-base font-semibold text-charcoal">
                 Syracuse University — Martin J. Whitman School of Management
@@ -192,11 +204,13 @@ export default function Experience() {
             <p className="text-xs text-charcoal-soft">Syracuse, NY · May 2026</p>
           </div>
         </div>
+      </div>
 
-        {/* Credentials */}
-        <div className="mt-16 border-t border-forest/10 pt-12">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-brass">Credentials</h3>
-          <div className="mt-6 divide-y divide-forest/10 border-y border-forest/10">
+      {/* Credentials — pale stone band */}
+      <div className="bg-brass-pale/35 py-16 sm:py-20">
+        <div className="mx-auto w-full max-w-5xl px-6">
+          <SubsectionHeading>Credentials</SubsectionHeading>
+          <div className="mt-8 divide-y divide-forest/10 border-y border-forest/10">
             {CREDENTIALS.map((credential) => (
               <div key={credential.name} className="flex items-center justify-between gap-4 py-3">
                 <span className="text-sm font-medium text-charcoal">{credential.name}</span>
@@ -205,10 +219,12 @@ export default function Experience() {
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Selected Relevant Coursework */}
-        <div className="mt-16 border-t border-forest/10 pt-12">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-brass">Selected Relevant Coursework</h3>
+      {/* Selected Relevant Coursework — muted panel */}
+      <div className="bg-mist/40 py-16 pb-28 sm:py-20 sm:pb-40">
+        <div className="mx-auto w-full max-w-5xl px-6">
+          <SubsectionHeading>Selected Relevant Coursework</SubsectionHeading>
           <p className="mt-2 text-xs leading-5 text-charcoal-soft">
             Selected coursework relevant to financial analysis, markets, accounting, analytics, and business
             operations.
@@ -217,7 +233,7 @@ export default function Experience() {
               Tailwind class tied to COURSEWORK_COLUMN_COUNT=3, the current
               data's widest row (Finance & Markets). If a future group grows
               past 3 courses, update this class to match. */}
-          <div className="mt-6 overflow-hidden border border-forest/10">
+          <div className="mt-8 overflow-hidden border border-forest/10 bg-cream/60">
             {COURSEWORK_GROUPS.map((group, rowIndex) => (
               <div
                 key={group.group}
