@@ -15,7 +15,8 @@
     "caterpillar:exhibits": "node caterpillar-demand-quality/build/render-svg-exhibits.mjs",
     "caterpillar:exhibit5": "node caterpillar-demand-quality/build/render-exhibit5.mjs",
     "caterpillar:pdf": "node caterpillar-demand-quality/build/render-pdf.mjs",
-    "caterpillar:build": "npm run caterpillar:exhibits && npm run caterpillar:exhibit5 && npm run caterpillar:pdf"
+    "caterpillar:deck": "node caterpillar-demand-quality/build/render-deck.mjs",
+    "caterpillar:build": "npm run caterpillar:exhibits && npm run caterpillar:exhibit5 && npm run caterpillar:pdf && npm run caterpillar:deck"
   },
   "dependencies": {
     "next": "16.2.12",

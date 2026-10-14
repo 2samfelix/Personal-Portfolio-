@@ -4,42 +4,42 @@
 Was Caterpillar's 2026 Construction Industries growth driven by real end-user demand or dealer restocking?
 
 ## 2. One-sentence finding
-Caterpillar's Construction Industries growth was still heavily supported by dealer restocking in Q1 2026, but by Q2 the mix had shifted materially toward end-user demand.
+Caterpillar's Construction Industries growth leaned heavily on dealer restocking in Q1 2026; by Q2 the evidence points to a material shift toward end-user demand.
 
 ## 3. Key evidence
 
 - **8** quarters analyzed, Q3 2024 – Q2 2026
-- **32 / 32** segment bridges reconcile to zero
-- **0** assumed figures
-- **16** comparability issues logged and tested
+- **28 / 32** bridges reconcile independently — 4 additional checks require caveats: 3 use back-solved prior-year values; 1 depends on a component disclosed only as "$3.1B"
+- **5-level** evidence classification — sourced · derived · back-solved · not collected · not disclosed
+- **16** comparability issues logged
 
-A bridge is Caterpillar's own disclosed volume, price realization, currency, and inter-segment components reconciled against its reported sales change, tested for each of four segments across eight quarters. Reconciliation demonstrates internal consistency with those components, not that the right line items were chosen.
+A bridge is Caterpillar's own disclosed volume, price realization, currency, and inter-segment components tested against its reported sales change, for three segments and the consolidated total across eight quarters. All 32 checks return zero, but four are not independent: three use a prior-year figure back-solved from the bridge itself, and one depends on a component disclosed only as "$3.1 billion". Reconciliation demonstrates internal consistency with those components, not that the right line items were chosen.
 
 | Construction Industries | Q1 2026 | Q2 2026 |
 |---|---:|---:|
 | Disclosed CI dealer-inventory build | $1.5B | $400M |
-| Management driver named first | dealer inventories | end users |
-| Adjusted reported-vs-retail gap | 24.3 pts | 7.8 pts |
+| Volume driver named first (order of mention) | dealer inventories | end users |
+| Adjusted reported-vs-retail gap | ~24 pts | ~8 pts |
 | Retail sales growth to end users | 7% | 22% |
 | Reported CI sales growth | 38.1% | 34.8% |
 
-Reported growth barely moved. What produced it changed.
+Reported growth barely moved. What produced it changed. The order of mention is sourced; reading it as a shift in the drivers' relative size is an analytical inference, consistent with the dealer-inventory dollars but not a disclosure of magnitude.
 
 > Read the reported-vs-retail gap as a **directional** indicator of dealer stocking, not as an exact dollar measurement of inventory. The two disclosures differ in price basis, scope, the treatment of parts and services, and possibly currency.
 
 ## 4. Hero exhibit
 
-![The shipping-to-retail gap narrowed from 24.3 points to 7.8 in Q2 2026](assets/exhibit-2-demand-quality-gap.png)
+![The shipping-to-retail gap narrowed sharply, from ~24 points to ~8, in Q2 2026](assets/exhibit-2-demand-quality-gap.png)
 
-*Construction Industries, year-over-year growth. Band = shipments above retail: a directional read on dealer stocking.*
+*Construction Industries, year-over-year growth. Shaded band = the gap: a directional signal of dealer stocking.*
 
-The band is DIRECTIONAL, not a measured inventory amount. Retail is reported in price-neutral dollars based on unit sales, so price realization is stripped from the blue line for comparability. The two series do not reconcile arithmetically — they differ in price basis, scope, parts and services, and possibly currency. Disclosed CI dealer build: +$1.5B in Q1 2026, +$0.4B in Q2 2026.
+The band is a DIRECTIONAL signal, not an accounting identity or a measured inventory amount. Retail is reported in price-neutral dollars based on unit sales, so price realization is stripped from the blue line. The two series do not reconcile arithmetically — they differ in price basis, scope, parts and services, and possibly currency. Retail growth is disclosed in whole percentages, hence ~24 / ~8 points. Disclosed CI dealer build: +$1.5B in Q1 2026, +$0.4B in Q2 2026. The Q1 2025 annotation ("slower stocking") uses company-wide dealer figures, not CI.
 
 *Source: Caterpillar quarterly earnings releases and Ex 99.2 retail sales statistics, Q3 2024 – Q2 2026.*
 
 ## 5. What the project demonstrates
-- Segment-level reconciliation discipline: every volume/price/currency/inter-segment bridge closes to zero across all 32 quarter-segment checks.
-- A four-level sourcing classification (SOURCED / DERIVED / CALC / NOT DISCLOSED, with INFERRED used only in notes) applied to every figure, with no assumed inputs anywhere in the dataset.
+- Segment-level reconciliation discipline: 28 of 32 volume/price/currency/inter-segment bridges close to zero independently, and the four that cannot (three with a back-solved prior-year value, one depending on a "$3.1B" rounded disclosure) are identified rather than counted as passes.
+- A five-level evidence classification (SOURCED / DERIVED / BACK-SOLVED / NOT COLLECTED / NOT DISCLOSED, with INFERRED used only in notes) applied to every figure. No figure is an estimate; the four back-solved values are flagged in the workbook.
 - A logged comparability record: segment renames, a prior-year restatement, and a retail-basis wording change are surfaced and tested rather than smoothed over or hidden.
 - A forward view stated as a falsifiable inference, with explicit conditions that would strengthen, weaken, or redirect the thesis — including an alternative hypothesis (demand pull-forward) and one expected corroboration (cash flow) that didn't hold up.
 - Correct handling of a cost-shock distortion: ex-tariff margin is explicitly framed as an upper bound, not claimed as an efficiency or cost-control result.
@@ -48,7 +48,7 @@ The band is DIRECTIONAL, not a measured inventory amount. Retail is reported in 
 
 *Stated as inference, not finding. All three describe H2 2026, which had not been reported when this was written.*
 
-If Caterpillar follows through on the expected dealer-inventory drawdown while end-user demand remains healthy, dealer stocking should contribute less to reported CI growth in H2 2026. Reported growth should therefore move closer to retail growth, or temporarily trail it during destocking.
+If dealer inventory stops building or draws down in H2 2026 while end-user demand holds, dealer stocking should contribute less to reported CI growth. Reported growth should therefore move closer to retail growth, or temporarily trail it during destocking. (Management commentary on a Q4 drawdown is referenced in the sources, but no verbatim quote was captured — INSUFFICIENT EVIDENCE — so it is not attributed here.)
 
 - **Strengthens the thesis** — Retail growth remains elevated while dealer inventory growth continues to slow or turns negative.
 - **Weakens the thesis** — Retail growth falls materially in H2 while dealer inventories draw down, suggesting Q2's 22% was a temporary spike rather than evidence of durable end demand.
@@ -60,7 +60,7 @@ If Caterpillar follows through on the expected dealer-inventory drawdown while e
 
 Financial figures are sourced to Caterpillar and SEC filings wherever available: quarterly earnings releases Q3 2024 – Q2 2026, Ex 99.2 Rolling 3-Month Retail Sales Statistics, and the Q1 and Q2 2026 Forms 10-Q (accessions 0000018230-26-000021 and -000046). Management commentary not reproduced in a filing is identified as earnings-call commentary and supported by transcript sources. No third-party estimates or analyst summaries are used as financial inputs. Where the 10-Q documents would not serve Item 2 on retrieval, figures were confirmed by exact-phrase match against the EDGAR full-text index — present in the filing, though the surrounding sentence was not read.
 
-Every figure in the workbook is classified SOURCED, DERIVED, CALC or NOT DISCLOSED, with INFERRED used in notes where a filing's scope or period qualifier could not be recovered. ASSUMPTION is part of the project's classification scheme but appears nowhere in this dataset — no figure here is assumed.
+Every figure in the workbook is classified on five levels — SOURCED, DERIVED, BACK-SOLVED, NOT COLLECTED or NOT DISCLOSED — with CALC marking live formula rows and INFERRED used in notes where a filing's scope or period qualifier could not be recovered. No figure is an estimate. Four figures are BACK-SOLVED residuals (shown in orange and noted in the workbook); any bridge that uses one is not counted as an independent reconciliation.
 
 Full detail: [`docs/methodology.md`](docs/methodology.md) · [`docs/sources.md`](docs/sources.md) · [`docs/definitions.md`](docs/definitions.md)
 
@@ -69,13 +69,18 @@ Full detail: [`docs/methodology.md`](docs/methodology.md) · [`docs/sources.md`]
 - Q2 2026 retail strength is a single observation and needs H2 confirmation.
 - Segment-level dealer-inventory dollars are not disclosed continuously, so no unbroken eight-quarter series exists at either scope.
 - Ex-tariff margin is an upper bound on underlying performance, not a clean efficiency measure: the price realization that lifted it was taken partly to recover the same tariff costs.
+- The Q4 2025 and Q1 2026 tariff figures are disclosed manufacturing-cost lines that Caterpillar said "largely" reflected tariffs; the Q2 2026 figure is 340 bps disclosed on the earnings call, converted to about $284M here (derived). The two methods are not comparable as a trend.
+- The pressure test supports direction only: the gap-implied stocking swing has the right sign in all four testable quarters, but no magnitude can be tested because prior-year builds are unquantified or the scopes differ.
+- The change in management's driver order is sourced; reading it as a change in the drivers' relative size is an analytical inference.
+- Q1 is seasonally a dealer build quarter (management called the Q1 2026 build "a more typical $1.5 billion increase in the first quarter"), so part of the sequential $1.5B → $400M decline may be seasonal.
+- INSUFFICIENT EVIDENCE: management's Q4 2026 dealer-inventory drawdown commentary and the full-year 2026 tariff-cost guidance (about $2.2B, roughly half of Q3 in CI) are referenced in the sources but no verbatim quote was captured, so neither is used as evidence.
 
 ## 9. Downloads / files
 
 | File | Description |
 |---|---|
 | [`analysis/Caterpillar_Demand_Quality_Case_Study.pdf`](analysis/Caterpillar_Demand_Quality_Case_Study.pdf) | Full written case study |
-| [`model/CAT_8Q_Operating_Dataset.xlsx`](model/CAT_8Q_Operating_Dataset.xlsx) | Eight-quarter dataset, 32 reconciled bridges, source and classification for every figure, comparability log |
+| [`model/CAT_8Q_Operating_Dataset.xlsx`](model/CAT_8Q_Operating_Dataset.xlsx) | Eight-quarter dataset, 32 bridge checks (28 independent), source and five-level classification for every figure, comparability log |
 | [`docs/methodology.md`](docs/methodology.md) | Sourcing rules, classification scheme, verification method |
 | [`docs/sources.md`](docs/sources.md) | Every source document, with direct links |
 | [`docs/definitions.md`](docs/definitions.md) | Classification scheme and tab-by-tab dataset definitions |

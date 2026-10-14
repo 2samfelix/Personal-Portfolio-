@@ -30,8 +30,8 @@
     <text class="ax" x="432" y="372">Net reported sales change</text>
     <g data-claude-anchor="caption" class="x-caption">
       <text class="cap" x="64" y="400">Inter-segment eliminations of $13–$40m a quarter are excluded for legibility, so the stacked components differ from the</text>
-      <text class="cap" x="64" y="414">total diamond by that amount. This is a composition, not a reconciliation. All four components reconcile to the reported</text>
-      <text class="cap" x="64" y="428">change with zero residual in the underlying workbook, across all eight quarters.</text>
+      <text class="cap" x="64" y="414">total diamond by that amount. This is a composition, not a reconciliation. In the underlying workbook, all four components</text>
+      <text class="cap" x="64" y="428">reconcile to the reported change in seven of eight quarters; Q2 2025 closes by construction (prior-year sales back-solved).</text>
       <text class="cap" x="64" y="446">Caterpillar quarterly earnings releases, Construction Industries segment sales bridges, Q3 2024 – Q2 2026</text>
     </g>
   </g>
