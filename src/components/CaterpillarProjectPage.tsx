@@ -4,31 +4,43 @@ import { ProjectHero } from "@/components/project/ProjectHero";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
 
-const VERIFICATION_STRIP = [
+const VERIFICATION_STRIP: { value: string; label: string; detail?: string }[] = [
   { value: "8", label: "Quarters analyzed, Q3 2024 – Q2 2026" },
-  { value: "32 / 32", label: "Segment bridges reconcile to zero" },
-  { value: "0", label: "Assumed figures" },
-  { value: "16", label: "Comparability issues logged and tested" },
+  {
+    value: "28 / 32",
+    label: "Bridges reconcile independently",
+    detail:
+      '4 additional checks require caveats: 3 use back-solved prior-year values; 1 depends on a component disclosed only as "$3.1B"',
+  },
+  {
+    value: "5-level",
+    label: "Evidence classification",
+    detail: "sourced · derived · back-solved · not collected · not disclosed",
+  },
+  { value: "16", label: "Comparability issues logged" },
 ];
 
 const EVIDENCE_ROWS: [string, string, string][] = [
   ["Disclosed CI dealer-inventory build", "$1.5B", "$400M"],
-  ["Management driver named first", "dealer inventories", "end users"],
-  ["Adjusted reported-vs-retail gap", "24.3 pts", "7.8 pts"],
+  ["Volume driver named first (order of mention)", "dealer inventories", "end users"],
+  ["Adjusted reported-vs-retail gap (directional)", "~24 pts", "~8 pts"],
   ["Retail sales growth to end users", "7%", "22%"],
   ["Reported CI sales growth", "38.1%", "34.8%"],
 ];
 
-// Q2 2026's 340 bps is the figure SOURCED verbatim from the Q2 2026 earnings
-// call (CFO Kyle Epley); the $284M dollar drag is DERIVED from it, not the
-// other way around. 343 (the bps recomputed back from the rounded $284M) is
-// a rounding artifact of that conversion and is not the disclosed number —
-// do not substitute it back in.
+// Mirrors assets/exhibit-5-margin-context.md. Q4 2025 / Q1 2026 dollars are
+// disclosed unfavorable manufacturing costs that Caterpillar said largely
+// reflected tariffs; their bps come from a workbook method. Q2 2026's 340 bps
+// is SOURCED from the earnings call (CFO Kyle Epley) and the ~$284M is
+// DERIVED from it. The two methods sit in separate rows because they are not
+// comparable; never recompute the Q2 bps back from the rounded dollars.
 const MARGIN_ROWS: [string, string, string, string][] = [
   ["Reported segment margin", "14.9%", "21.4%", "23.3%"],
-  ["Disclosed tariff drag, $m", "420", "362", "284"],
-  ["Tariff drag, bps of margin", "604", "509", "340"],
-  ["Margin excluding that drag, derived", "20.9%", "26.5%", "26.7%"],
+  ["Unfavorable manufacturing costs, disclosed, $m (largely tariffs)", "420", "362", "not disclosed"],
+  ["Tariff impact, disclosed on the call, bps", "—", "—", "340"],
+  ["Tariff impact, derived from the 340 bps, $m", "—", "—", "~284"],
+  ["Cost drag, bps (workbook method, not comparable with Q2)", "~600", "~510", "—"],
+  ["Margin excluding that cost, derived (upper bound)", "20.9%", "26.5%", "26.7%"],
 ];
 
 // Workbook source: Analysis tab, rows 40-43, columns B-I. Only four of the
@@ -38,21 +50,23 @@ const MARGIN_ROWS: [string, string, string, string][] = [
 // has no disclosed dollar figure either, but Caterpillar's narrative
 // disclosure (an increase against a prior-year decrease) is carried through
 // explicitly per row 47's verdict — not coerced into a number or left blank.
-// The Verdict row is reformatted (not reworded) from the workbook's own
-// per-quarter notes: Q1 2025 from row 45, Q3 2025 from row 47, Q1 2026 from
-// row 48, Q2 2026 from row 46.
+// The Verdict row follows the workbook's per-quarter notes (Q1 2025 row 45,
+// Q3 2025 row 47, Q1 2026 row 48, Q2 2026 row 46): the sign is tested, the
+// magnitude is not. Implied swings are rounded because retail growth is
+// disclosed in whole percentages (about +/-$30M per quarter before any basis
+// difference).
 const PRESSURE_TEST_ROWS: [string, string, string, string, string][] = [
-  ["Implied stocking swing", "−$1,078M", "+$233M", "+$1,258M", "+$485M"],
+  ["Implied stocking swing (directional)", "~−$1.1B", "~+$0.2B", "~+$1.3B", "~+$0.5B"],
   [
     "Disclosed build, this quarter",
-    "$100M",
+    "$100M (company-wide)",
     "Increase (no dollar disclosed)",
     "$1,500M",
     "$400M",
   ],
   [
     "Disclosed build, prior-year quarter",
-    "$1,400M",
+    "$1,400M (company-wide)",
     "Decrease (no dollar disclosed)",
     "slight decrease (unquantified)",
     "decrease (unquantified)",
@@ -60,17 +74,20 @@ const PRESSURE_TEST_ROWS: [string, string, string, string, string][] = [
   ["Scope", "Company-wide", "—", "CI", "CI"],
   [
     "Verdict",
-    "FITS — 83% of the company-wide swing",
-    "Sign agrees; magnitude untestable",
-    "UNDERSTATES by roughly $290M",
-    "FITS — $485M implied vs $400M disclosed build; prior-year decrease unquantified",
+    "SIGN AGREES — scope differs, magnitude not tested",
+    "SIGN AGREES — no dollar disclosed, magnitude untestable",
+    "SIGN AGREES — prior-year build unquantified, magnitude untestable",
+    "SIGN AGREES — prior-year build unquantified, magnitude untestable",
   ],
 ];
 
 const LIMITATIONS = [
-  "The reported-vs-retail gap is directional and relative, not a precise dealer-inventory dollar measure.",
+  "The reported-vs-retail gap is a directional signal, not an accounting identity or a precise dealer-inventory dollar measure; the pressure test supports its sign, not its size.",
+  "The change in management's order of mention is sourced; reading it as a change in the drivers' relative size is an analytical inference.",
   "Q2 2026 retail strength is a single observation and needs H2 confirmation.",
   "Segment-level dealer-inventory dollars are not disclosed continuously, so no unbroken eight-quarter series exists at either scope.",
+  "Q1 is seasonally a dealer build quarter, so part of the sequential $1.5B → $400M decline may be seasonal.",
+  "Insufficient evidence: management commentary on a Q4 2026 dealer-inventory drawdown is referenced in the sources, but no verbatim quote was captured, so the forward view is stated as a condition only.",
 ];
 
 const DOCS_BASE =
@@ -213,7 +230,7 @@ export default function CaterpillarProjectPage({
           }}
           finding={{
             label: "03 — The Finding",
-            body: "The mix shifted materially toward end-user demand in Q2 2026: the disclosed dealer build fell from $1.5B to $400M while retail sales growth increased from 7% to 22%.",
+            body: "The evidence points to a material shift toward end-user demand in Q2 2026: the disclosed CI dealer build fell from $1.5B to $400M while retail sales growth rose from 7% to 22%.",
           }}
         />
 
@@ -223,7 +240,7 @@ export default function CaterpillarProjectPage({
               title: "Full Case Study",
               format: "PDF",
               description:
-                "Seven-page written analysis covering the thesis, evidence, pressure test, forward judgment, limitations, and methodology.",
+                "Eight-page written analysis covering the thesis, evidence, pressure test, forward judgment, limitations, and methodology.",
               href: pdfDeliverable?.url,
               ctaLabel: "Open case study ↗",
             },
@@ -231,7 +248,7 @@ export default function CaterpillarProjectPage({
               title: "Presentation",
               format: "PDF",
               description:
-                "Nine-page executive presentation distilling the question, evidence, finding, pressure test, operating drivers, and forward judgment.",
+                "Nine-page executive presentation distilling the question, evidence, finding, pressure test, operating drivers, forward test, and margin context.",
               href: presentationDeliverable?.url,
               ctaLabel: "Open presentation ↗",
             },
@@ -239,7 +256,7 @@ export default function CaterpillarProjectPage({
               title: "Operating Workbook",
               format: "XLSX",
               description:
-                "Eight-quarter operating dataset with sourced figures, reconciliation checks, comparability log, and the underlying pressure test.",
+                "Eight-quarter operating dataset with a five-level evidence classification, reconciliation checks, comparability log, and the underlying pressure test.",
               href: xlsxDeliverable?.url,
               ctaLabel: "Download workbook ↗",
             },
@@ -261,14 +278,17 @@ export default function CaterpillarProjectPage({
               <div key={stat.label} className="rounded-xl border border-forest/15 bg-white p-4">
                 <span className="block text-2xl font-black text-charcoal">{stat.value}</span>
                 <span className="mt-1 block text-xs leading-5 text-charcoal-soft">{stat.label}</span>
+                {stat.detail && (
+                  <span className="mt-1 block text-[11px] leading-4 text-charcoal-soft/80">{stat.detail}</span>
+                )}
               </div>
             ))}
           </div>
           <p className="mt-3 text-xs leading-5 text-charcoal-soft">
             A bridge is Caterpillar&apos;s own disclosed volume, price realization, currency and inter-segment
-            components reconciled against its reported sales change, tested for each of four segments across eight
-            quarters. Reconciliation demonstrates internal consistency with those components, not that the right
-            line items were chosen.
+            components tested against its reported sales change, for three segments and the consolidated total
+            across eight quarters. Reconciliation demonstrates internal consistency with those components, not that
+            the right line items were chosen.
           </p>
         </div>
 
@@ -278,25 +298,28 @@ export default function CaterpillarProjectPage({
           {/*
             title/subtitle must match exhibit-2-demand-quality-gap.svg's own
             <text class="ttl">/<text class="sub"> verbatim — see the note on
-            ExhibitFigure. headerHeight=70: single-line subtitle ending ~y=52,
-            plus margin before the first gridline at y=102.8. Verify with
+            ExhibitFigure. naturalHeight=466 (viewBox grew from 452 when a fifth
+            caption line was added in Gate C3B). headerHeight=70: single-line
+            subtitle ending ~y=52, plus margin before the first gridline at
+            y=102.8. Verify with
             `npm run verify:caterpillar-exhibits`.
           */}
           <ExhibitFigure
             eyebrow="Exhibit 2"
             src="/caterpillar/exhibit-2-demand-quality-gap.svg"
-            alt="Construction Industries price-adjusted sales growth against retail sales to end users, eight quarters. The gap narrowed from 24.3 points in Q1 2026 to 7.8 points in Q2 2026."
-            title="The shipping-to-retail gap narrowed from 24.3 points to 7.8 in Q2 2026"
-            subtitle="Construction Industries, year-over-year growth. Band = shipments above retail: a directional read on dealer stocking."
-            naturalHeight={452}
+            alt="Construction Industries price-adjusted sales growth against retail sales to end users, eight quarters. The gap, a directional signal rather than an accounting identity, narrowed sharply from about 24 points in Q1 2026 to about 8 points in Q2 2026."
+            title="The shipping-to-retail gap narrowed sharply, from ~24 points to ~8, in Q2 2026"
+            subtitle="Construction Industries, year-over-year growth. Shaded band = the gap: a directional signal of dealer stocking."
+            naturalHeight={466}
             headerHeight={70}
           />
           <p className="mt-6 text-base font-semibold text-charcoal">Q1 2025 is the control case</p>
           <p className="mt-2 text-sm leading-6 text-charcoal-soft">
             The same pattern runs the other way a year earlier. Retail sales to end users rose 3% while
-            price-adjusted CI shipments fell 13.8%, as dealer inventory accumulation slowed sharply. That
-            historical quarter is why I treat the reported-vs-retail gap as a directional signal rather than a
-            story fitted to Q1 and Q2 2026.
+            price-adjusted CI shipments fell 13.8%, as company-wide dealer stocking slowed sharply (+$0.1B
+            against +$1.4B a year earlier; no CI figure was disclosed that quarter). That historical quarter is
+            why I treat the reported-vs-retail gap as a directional signal rather than a story fitted to Q1 and
+            Q2 2026.
           </p>
         </section>
 
@@ -326,12 +349,14 @@ export default function CaterpillarProjectPage({
             </table>
           </div>
           <p className="mt-4 text-sm leading-6 text-charcoal-soft">
-            Reported growth barely moved. What produced it changed.
+            Reported growth barely moved. What produced it changed. The change in the order of mention is
+            sourced; reading it as a shift in the drivers&apos; relative size is an analytical inference,
+            consistent with the dealer-inventory dollars but not a disclosure of magnitude.
           </p>
           <div className="mt-4 rounded-xl border-l-4 border-brass bg-brass-pale/40 px-4 py-3 text-sm leading-6 text-charcoal">
-            Read the reported-vs-retail gap as a <span className="font-bold">directional</span> indicator of
-            dealer stocking, not as an exact dollar measurement of inventory. The two disclosures differ in price
-            basis, scope, the treatment of parts and services, and possibly currency.
+            Read the reported-vs-retail gap as a <span className="font-bold">directional</span> signal of
+            dealer stocking, not as an accounting identity or an exact dollar measurement of inventory. The two
+            disclosures differ in price basis, scope, the treatment of parts and services, and possibly currency.
           </div>
         </section>
 
@@ -342,13 +367,10 @@ export default function CaterpillarProjectPage({
           </h2>
           <p className="mt-3 text-sm leading-6 text-charcoal-soft">
             I pressure-tested the reported-vs-retail signal against the four quarters where Caterpillar disclosed
-            dealer-inventory changes. The direction agrees in all four, but the magnitude does not reconcile
-            precisely, and this is not an accounting identity. In Q1 2026 the gap-based estimate of $1,258M falls
-            roughly $290M short of the implied year-over-year swing — Caterpillar&apos;s disclosed $1.5B
-            Construction Industries build against a slight decrease in the prior-year quarter. Price-basis
-            differences explain part of that shortfall, while parts/services, currency and other scope
-            differences prevent a precise reconciliation. Disclosure scope is not fully like-for-like across the
-            four tests, so the result supports direction rather than a precise segment-level reconciliation.
+            dealer-inventory changes. The sign agrees in all four. No magnitude can be tested: in Q1 and Q2 2026
+            the prior-year Construction Industries build is unquantified, Q3 2025 has no dollar figure, and Q1
+            2025 compares a CI estimate with a company-wide disclosure. The gap is a directional signal, not an
+            accounting identity, so the test supports direction rather than size.
           </p>
           <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
             <table className="w-full min-w-[520px] text-left text-sm">
@@ -389,23 +411,27 @@ export default function CaterpillarProjectPage({
           {/*
             title/subtitle must match exhibit-3-dealer-inventory-record.svg's
             own <text class="ttl">/<text class="sub"> verbatim — see the note
-            on ExhibitFigure. headerHeight=70: single-line subtitle ending
-            ~y=52, plus margin before the first gridline at y=112.1. Verify
+            on ExhibitFigure. naturalHeight=470 (viewBox grew from 456 when the
+            seasonality line was added in Gate C3B). headerHeight=70: single-line
+            subtitle ending ~y=52, plus margin before the first gridline at y=112.1. Verify
             with `npm run verify:caterpillar-exhibits`.
           */}
           <ExhibitFigure
             eyebrow="Exhibit 3"
             src="/caterpillar/exhibit-3-dealer-inventory-record.svg"
-            alt="Disclosed dealer-inventory change by quarter. The Construction Industries build collapsed from 1.5 billion dollars in Q1 2026 to 400 million in Q2 2026."
-            title="Construction Industries dealer build collapsed from $1.5B to $0.4B in Q2 2026"
+            alt="Disclosed dealer-inventory change by quarter. The Construction Industries build fell sharply from 1.5 billion dollars in Q1 2026 to 400 million in Q2 2026; Q1 is seasonally a dealer build quarter, so part of the decline may be seasonal."
+            title="Construction Industries dealer build fell sharply from $1.5B to $0.4B in Q2 2026"
             subtitle="Disclosed dealer-inventory change. Every quarter has two slots; a hatched stub means that figure was never disclosed."
-            naturalHeight={456}
+            naturalHeight={470}
             headerHeight={70}
           />
           <p className="mt-6 text-base font-semibold text-charcoal">Why this matters</p>
           <p className="mt-2 text-sm leading-6 text-charcoal-soft">
-            The $1.5B → $400M decline is the hardest evidence in the analysis because it comes directly from
-            Caterpillar&apos;s disclosed Construction Industries dealer-inventory figures. Showing all eight
+            The $1.5B → $400M decline is the most direct evidence in the analysis because it comes from
+            Caterpillar&apos;s disclosed Construction Industries dealer-inventory figures. Q1 is seasonally a build
+            quarter — management called the Q1 2026 figure &ldquo;a more typical $1.5 billion increase in the first
+            quarter&rdquo; — so part of the sequential decline may be seasonal; the year-over-year pressure test
+            above is the seasonally matched check. Showing all eight
             quarters also makes clear where dollar disclosure exists and where it does not; missing disclosure is
             not treated as zero.
           </p>
@@ -454,9 +480,9 @@ export default function CaterpillarProjectPage({
             was written.
           </p>
           <p className="mt-4 text-base leading-7 text-charcoal-soft">
-            If Caterpillar follows through on the expected dealer-inventory drawdown while end-user demand
-            remains healthy, dealer stocking should contribute less to reported CI growth in H2 2026. Reported
-            growth should therefore move closer to retail growth, or temporarily trail it during destocking.
+            If dealer inventory stops building or draws down in H2 2026 while end-user demand holds, dealer
+            stocking should contribute less to reported CI growth. Reported growth should therefore move closer to
+            retail growth, or temporarily trail it during destocking.
           </p>
           <div className="mt-6 flex flex-col gap-4">
             <div className="rounded-r-lg border-l-4 border-forest bg-forest/5 p-4">
@@ -489,8 +515,10 @@ export default function CaterpillarProjectPage({
             Margin Context, and What the Analysis Cannot Claim
           </h2>
           <p className="mt-3 text-sm leading-6 text-charcoal-soft">
-            The Q4 2025 margin trough was driven largely by tariff costs rather than an underlying efficiency or
-            cost-control deterioration, and the 2026 recovery is partly that pressure receding.
+            Our reading, an analytical inference: the Q4 2025 margin trough was mainly a tariff cost shock rather
+            than an underlying efficiency or cost-control deterioration, and the 2026 recovery is partly that
+            pressure receding. The manufacturing-cost lines only &ldquo;largely&rdquo; reflected tariffs, and the CI
+            profit bridges remain only partly itemized.
           </p>
           <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
             <table className="w-full min-w-[420px] text-left text-sm">
@@ -515,16 +543,18 @@ export default function CaterpillarProjectPage({
             </table>
           </div>
           <p className="mt-4 text-xs leading-5 text-charcoal-soft">
-            Q4 2025 and Q1 2026 drags are dollar figures disclosed in the earnings releases, and their bps are
-            derived as the ex-tariff margin computed from raw dollars less Caterpillar&apos;s rounded reported
-            margin — so they differ by 2–3 bps from drag ÷ sales. Q2 2026 is the reverse: Caterpillar disclosed
-            340 bps on the earnings call, converted to dollars here.{" "}
+            Q4 2025 and Q1 2026 use the unfavorable manufacturing costs disclosed in the earnings releases, which
+            Caterpillar said largely reflected higher tariff costs; their bps are derived as the ex-tariff margin
+            computed from raw dollars less Caterpillar&apos;s rounded reported margin. Q2 2026 is a different
+            method: Caterpillar disclosed 340 bps on the earnings call (sourced), converted to about $284M here
+            (derived). The two methods are not comparable as a trend.{" "}
             <span className="font-bold">
               Ex-tariff margin is an upper bound on underlying performance
             </span>
             : the price realization that lifted it was taken partly to recover the same tariff costs. Separately,
-            Q2 2026 consolidated operating profit included $392m of one-time IEEPA tariff recoveries, which the
-            CFO stated sat mostly in corporate items — CI segment margin is unaffected by them.
+            Q2 2026 consolidated operating profit included $392m of one-time IEEPA tariff recoveries; the CFO said
+            the majority sits in corporate items. The CI share was not disclosed, so CI segment margin is unlikely
+            to be materially affected — an inference, not a disclosed exclusion.
           </p>
           <p className="mt-2 text-xs leading-5 text-charcoal-soft">
             Caterpillar 4Q 2025, 1Q 2026 and 2Q 2026 earnings releases and Q2 2026 earnings call
