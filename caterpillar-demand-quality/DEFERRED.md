@@ -19,10 +19,12 @@ Evidence gaps. Each is marked INSUFFICIENT EVIDENCE wherever it is mentioned
 and is not used as evidence until a verbatim quote is captured from the
 primary source:
 
-- **Q4 2026 dealer-inventory drawdown commentary** (Q2 2026 call). The forward
-  view is stated as a condition, not attributed to management.
-- **FY2026 tariff-cost guidance** (about $2.2B, roughly half of Q3 in CI; Q2
-  2026 call).
+- ~~**Q4 2026 dealer-inventory drawdown commentary** (Q2 2026 call).~~
+  **Resolved 2026-10-16:** quoted and attributed (CFO Kyle Epley, CEO Joseph
+  Creed) in the public text and the workbook; see the first Resolved entry.
+- ~~**FY2026 tariff-cost guidance** (about $2.2B, roughly half of Q3 in CI; Q2
+  2026 call).~~ **Resolved 2026-10-16:** quoted and attributed (CFO Kyle
+  Epley), with the IEEPA-recoveries exclusion; see the first Resolved entry.
 - **Exact release wording of the Q4 2025 / Q1 2026 manufacturing-cost
   attribution** ("…higher tariffs" in Comparability Log D18 vs "…higher tariff
   costs" in Construction Industries A28).
@@ -54,11 +56,15 @@ primary source:
   verification-strip labels (site, projects.ts, Exhibit 1 SVG label and aria-label,
   README, case study, slide 9); the 28 / 32 count is unchanged.
 
-  Not yet changed: the workbook. Dealer Inventory!D11 still quotes the Q2 call as
-  "about $400 million" (the transcript has no "about"), and Source Index!D16, D24,
-  Comparability Log!F18 and Analysis!A60 and A63 still carry the INSUFFICIENT EVIDENCE
-  wording. The two matching
-  items in the Open list above stay open until those cells are edited.
+  Workbook (same date, second commit): six text cells changed and nothing else.
+  Dealer Inventory!D11 now quotes the Q2 call sentence exactly (the old quote said
+  "about $400 million"; the transcript has no "about"). Source Index!D16 and D24,
+  Comparability Log!F18 and Analysis!A60 and A63 now carry the attributed wording
+  instead of INSUFFICIENT EVIDENCE. The edit replaced only those six entries in
+  xl/sharedStrings.xml; every other file in the .xlsx package is byte-identical, every
+  other cell matches before and after (formulas and cached values), and the 32
+  reconciliation rows still hold cached zeros. The two matching Open items above are
+  marked resolved.
 
 - **Gate C3B, Phase C — exhibits and site (applied, uncommitted at time of writing).** The workbook and docs now
   use the corrected language; these public artifacts still carry the old claims
