@@ -11,7 +11,7 @@ from $1.5B to $400M while retail sales growth rose from 7% to 22%.
 quarters analyzed
 Q3 2024 – Q2 2026
 28 / 32
-bridges reconcile
+sales bridges reconcile
 independently
 4 additional checks require
 caveats: 3 use back-solved prior-
@@ -254,10 +254,15 @@ inference.
 Q2 2026 retail strength is a single observation and needs H2 confirmation.
 Dealer-inventory dollars are not disclosed continuously at either scope, and Q1 is seasonally a build
 quarter.
-INSUFFICIENT EVIDENCE: Q4 2026 drawdown commentary and FY2026 tariff-cost guidance (no
-verbatim quotes captured); neither is used.
+Management expects a Q4 2026 Construction Industries dealer-inventory drawdown: CFO Kyle Epley
+said Caterpillar expects “a more typical reduction in Construction Industries dealer inventory of over $1
+billion in the fourth quarter,” and CEO Joseph Creed said “We'll have a drawdown in the fourth quarter
+on CI dealer inventory.” Management also expects full-year 2026 tariff costs of around $2.2 billion,
+excluding approximately $400 million of expected IEEPA tariff recoveries, at the low end of its prior
 Caterpillar Demand Quality · Page 7 of 8
 === PAGE 8 ===
+range; for Q3 it expects tariff costs of around $600 million with about 50% incurred in Construction
+Industries (Q2 2026 call).
 Methodology and sources
 Financial figures are sourced to Caterpillar and SEC filings wherever available: quarterly earnings
 releases Q3 2024 – Q2 2026, Ex 99.2 Rolling 3-Month Retail Sales Statistics, and the Q1 and Q2 2026
@@ -267,7 +272,7 @@ No third-party estimates or analyst summaries are used as financial inputs. Wher
 documents would not serve Item 2 on retrieval, figures were confirmed by exact-phrase match
 against the EDGAR full-text index — present in the filing, though the surrounding sentence was not
 read.
-Underlying workbook available for download — the eight-quarter dataset, 32 bridge checks (28
-independent, 4 with caveats), a five-level evidence classification for every figure (sourced, derived,
-back-solved, not collected, not disclosed; no estimates), and the comparability log.
+Underlying workbook available for download — the eight-quarter dataset, 32 sales bridge checks
+(28 independent, 4 with caveats), a five-level evidence classification for every figure (sourced,
+derived, back-solved, not collected, not disclosed; no estimates), and the comparability log.
 Caterpillar Demand Quality · Page 8 of 8

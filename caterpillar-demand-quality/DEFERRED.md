@@ -31,6 +31,35 @@ primary source:
 
 ## Resolved
 
+- **Q4 drawdown and FY2026 tariff guidance now quoted (2026-10-16; text only).** The
+  Q2 2026 call (Motley Fool transcript) was reviewed manually. The public wording that
+  said no verbatim quote was captured (INSUFFICIENT EVIDENCE) is replaced by attributed
+  wording built only from these quotes:
+  - CFO Kyle Epley: "We also expect a more typical reduction in Construction Industries
+    dealer inventory of over $1 billion in the fourth quarter."
+  - CEO Joseph Creed: "We'll have a drawdown in the fourth quarter on CI dealer inventory."
+  - Epley: "Excluding the expected IEEPA tariff recoveries of approximately $400 million
+    reported in the second quarter, we now expect full year 2026 tariff costs of around
+    $2.2 billion or at the low end of the range we previously provided."
+  - Epley: "We anticipate tariff costs of around $600 million, which is similar to what we
+    incurred in the third quarter of 2025. We expect about 50% of the tariffs to be
+    incurred in Construction Industries and 25% in both Power & Energy and Resource
+    Industries."
+
+  Changed: README.md (forward-judgment note and Limitations), docs/methodology.md
+  (Evidence gaps), docs/sources.md (Q2 2026 call rows), the site's Limitations list
+  (`src/components/CaterpillarProjectPage.tsx`), case-study.html (Limitations) and
+  presentation.html (slide 9, shortened; the IEEPA exclusion is kept). The H2 forward
+  test stays stated as a condition. "Sales" was added before "bridges" in the
+  verification-strip labels (site, projects.ts, Exhibit 1 SVG label and aria-label,
+  README, case study, slide 9); the 28 / 32 count is unchanged.
+
+  Not yet changed: the workbook. Dealer Inventory!D11 still quotes the Q2 call as
+  "about $400 million" (the transcript has no "about"), and Source Index!D16, D24,
+  Comparability Log!F18 and Analysis!A60 and A63 still carry the INSUFFICIENT EVIDENCE
+  wording. The two matching
+  items in the Open list above stay open until those cells are edited.
+
 - **Gate C3B, Phase C — exhibits and site (applied, uncommitted at time of writing).** The workbook and docs now
   use the corrected language; these public artifacts still carry the old claims
   and must be brought into line together (the exhibit-text verification script
