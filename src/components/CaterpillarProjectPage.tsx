@@ -8,7 +8,7 @@ const VERIFICATION_STRIP: { value: string; label: string; detail?: string }[] = 
   { value: "8", label: "Quarters analyzed, Q3 2024 – Q2 2026" },
   {
     value: "28 / 32",
-    label: "Bridges reconcile independently",
+    label: "Sales bridges reconcile independently",
     detail:
       '4 additional checks require caveats: 3 use back-solved prior-year values; 1 depends on a component disclosed only as "$3.1B"',
   },
@@ -87,7 +87,7 @@ const LIMITATIONS = [
   "Q2 2026 retail strength is a single observation and needs H2 confirmation.",
   "Segment-level dealer-inventory dollars are not disclosed continuously, so no unbroken eight-quarter series exists at either scope.",
   "Q1 is seasonally a dealer build quarter, so part of the sequential $1.5B → $400M decline may be seasonal.",
-  "Insufficient evidence: management commentary on a Q4 2026 dealer-inventory drawdown is referenced in the sources, but no verbatim quote was captured, so the forward view is stated as a condition only.",
+  "Guidance from the Q2 2026 call, not an observed outcome: Management expects a Q4 2026 Construction Industries dealer-inventory drawdown: CFO Kyle Epley said Caterpillar expects \"a more typical reduction in Construction Industries dealer inventory of over $1 billion in the fourth quarter,\" and CEO Joseph Creed said \"We'll have a drawdown in the fourth quarter on CI dealer inventory.\" Management also expects full-year 2026 tariff costs of around $2.2 billion, excluding approximately $400 million of expected IEEPA tariff recoveries, at the low end of its prior range; for Q3 it expects tariff costs of around $600 million with about 50% incurred in Construction Industries (Q2 2026 call).",
 ];
 
 const DOCS_BASE =

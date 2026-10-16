@@ -19,10 +19,12 @@ Evidence gaps. Each is marked INSUFFICIENT EVIDENCE wherever it is mentioned
 and is not used as evidence until a verbatim quote is captured from the
 primary source:
 
-- **Q4 2026 dealer-inventory drawdown commentary** (Q2 2026 call). The forward
-  view is stated as a condition, not attributed to management.
-- **FY2026 tariff-cost guidance** (about $2.2B, roughly half of Q3 in CI; Q2
-  2026 call).
+- ~~**Q4 2026 dealer-inventory drawdown commentary** (Q2 2026 call).~~
+  **Resolved 2026-10-16:** quoted and attributed (CFO Kyle Epley, CEO Joseph
+  Creed) in the public text and the workbook; see the first Resolved entry.
+- ~~**FY2026 tariff-cost guidance** (about $2.2B, roughly half of Q3 in CI; Q2
+  2026 call).~~ **Resolved 2026-10-16:** quoted and attributed (CFO Kyle
+  Epley), with the IEEPA-recoveries exclusion; see the first Resolved entry.
 - **Exact release wording of the Q4 2025 / Q1 2026 manufacturing-cost
   attribution** ("…higher tariffs" in Comparability Log D18 vs "…higher tariff
   costs" in Construction Industries A28).
@@ -30,6 +32,39 @@ primary source:
   unlikely to be materially affected" stays labeled as inference.
 
 ## Resolved
+
+- **Q4 drawdown and FY2026 tariff guidance now quoted (2026-10-16; text only).** The
+  Q2 2026 call (Motley Fool transcript) was reviewed manually. The public wording that
+  said no verbatim quote was captured (INSUFFICIENT EVIDENCE) is replaced by attributed
+  wording built only from these quotes:
+  - CFO Kyle Epley: "We also expect a more typical reduction in Construction Industries
+    dealer inventory of over $1 billion in the fourth quarter."
+  - CEO Joseph Creed: "We'll have a drawdown in the fourth quarter on CI dealer inventory."
+  - Epley: "Excluding the expected IEEPA tariff recoveries of approximately $400 million
+    reported in the second quarter, we now expect full year 2026 tariff costs of around
+    $2.2 billion or at the low end of the range we previously provided."
+  - Epley: "We anticipate tariff costs of around $600 million, which is similar to what we
+    incurred in the third quarter of 2025. We expect about 50% of the tariffs to be
+    incurred in Construction Industries and 25% in both Power & Energy and Resource
+    Industries."
+
+  Changed: README.md (forward-judgment note and Limitations), docs/methodology.md
+  (Evidence gaps), docs/sources.md (Q2 2026 call rows), the site's Limitations list
+  (`src/components/CaterpillarProjectPage.tsx`), case-study.html (Limitations) and
+  presentation.html (slide 9, shortened; the IEEPA exclusion is kept). The H2 forward
+  test stays stated as a condition. "Sales" was added before "bridges" in the
+  verification-strip labels (site, projects.ts, Exhibit 1 SVG label and aria-label,
+  README, case study, slide 9); the 28 / 32 count is unchanged.
+
+  Workbook (same date, second commit): six text cells changed and nothing else.
+  Dealer Inventory!D11 now quotes the Q2 call sentence exactly (the old quote said
+  "about $400 million"; the transcript has no "about"). Source Index!D16 and D24,
+  Comparability Log!F18 and Analysis!A60 and A63 now carry the attributed wording
+  instead of INSUFFICIENT EVIDENCE. The edit replaced only those six entries in
+  xl/sharedStrings.xml; every other file in the .xlsx package is byte-identical, every
+  other cell matches before and after (formulas and cached values), and the 32
+  reconciliation rows still hold cached zeros. The two matching Open items above are
+  marked resolved.
 
 - **Gate C3B, Phase C — exhibits and site (applied, uncommitted at time of writing).** The workbook and docs now
   use the corrected language; these public artifacts still carry the old claims
