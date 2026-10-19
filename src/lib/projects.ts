@@ -249,7 +249,7 @@ export const flagshipProjects: Project[] = [
         "The reported-vs-retail gap, a directional signal, narrowed sharply from ~24 points in Q1 2026 to ~8 points in Q2 2026, even as reported CI sales growth barely moved (38.1% to 34.8%).",
         "Volume, not price, produced the 2026 growth: price realization was negative every quarter from Q3 2024 through Q4 2025 and turned positive only in Q1 2026.",
         "Our reading (an inference) is that the Q4 2025 margin trough of 14.9% was mainly a tariff cost shock rather than an efficiency or cost-control deterioration — the disclosed manufacturing costs only largely reflected tariffs; the derived ex-tariff margin of approximately 20.9% is an upper bound on underlying performance.",
-        "28 of 32 segment-quarter bridges reconcile independently; the other four are identified rather than counted as passes, and 16 logged comparability issues (segment renames, a prior-year restatement, a retail-basis wording change) are surfaced rather than smoothed over.",
+        "28 of 32 segment-quarter sales bridges reconcile independently; the other four are identified rather than counted as passes, and 16 logged comparability issues (segment renames, a prior-year restatement, a retail-basis wording change) are surfaced rather than smoothed over.",
       ],
       takeaway:
         "If dealer inventory stops building or draws down in H2 2026 while end-user demand holds, dealer stocking should contribute less to reported Construction Industries growth. An alternative hypothesis — tariff-driven demand pull-forward into Q2 — remains untested until H2 results are reported.",

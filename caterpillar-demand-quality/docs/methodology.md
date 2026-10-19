@@ -42,10 +42,10 @@ Tariff figures follow the same split: the Q4 2025 ($420M) and Q1 2026 ($362M) fi
 
 Items marked **INSUFFICIENT EVIDENCE** are referenced in the sources but are not used as evidence until a verbatim quote is captured:
 
-- Management commentary on a Q4 2026 dealer-inventory drawdown (Q2 2026 call). The forward view is therefore stated as a condition, not attributed to management.
-- Full-year 2026 tariff-cost guidance of about $2.2B, and roughly half of Q3 2026 tariff costs landing in Construction Industries (Q2 2026 call).
 - The exact release wording of the Q4 2025 / Q1 2026 manufacturing-cost attribution ("…higher tariffs" vs "…higher tariff costs" appear in different workbook notes).
 - The Construction Industries share of the $392M Q2 2026 IEEPA recoveries. The CFO said the majority sits in corporate items, so CI segment margin is unlikely to be materially affected — an inference, not a confirmed exclusion.
+
+Management's Q2 2026 call commentary on the dealer-inventory drawdown and tariff costs is quoted and attributed rather than treated as an evidence gap. Guidance from the Q2 2026 call, not an observed outcome: Management expects a Q4 2026 Construction Industries dealer-inventory drawdown: CFO Kyle Epley said Caterpillar expects "a more typical reduction in Construction Industries dealer inventory of over $1 billion in the fourth quarter," and CEO Joseph Creed said "We'll have a drawdown in the fourth quarter on CI dealer inventory." Management also expects full-year 2026 tariff costs of around $2.2 billion, excluding approximately $400 million of expected IEEPA tariff recoveries, at the low end of its prior range; for Q3 it expects tariff costs of around $600 million with about 50% incurred in Construction Industries (Q2 2026 call).
 
 ## Verification method
 

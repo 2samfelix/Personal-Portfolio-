@@ -9,7 +9,7 @@ Caterpillar's Construction Industries growth leaned heavily on dealer restocking
 ## 3. Key evidence
 
 - **8** quarters analyzed, Q3 2024 – Q2 2026
-- **28 / 32** bridges reconcile independently — 4 additional checks require caveats: 3 use back-solved prior-year values; 1 depends on a component disclosed only as "$3.1B"
+- **28 / 32** sales bridges reconcile independently — 4 additional checks require caveats: 3 use back-solved prior-year values; 1 depends on a component disclosed only as "$3.1B"
 - **5-level** evidence classification — sourced · derived · back-solved · not collected · not disclosed
 - **16** comparability issues logged
 
@@ -48,7 +48,7 @@ The band is a DIRECTIONAL signal, not an accounting identity or a measured inven
 
 *Stated as inference, not finding. All three describe H2 2026, which had not been reported when this was written.*
 
-If dealer inventory stops building or draws down in H2 2026 while end-user demand holds, dealer stocking should contribute less to reported CI growth. Reported growth should therefore move closer to retail growth, or temporarily trail it during destocking. (Management commentary on a Q4 drawdown is referenced in the sources, but no verbatim quote was captured — INSUFFICIENT EVIDENCE — so it is not attributed here.)
+If dealer inventory stops building or draws down in H2 2026 while end-user demand holds, dealer stocking should contribute less to reported CI growth. Reported growth should therefore move closer to retail growth, or temporarily trail it during destocking. Management expects a Q4 2026 Construction Industries dealer-inventory drawdown: CFO Kyle Epley said Caterpillar expects "a more typical reduction in Construction Industries dealer inventory of over $1 billion in the fourth quarter," and CEO Joseph Creed said "We'll have a drawdown in the fourth quarter on CI dealer inventory" (Q2 2026 call).
 
 - **Strengthens the thesis** — Retail growth remains elevated while dealer inventory growth continues to slow or turns negative.
 - **Weakens the thesis** — Retail growth falls materially in H2 while dealer inventories draw down, suggesting Q2's 22% was a temporary spike rather than evidence of durable end demand.
@@ -73,14 +73,14 @@ Full detail: [`docs/methodology.md`](docs/methodology.md) · [`docs/sources.md`]
 - The pressure test supports direction only: the gap-implied stocking swing has the right sign in all four testable quarters, but no magnitude can be tested because prior-year builds are unquantified or the scopes differ.
 - The change in management's driver order is sourced; reading it as a change in the drivers' relative size is an analytical inference.
 - Q1 is seasonally a dealer build quarter (management called the Q1 2026 build "a more typical $1.5 billion increase in the first quarter"), so part of the sequential $1.5B → $400M decline may be seasonal.
-- INSUFFICIENT EVIDENCE: management's Q4 2026 dealer-inventory drawdown commentary and the full-year 2026 tariff-cost guidance (about $2.2B, roughly half of Q3 in CI) are referenced in the sources but no verbatim quote was captured, so neither is used as evidence.
+- Guidance from the Q2 2026 call, not an observed outcome: Management expects a Q4 2026 Construction Industries dealer-inventory drawdown: CFO Kyle Epley said Caterpillar expects "a more typical reduction in Construction Industries dealer inventory of over $1 billion in the fourth quarter," and CEO Joseph Creed said "We'll have a drawdown in the fourth quarter on CI dealer inventory." Management also expects full-year 2026 tariff costs of around $2.2 billion, excluding approximately $400 million of expected IEEPA tariff recoveries, at the low end of its prior range; for Q3 it expects tariff costs of around $600 million with about 50% incurred in Construction Industries (Q2 2026 call).
 
 ## 9. Downloads / files
 
 | File | Description |
 |---|---|
 | [`analysis/Caterpillar_Demand_Quality_Case_Study.pdf`](analysis/Caterpillar_Demand_Quality_Case_Study.pdf) | Full written case study |
-| [`model/CAT_8Q_Operating_Dataset.xlsx`](model/CAT_8Q_Operating_Dataset.xlsx) | Eight-quarter dataset, 32 bridge checks (28 independent), source and five-level classification for every figure, comparability log |
+| [`model/CAT_8Q_Operating_Dataset.xlsx`](model/CAT_8Q_Operating_Dataset.xlsx) | Eight-quarter dataset, 32 sales bridge checks (28 independent), source and five-level classification for every figure, comparability log |
 | [`docs/methodology.md`](docs/methodology.md) | Sourcing rules, classification scheme, verification method |
 | [`docs/sources.md`](docs/sources.md) | Every source document, with direct links |
 | [`docs/definitions.md`](docs/definitions.md) | Classification scheme and tab-by-tab dataset definitions |
