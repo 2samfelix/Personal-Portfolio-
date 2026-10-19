@@ -74,6 +74,23 @@ const TYPE_TAG_CLASS: Record<StatementType, string> = {
   LIMITATION: "bg-brass/15 text-brass",
 };
 
+// Caterpillar workbook, Dealer Inventory tab, rows 10-11, columns A, C, D, E, F, G.
+// Copied cell for cell; column D keeps the workbook's double spaces around "|".
+const WORKBOOK_HEADERS = ["Quarter", "Scope", "Disclosed language (verbatim)", "Source", "Class", "CI-specific $mm"];
+const WORKBOOK_ROWS: [string, string, string, string, string, string][] = [
+  ["Q1 2026", "Company-wide AND CI split", "10-Q: \"dealer inventory increased $2.0 billion\"  |  10-Q: \"Construction Industries dealer inventory increased by $1.5 billion\"  |  Call (corroborating, CFO Bonfield): \"a more typical $1.5 billion increase in the first quarter as compared to a slight decrease in the prior year.\"", "Q1 2026 Form 10-Q, Item 2 MD&A — accession 0000018230-26-000021; corroborated by Q1 2026 earnings call", "SOURCED", "1500"],
+  ["Q2 2026", "CI only", "10-Q: \"Construction Industries dealer inventory increased by $400 million\"  |  Call (corroborating): \"Dealer inventory increased by $400 million in Construction Industries compared to a decrease in the second quarter of 2025.\"", "Q2 2026 Form 10-Q, Item 2 MD&A — accession 0000018230-26-000046; corroborated by Q2 2026 earnings call", "SOURCED (CI)", "400"],
+];
+// Long-text columns wrap at a minimum width; the rest stay on one line.
+const WORKBOOK_COL_CLASS = [
+  "whitespace-nowrap",
+  "min-w-[7rem]",
+  "min-w-[16rem] whitespace-pre-wrap",
+  "min-w-[10rem]",
+  "whitespace-nowrap",
+  "whitespace-nowrap text-right tabular-nums",
+];
+
 const linkClass = "font-semibold text-forest hover:text-forest-dark";
 
 /**
@@ -245,7 +262,49 @@ export default function EngineProjectPage({
             The engine runs on my Caterpillar Q2 2026 case study: 40 sourced facts, 25 derived facts, 7 disclosure
             gaps, 13 bridges and 24 sources.
           </p>
-          <Link href={CATERPILLAR_PAGE} className={`mt-3 inline-block text-sm ${linkClass}`}>
+          <figure className="mt-6">
+            <div className="overflow-x-auto rounded-xl border border-forest/15 bg-white">
+              <table className="w-full min-w-[720px] text-left align-top text-xs leading-5">
+                <thead>
+                  <tr className="border-b border-forest/15">
+                    {WORKBOOK_HEADERS.map((header, col) => (
+                      <th
+                        key={header}
+                        scope="col"
+                        className={`whitespace-nowrap px-3 py-2.5 align-bottom font-semibold text-charcoal ${
+                          col === 5 ? "text-right" : ""
+                        }`}
+                      >
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {WORKBOOK_ROWS.map((row) => (
+                    <tr key={row[0]} className="border-b border-forest/10 last:border-0">
+                      {row.map((cell, col) => (
+                        <td
+                          key={col}
+                          className={`px-3 py-2.5 align-top text-charcoal-soft ${WORKBOOK_COL_CLASS[col]} ${
+                            col === 5 ? "font-semibold text-charcoal" : ""
+                          }`}
+                        >
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <figcaption className="mt-3 text-xs leading-5 text-charcoal-soft">
+              Excerpt from the Caterpillar case-study workbook (Dealer Inventory tab). The $1,500M and $400M figures
+              are the ones in brief statement B2 above. The engine reads its own curated benchmark files, not this
+              spreadsheet.
+            </figcaption>
+          </figure>
+          <Link href={CATERPILLAR_PAGE} className={`mt-4 inline-block text-sm ${linkClass}`}>
             Caterpillar case study &rarr;
           </Link>
         </section>
