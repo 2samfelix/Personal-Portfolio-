@@ -1,0 +1,231 @@
+import Link from "next/link";
+import type { Project } from "@/lib/projects";
+
+const ENGINE_REPO = "https://github.com/2samfelix/fpa-intelligence-engine";
+const STATUS_DOC = `${ENGINE_REPO}/blob/main/docs/project_status.md`;
+const CATERPILLAR_PAGE = "/projects/caterpillar-demand-quality";
+
+const STEPS: { title: string; owner: string; body: string }[] = [
+  {
+    title: "Load and validate",
+    owner: "Code",
+    body: "A deterministic loader reads sourced facts and checks them against their evidence.",
+  },
+  {
+    title: "Calculate and reconcile",
+    owner: "Code",
+    body: "Python computes derived figures with exact decimal arithmetic, then marks each reconciliation as reconciled, unresolved or not applicable. The engine never forces a tie-out.",
+  },
+  {
+    title: "Package",
+    owner: "Code",
+    body: "The verified facts go into a fixed, hashed input packet, so every run can be traced to exactly what the model saw.",
+  },
+  {
+    title: "Write, then check",
+    owner: "AI writes · code checks",
+    body: "The AI writes structured statements only. A deterministic validator accepts or rejects the brief. The system allows one attempt plus at most one corrective retry. There is no second AI grading the first.",
+  },
+];
+
+const LIMITATIONS = [
+  "It is one company and one quarter, with a hand-curated benchmark.",
+  "Five runs show consistency on one input, not general reliability.",
+  "The \"28 / 32\" bridge figure on my Caterpillar page comes from the workbook. The engine independently confirms two bridges (R01 and R02). The three profit bridges (R03 to R05) are left unresolved on purpose, because the data does not support a tie-out.",
+  "Assumption disclosure was verified only by offline tests, because all five live runs used a path with no assumptions.",
+  "Some benchmark entries are known to need correction. They are documented in the repo.",
+  "The model chose the severity labels itself, and they varied across runs.",
+];
+
+const linkClass = "font-semibold text-forest hover:text-forest-dark";
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{children}</h2>;
+}
+
+/**
+ * Four-step flow: stacked with down arrows on mobile, one row with right
+ * arrows from sm: up. Step titles only; the full step text follows below.
+ */
+function StepFlow() {
+  return (
+    <ol
+      aria-label="How it works, in four steps"
+      className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-0"
+    >
+      {STEPS.flatMap((step, index) => {
+        const isAiStep = index === STEPS.length - 1;
+        const box = (
+          <li
+            key={step.title}
+            className={`flex flex-col rounded-xl border p-4 sm:flex-1 sm:basis-0 ${
+              isAiStep ? "border-forest/30 bg-forest/5" : "border-forest/15 bg-white"
+            }`}
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-forest text-xs font-bold text-cream">
+              {index + 1}
+            </span>
+            <span className="mt-3 text-sm font-semibold leading-5 text-charcoal">{step.title}</span>
+            <span className="mt-auto pt-3 text-[11px] font-medium uppercase tracking-wide text-brass">
+              {step.owner}
+            </span>
+          </li>
+        );
+        if (index === STEPS.length - 1) return [box];
+        return [
+          box,
+          <li
+            key={`${step.title}-arrow`}
+            aria-hidden="true"
+            className="self-center py-1 text-lg leading-none text-forest/50 sm:px-2 sm:py-0"
+          >
+            <span className="sm:hidden">&darr;</span>
+            <span className="hidden sm:inline">&rarr;</span>
+          </li>,
+        ];
+      })}
+    </ol>
+  );
+}
+
+export default function EngineProjectPage({
+  project,
+  prev,
+  next,
+}: {
+  project: Project;
+  prev: Project;
+  next: Project;
+}) {
+  return (
+    <main className="bg-cream">
+      <div className="mx-auto w-full max-w-4xl px-6 py-16 sm:py-24">
+        <Link href="/#work" className="text-sm font-semibold text-forest hover:text-forest-dark">
+          &larr; Back to Projects
+        </Link>
+
+        <div className="mt-8">
+          <h1 className="text-4xl font-black tracking-tight text-charcoal sm:text-5xl">{project.title}</h1>
+          <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">
+            The AI writes the brief. Code does the math and decides whether the writing is accepted.
+          </p>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-charcoal-soft">
+            The model only sees verified figures and can only write structured statements that point to them. Every
+            number is checked against the computed values and every quote against its source, and a statement that
+            fails is rejected. That doesn&apos;t mean the briefs are right in judgment. The checks confirm that
+            figures and quotes match the evidence, not that the interpretation is the right one.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <a
+              href={ENGINE_REPO}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+            >
+              View on GitHub ↗
+            </a>
+            <a
+              href={STATUS_DOC}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
+            >
+              Project status ↗
+            </a>
+          </div>
+        </div>
+
+        <section className="mt-16 border-t border-forest/10 pt-12">
+          <SectionHeading>The problem</SectionHeading>
+          <p className="mt-4 text-base leading-7 text-charcoal">
+            AI can write a convincing finance summary, but it can also invent a number or misattribute a quote. In
+            FP&amp;A, one bad figure undermines the whole brief. I built the engine so that code, not the model, is
+            responsible for the math and for accepting or rejecting what the model writes.
+          </p>
+        </section>
+
+        <section className="mt-12 border-t border-forest/10 pt-12">
+          <SectionHeading>How it works</SectionHeading>
+          <StepFlow />
+          <ol className="mt-8 space-y-4">
+            {STEPS.map((step, index) => (
+              <li key={step.title} className="flex gap-4">
+                <span className="w-5 shrink-0 text-sm font-bold text-forest">{index + 1}.</span>
+                <p className="text-sm leading-6 text-charcoal-soft">
+                  <span className="font-semibold text-charcoal">{step.title}.</span> {step.body}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="mt-12 border-t border-forest/10 pt-12">
+          <SectionHeading>The test case</SectionHeading>
+          <p className="mt-4 text-base leading-7 text-charcoal">
+            The engine runs on my Caterpillar Q2 2026 case study: 40 sourced facts, 25 derived facts, 7 disclosure
+            gaps, 13 bridges and 24 sources.
+          </p>
+          <Link href={CATERPILLAR_PAGE} className={`mt-3 inline-block text-sm ${linkClass}`}>
+            Caterpillar case study &rarr;
+          </Link>
+        </section>
+
+        <section className="mt-12 border-t border-forest/10 pt-12">
+          <SectionHeading>What I tested</SectionHeading>
+          <p className="mt-4 text-base leading-7 text-charcoal">
+            I ran the engine five times on the same pinned input. All five briefs were accepted on the first attempt,
+            with no retries, no rejections, no provider errors and no number problems flagged. Each brief had 8 to 10
+            statements.
+          </p>
+          <p className="mt-3 text-xs leading-5 text-charcoal-soft">
+            Pinned configuration: prompt synthesis_v3, packet version 2, model claude-opus-5-5. Evaluated at commit
+            f33a569, with one small error-message wording fix (72d5299) added afterward.
+          </p>
+        </section>
+
+        <section className="mt-12 border-t border-forest/10 pt-12">
+          <SectionHeading>What this doesn&apos;t prove</SectionHeading>
+          <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-charcoal-soft marker:text-brass">
+            {LIMITATIONS.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="mt-12 border-t border-forest/10 pt-12">
+          <SectionHeading>What I&apos;d do next</SectionHeading>
+          <p className="mt-4 text-base leading-7 text-charcoal">
+            Extract evidence from raw filings with its own validator, correct the known benchmark entries under a new
+            evaluation, and add automated testing on every change.
+          </p>
+        </section>
+
+        <section className="mt-12 border-t border-forest/10 pt-8">
+          <p className="text-sm text-charcoal-soft">
+            Links:{" "}
+            <a href={ENGINE_REPO} target="_blank" rel="noopener noreferrer" className={linkClass}>
+              GitHub repo ↗
+            </a>
+            {" · "}
+            <a href={STATUS_DOC} target="_blank" rel="noopener noreferrer" className={linkClass}>
+              Project status doc ↗
+            </a>
+            {" · "}
+            <Link href={CATERPILLAR_PAGE} className={linkClass}>
+              Caterpillar case study &rarr;
+            </Link>
+          </p>
+        </section>
+
+        <nav className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
+          <Link href={`/projects/${prev.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+            &larr; Previous Project
+          </Link>
+          <Link href={`/projects/${next.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+            Next Project &rarr;
+          </Link>
+        </nav>
+      </div>
+    </main>
+  );
+}
