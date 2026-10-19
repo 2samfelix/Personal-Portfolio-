@@ -37,7 +37,70 @@ const LIMITATIONS = [
   "The model chose the severity labels itself, and they varied across runs.",
 ];
 
+type StatementType = "FACT" | "INTERPRETIVE" | "LIMITATION";
+
+// Run 1 of the five-run evaluation, quoted unedited. "Linked to" counts come
+// from the brief's own citations; do not reword or recount.
+const BRIEF_STATEMENTS: { id: string; type: StatementType; linkedTo: string; text: string }[] = [
+  {
+    id: "B1",
+    type: "FACT",
+    linkedTo: "4 facts, 1 reconciliation",
+    text: "Construction Industries sales rose to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+  },
+  {
+    id: "B2",
+    type: "FACT",
+    linkedTo: "4 facts",
+    text: "The disclosed CI dealer-inventory build fell from $1,500M in Q1 2026 to $400M in Q2 2026. Over the same quarters, price-neutral CI retail sales growth rose from 7% to 22%.",
+  },
+  {
+    id: "B5",
+    type: "INTERPRETIVE",
+    linkedTo: "no figures (an inference, labeled as one)",
+    text: "Taken together, a smaller disclosed dealer build alongside faster price-neutral retail growth suggests that Q2 2026 CI growth leaned less on dealer restocking and more on end-user demand than in Q1 2026.",
+  },
+  {
+    id: "B6",
+    type: "LIMITATION",
+    linkedTo: "1 fact, 3 reconciliations",
+    text: "The drivers of the $703M increase in Q2 2026 CI segment profit remain unresolved. The volume and price-realization contributions were not captured, and no manufacturing-cost driver was disclosed, which should not be read as zero. The Q1 2026 and Q4 2025 CI profit bridges also leave residuals for drivers Caterpillar did not itemize.",
+  },
+];
+
+const TYPE_TAG_CLASS: Record<StatementType, string> = {
+  FACT: "bg-forest/10 text-forest",
+  INTERPRETIVE: "bg-mist text-charcoal",
+  LIMITATION: "bg-brass/15 text-brass",
+};
+
 const linkClass = "font-semibold text-forest hover:text-forest-dark";
+
+/**
+ * One statement from the example brief. The LIMITATION card gets a warm brass
+ * accent so a stated limit reads as part of the output, not as an error.
+ */
+function StatementCard({ statement }: { statement: (typeof BRIEF_STATEMENTS)[number] }) {
+  const isLimitation = statement.type === "LIMITATION";
+  return (
+    <li
+      className={`flex flex-col rounded-2xl border p-5 ${
+        isLimitation ? "border-brass/50 border-l-4 border-l-brass bg-brass-pale/40" : "border-forest/15 bg-white"
+      }`}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-mono text-xs font-bold text-charcoal">{statement.id}</span>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${TYPE_TAG_CLASS[statement.type]}`}
+        >
+          {statement.type}
+        </span>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-charcoal">{statement.text}</p>
+      <p className="mt-auto pt-4 text-xs leading-5 text-charcoal-soft">Linked to {statement.linkedTo}</p>
+    </li>
+  );
+}
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{children}</h2>;
@@ -141,6 +204,23 @@ export default function EngineProjectPage({
             AI can write a convincing finance summary, but it can also invent a number or misattribute a quote. In
             FP&amp;A, one bad figure undermines the whole brief. I built the engine so that code, not the model, is
             responsible for the math and for accepting or rejecting what the model writes.
+          </p>
+        </section>
+
+        <section className="mt-12 border-t border-forest/10 pt-12">
+          <SectionHeading>What it produces</SectionHeading>
+          <p className="mt-4 text-base leading-7 text-charcoal">
+            This is part of a real brief the engine produced and accepted. It is shown unedited. Each statement carries
+            a type and the evidence it points to, which the validator checks.
+          </p>
+          <ul aria-label="Four statements from an accepted brief" className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {BRIEF_STATEMENTS.map((statement) => (
+              <StatementCard key={statement.id} statement={statement} />
+            ))}
+          </ul>
+          <p className="mt-3 text-xs leading-5 text-charcoal-soft">
+            Run 1 of 5. Accepted on the first attempt. The full brief has 8 statements; four are shown. This brief was
+            checked against the evidence for the numbers it contains, not for whether its reading of them is right.
           </p>
         </section>
 
