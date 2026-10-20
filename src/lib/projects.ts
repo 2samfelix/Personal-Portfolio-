@@ -272,6 +272,19 @@ export const flagshipProjects: Project[] = [
       ],
     },
   },
+  {
+    slug: "fpa-intelligence-engine",
+    title: "FP&A Intelligence Engine",
+    category: "AI-Written Briefs with Deterministic Checks",
+    summary:
+      "The AI writes the brief. Code does the math and decides whether the writing is accepted.",
+    tools: ["Python", "AI", "FP&A", "Validation"],
+    year: "2026",
+    status: "live",
+    icon: "05",
+    visual: "/project-visuals/fpa-intelligence-engine.svg",
+    githubUrl: "https://github.com/2samfelix/fpa-intelligence-engine",
+  },
 ];
 
 export const builds: Project[] = [
