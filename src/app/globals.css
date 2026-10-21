@@ -94,18 +94,26 @@ body {
 }
 
 /* Scroll reveal. Only ScrollReveal.tsx sets data-reveal, and only on elements
-   that start below the fold, so nothing is hidden without JavaScript. */
+   that start below the fold, so nothing is hidden without JavaScript. It sets
+   --reveal-ms / --reveal-y per element and removes everything once revealed. */
 [data-reveal="pending"] {
   opacity: 0;
-  transform: translateY(12px);
+  transform: translateY(var(--reveal-y, 12px));
 }
 
 [data-reveal="shown"] {
   opacity: 1;
   transform: none;
   transition:
-    opacity 400ms ease-out,
-    transform 400ms ease-out;
+    opacity var(--reveal-ms, 400ms) ease-out,
+    transform var(--reveal-ms, 400ms) ease-out;
+}
+
+@media print {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

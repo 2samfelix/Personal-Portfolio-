@@ -6,11 +6,20 @@ import { useEffect, useRef, useState } from "react";
 // Caterpillar figures from CaterpillarProjectPage's hero metrics; the $3.64B
 // label from the home-page hero badge ("$3.64B Synergy Breakeven Modeled").
 // Eyebrows are the project titles from src/lib/projects.ts.
-const FIGURES = [
+// keepTogether: a phrase in the label that must not break across lines.
+// sentenceCase: shown in sentence case with CSS only; the text stays as copied.
+const FIGURES: {
+  project: string;
+  value: string;
+  label: string;
+  keepTogether?: string;
+  sentenceCase?: boolean;
+}[] = [
   {
     project: "Caterpillar, Inc.",
     value: "$1.5B → $400M",
     label: "Construction Industries dealer-inventory build, Q1 → Q2 2026",
+    keepTogether: "Q1 → Q2 2026",
   },
   {
     project: "Caterpillar, Inc.",
@@ -21,6 +30,7 @@ const FIGURES = [
     project: "Microsoft × Activision Blizzard",
     value: "$3.64B",
     label: "Synergy Breakeven Modeled",
+    sentenceCase: true,
   },
 ];
 
@@ -41,6 +51,19 @@ function withBrassArrow(text: string) {
   const parts = text.split("→");
   return parts.flatMap((part, i) =>
     i === 0 ? [part] : [<span key={i} className="text-brass-light">→</span>, part],
+  );
+}
+
+/** The label, with its keepTogether phrase on one line. */
+function labelText(label: string, keepTogether?: string) {
+  if (!keepTogether || !label.includes(keepTogether)) return label;
+  const [before, after] = label.split(keepTogether);
+  return (
+    <>
+      {before}
+      <span className="whitespace-nowrap">{keepTogether}</span>
+      {after}
+    </>
   );
 }
 
@@ -88,21 +111,30 @@ export default function ProofStrip() {
     <section ref={ref} id="proof" aria-label="Key figures" className="bg-forest text-cream">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-6 py-14 sm:py-20 lg:grid-cols-3 lg:gap-8">
         {FIGURES.map((figure) => (
-          <div key={figure.value} className="flex flex-col">
+          <div key={figure.value} className="@container flex min-w-0 flex-col">
             <span className="h-px w-10 bg-brass" aria-hidden="true" />
             <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-brass-light">
               {figure.project}
             </p>
-            <p className="relative mt-3 whitespace-nowrap text-[2.75rem] font-black leading-none tracking-tight tabular-nums sm:text-6xl lg:text-[2.75rem] xl:text-5xl">
+            {/* Sized from the column, not the viewport: 12.5% of the column width keeps
+                the widest figure at about 87% of its column. If a wider font still
+                would not fit, the figure wraps at a space instead of overlapping. */}
+            <p className="relative mt-3 text-[clamp(2rem,12.5cqi,4.5rem)] font-black leading-none tracking-tight tabular-nums">
               <span className="invisible" aria-hidden="true">
                 {figure.value}
               </span>
-              <span className="absolute inset-0 whitespace-nowrap" aria-hidden="true">
+              <span className="absolute inset-0" aria-hidden="true">
                 {withBrassArrow(partway(figure.value, t))}
               </span>
               <span className="sr-only">{figure.value}</span>
             </p>
-            <p className="mt-4 max-w-xs text-sm leading-6 text-cream/75">{figure.label}</p>
+            <p
+              className={`mt-4 max-w-xs text-sm leading-6 text-cream/75 ${
+                figure.sentenceCase ? "lowercase first-letter:uppercase" : ""
+              }`}
+            >
+              {labelText(figure.label, figure.keepTogether)}
+            </p>
           </div>
         ))}
       </div>
