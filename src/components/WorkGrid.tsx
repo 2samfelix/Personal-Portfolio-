@@ -5,7 +5,11 @@ function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       href={`/projects/${project.slug}`}
-      className="flex h-full flex-col overflow-hidden rounded-2xl border border-forest/15 bg-white text-left transition-colors hover:border-forest/35"
+      // Lift + soft shadow on hover (Tailwind v4 emits hover: inside
+      // @media (hover: hover), so touch screens never get a stuck state) and on
+      // keyboard focus. Motion uses translate only, so neighbours never move;
+      // reduced-motion users get the shadow without the lift.
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-forest/15 bg-white text-left transition-[translate,box-shadow,border-color] duration-200 ease-out hover:-translate-y-1 hover:border-forest/35 hover:shadow-lg hover:shadow-forest/10 focus-visible:-translate-y-1 focus-visible:border-forest/35 focus-visible:shadow-lg focus-visible:shadow-forest/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-cream motion-reduce:transition-[box-shadow,border-color] motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
     >
       <div className="h-48 w-full overflow-hidden border-b border-forest/10 bg-cream">
         {project.visual && (
@@ -13,7 +17,7 @@ function ProjectCard({ project }: { project: Project }) {
           <img
             src={project.visual}
             alt={`${project.title} preview`}
-            className="h-full w-full object-cover object-top"
+            className="h-full w-full object-contain"
           />
         )}
       </div>
@@ -34,7 +38,7 @@ function ProjectCard({ project }: { project: Project }) {
         <p className="text-sm leading-6 text-charcoal-soft">
           {project.description ?? project.summary}
         </p>
-        <span className="mt-auto pt-4 text-sm font-semibold text-forest">
+        <span className="mt-auto pt-4 text-sm font-semibold text-forest transition-transform duration-200 ease-out group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
           View project &rarr;
         </span>
       </div>
