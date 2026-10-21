@@ -27,6 +27,7 @@ const SKILL_LABELS: Record<string, string> = {
   arm: "Valuation / Market Expectations",
   "microsoft-activision": "M&A / Transaction Economics",
   "caterpillar-demand-quality": "Operating / Demand Quality",
+  "fpa-intelligence-engine": "AI / Deterministic Validation",
   "front-office-simulator": "Strategy / Simulation",
 };
 
