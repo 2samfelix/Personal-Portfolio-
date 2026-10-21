@@ -17,7 +17,7 @@ function ProjectCard({ project }: { project: Project }) {
           <img
             src={project.visual}
             alt={`${project.title} preview`}
-            className="h-full w-full object-cover object-top"
+            className="h-full w-full object-contain"
           />
         )}
       </div>
