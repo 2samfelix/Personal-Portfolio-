@@ -2,7 +2,7 @@
 
 A committed, reproducible pipeline for the artifacts under `caterpillar-demand-quality/`
 that previously only existed as rendered output with no source/generator in the repo:
-the case-study PDF and the exhibit PNGs.
+the case-study PDF, the presentation PDF and the exhibit PNGs.
 
 ## What's here
 
@@ -11,9 +11,12 @@ the case-study PDF and the exhibit PNGs.
 | `render-svg-exhibits.mjs` | Light + dark PNGs for every `assets/*.svg` exhibit, from that SVG |
 | `render-exhibit5.mjs` | `assets/exhibit-5-margin-context.png`, from `assets/exhibit-5-margin-context.md` |
 | `render-pdf.mjs` | `analysis/Caterpillar_Demand_Quality_Case_Study.pdf`, from `src/case-study.html` + `src/print.css` |
+| `render-deck.mjs` | `presentation/Caterpillar_Demand_Quality_Presentation.pdf` (9 slides, 16:9, 960 × 540 pt), from `src/presentation.html` + `src/deck.css`; Exhibit 3 is spliced in from `assets/` with its title and footnote bands cropped |
 | `src/case-study.html` | The case-study document's HTML source |
 | `src/print.css` | Print stylesheet (US Letter, typography, tables, caveat callouts, page-number footer) |
-| `src/baseline-pdf-text.txt` | Raw text extraction of the pre-rebuild PDF — the baseline Phase 2 content was built from, kept as a frozen historical record (not re-extracted on each run) |
+| `src/presentation.html` | The presentation's slide source (one `<section class="slide">` per slide) |
+| `src/deck.css` | Slide stylesheet (forest/cream identity, Caladea headlines, Inter body) |
+| `src/baseline-pdf-text.txt` | Raw text extraction (`pdftotext -raw`, per page) of the current PDF, refreshed at Gate C3B Phase D after the evidence-classification corrections. Not regenerated automatically: re-extract it whenever the PDF is rebuilt with changed content. The pre-C3B extraction remains in git history |
 | `lib/chromium.mjs` | Resolves a Chromium executable for Playwright (see below) |
 
 Exhibits 2, 3 and 4 are **not** images in `case-study.html` — it has
@@ -39,7 +42,8 @@ From the repo root:
 npm run caterpillar:exhibits   # SVG exhibits -> light + dark PNGs
 npm run caterpillar:exhibit5   # exhibit-5 markdown table -> PNG
 npm run caterpillar:pdf        # case-study.html -> PDF
-npm run caterpillar:build      # all three, in that order
+npm run caterpillar:deck       # presentation.html -> presentation PDF
+npm run caterpillar:build      # all four, in that order
 ```
 
 `render-svg-exhibits.mjs` processes every SVG under `assets/` — it isn't

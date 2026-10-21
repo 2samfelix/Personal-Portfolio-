@@ -224,6 +224,13 @@ section {
   line-height: 1.4;
 }
 
+.stat-tile .stat-detail {
+  font-size: 7pt;
+  color: var(--ink-2);
+  margin-top: 3pt;
+  line-height: 1.35;
+}
+
 .stat-footnote {
   font-size: 8.5pt;
   color: var(--ink-2);
