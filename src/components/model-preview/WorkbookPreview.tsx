@@ -38,6 +38,8 @@ const ROW_HEADER_COMPACT_PX = 34;
 /** On small screens the frozen label column is capped at this width, with ellipsis. */
 const FROZEN_COMPACT_MAX_PX = 120;
 const MIN_COMPACT_FONT_PX = 12;
+/** In the dialog, rows are never shorter than one 12px line. */
+const MIN_COMPACT_ROW_PX = 17;
 const PAGE_ROWS = 10;
 /** A touch that moves further than this is a scroll, not a tap. */
 const TAP_SLOP_PX = 8;
@@ -47,7 +49,15 @@ const PRELOAD_MARGIN = "600px 0px";
 // Fixed heights for the desktop panel, so it occupies the same space while loading.
 const TABS_PX = 44;
 const FORMULA_BAR_PX = 92;
-const GRID_PX = 440;
+const GRID_HEIGHT = "min(70vh, 640px)";
+
+// One scale factor for column widths, row heights, fonts and padding. Applied in
+// code rather than with CSS zoom/transform, which would break sticky headers.
+const ZOOM_STEPS = [0.7, 0.8, 0.9, 1, 1.1];
+const DESKTOP_ZOOM = 0.8;
+const DIALOG_ZOOM = 1;
+/** On desktop the frozen columns take at most this share of the grid's width. */
+const FROZEN_MAX_SHARE = 0.28;
 
 const HEADER_BG = "#ECE8DC";
 const HEADER_SELECTED_BG = "#D8B888";
@@ -75,6 +85,9 @@ type GridProps = {
   selection: Selection;
   onSelect: (s: Selection) => void;
   compact: boolean;
+  zoom: number;
+  /** Width of the grid's viewport (desktop), to cap the frozen columns. */
+  viewportWidth: number;
   gridId: string;
   labelledBy: string;
 };
@@ -84,22 +97,44 @@ type GridProps = {
  * numbers, the workbook's frozen rows and columns, Excel column widths and row
  * heights, and one focusable (selected) cell at a time.
  */
-function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledBy }: GridProps) {
+function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWidth, gridId, labelledBy }: GridProps) {
   const rows = useMemo(() => indexCells(sheet), [sheet]);
   const hiddenRows = useMemo(() => new Set(sheet.hiddenRows), [sheet]);
   const hiddenCols = useMemo(() => new Set(sheet.hiddenCols), [sheet]);
-  const rowHeader = compact ? ROW_HEADER_COMPACT_PX : ROW_HEADER_PX;
+  const rowHeader = Math.round((compact ? ROW_HEADER_COMPACT_PX : ROW_HEADER_PX) * zoom);
+  const colHeader = Math.max(18, Math.round(COL_HEADER_PX * zoom));
+  const headerFontPx = compact ? 11 : Math.max(9, Math.round(11 * zoom));
+  const padPx = Math.max(2, Math.round(4 * zoom));
 
-  const widths = useMemo(
+  // Column widths at this zoom. The frozen columns are capped: 120px in the
+  // dialog, and a share of the grid's width on desktop; capped text ends in an ellipsis.
+  const { widths, frozenNarrowed } = useMemo(() => {
+    const ws = sheet.colWidths.map((w, c) => (hiddenCols.has(c) ? 0 : Math.round(colPx(w) * zoom)));
+    let narrowed = false;
+    if (compact) {
+      for (let c = 0; c < sheet.freeze.cols; c++) {
+        if (ws[c] > FROZEN_COMPACT_MAX_PX) {
+          ws[c] = FROZEN_COMPACT_MAX_PX;
+          narrowed = true;
+        }
+      }
+    } else if (viewportWidth > 0) {
+      const frozen = ws.slice(0, sheet.freeze.cols).reduce((a, b) => a + b, 0);
+      const cap = Math.floor(viewportWidth * FROZEN_MAX_SHARE);
+      if (frozen > cap) {
+        for (let c = 0; c < sheet.freeze.cols; c++) ws[c] = Math.floor((ws[c] * cap) / frozen);
+        narrowed = true;
+      }
+    }
+    return { widths: ws, frozenNarrowed: narrowed };
+  }, [sheet, compact, hiddenCols, zoom, viewportWidth]);
+  const heights = useMemo(
     () =>
-      sheet.colWidths.map((w, c) => {
-        if (hiddenCols.has(c)) return 0;
-        const px = colPx(w);
-        return compact && c < sheet.freeze.cols ? Math.min(px, FROZEN_COMPACT_MAX_PX) : px;
-      }),
-    [sheet, compact, hiddenCols],
+      sheet.rowHeights.map((h, r) =>
+        hiddenRows.has(r) ? 0 : Math.max(Math.round(rowPx(h) * zoom), compact ? MIN_COMPACT_ROW_PX : 0),
+      ),
+    [sheet, hiddenRows, zoom, compact],
   );
-  const heights = useMemo(() => sheet.rowHeights.map((h, r) => (hiddenRows.has(r) ? 0 : rowPx(h))), [sheet, hiddenRows]);
 
   // Sticky offsets for frozen columns (left) and frozen rows (top).
   const leftOf = useMemo(() => {
@@ -113,15 +148,15 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledB
   }, [sheet, widths, rowHeader]);
   const topOf = useMemo(() => {
     const out: number[] = [];
-    let y = COL_HEADER_PX;
+    let y = colHeader;
     for (let r = 0; r < sheet.rows; r++) {
       out.push(y);
       y += heights[r];
     }
     return out;
-  }, [sheet, heights]);
+  }, [sheet, heights, colHeader]);
   const frozenW = sheet.freeze.cols ? leftOf[sheet.freeze.cols - 1] + widths[sheet.freeze.cols - 1] : rowHeader;
-  const frozenH = sheet.freeze.rows ? topOf[sheet.freeze.rows - 1] + heights[sheet.freeze.rows - 1] : COL_HEADER_PX;
+  const frozenH = sheet.freeze.rows ? topOf[sheet.freeze.rows - 1] + heights[sheet.freeze.rows - 1] : colHeader;
   const tableWidth = rowHeader + widths.reduce((a, b) => a + b, 0);
 
   // Merged ranges: the top-left cell spans, the others are not rendered.
@@ -137,14 +172,39 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledB
 
   const cellId = (r: number, c: number) => `${gridId}-r${r}-c${c}`;
 
-  // Focus follows selection only for selections made in this grid.
+  // Scroll the grid (never the page) by the minimum needed to show a cell beside
+  // the frozen panes. Frozen rows and columns are always visible on their axis.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const revealCell = (s: Selection) => {
+    const box = scrollRef.current;
+    if (!box) return;
+    if (s.c >= sheet.freeze.cols) {
+      const x = leftOf[s.c];
+      const w = widths[s.c];
+      if (x < box.scrollLeft + frozenW) box.scrollLeft = x - frozenW;
+      else if (x + w > box.scrollLeft + box.clientWidth) box.scrollLeft = Math.min(x - frozenW, x + w - box.clientWidth);
+    }
+    if (s.r >= sheet.freeze.rows) {
+      const y = topOf[s.r];
+      const h = heights[s.r];
+      if (y < box.scrollTop + frozenH) box.scrollTop = y - frozenH;
+      else if (y + h > box.scrollTop + box.clientHeight) box.scrollTop = Math.min(y - frozenH, y + h - box.clientHeight);
+    }
+  };
+
+  // Focus follows selection only for selections made in this grid; after a zoom
+  // change the selected cell is kept in view.
   const pendingFocus = useRef(false);
+  const lastZoom = useRef(zoom);
   useEffect(() => {
-    if (!pendingFocus.current) return;
-    pendingFocus.current = false;
-    const el = document.getElementById(cellId(selection.r, selection.c));
-    el?.focus({ preventScroll: true });
-    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (pendingFocus.current) {
+      pendingFocus.current = false;
+      revealCell(selection);
+      document.getElementById(cellId(selection.r, selection.c))?.focus({ preventScroll: true });
+    } else if (lastZoom.current !== zoom) {
+      revealCell(selection);
+    }
+    lastZoom.current = zoom;
   });
 
   const select = (s: Selection) => {
@@ -205,8 +265,8 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledB
 
   return (
     <div
+      ref={scrollRef}
       className="h-full overflow-auto overscroll-contain bg-white"
-      style={{ scrollPaddingTop: frozenH, scrollPaddingLeft: frozenW }}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
     >
@@ -227,7 +287,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledB
           ))}
         </colgroup>
         <thead>
-          <tr aria-rowindex={1} style={{ height: COL_HEADER_PX }}>
+          <tr aria-rowindex={1} style={{ height: colHeader }}>
             <th
               aria-label="Row and column headers"
               className="sticky left-0 top-0 z-40 border-b border-r p-0"
@@ -239,8 +299,9 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledB
                   key={c}
                   scope="col"
                   aria-colindex={c + 2}
-                  className="sticky top-0 border-b border-r p-0 text-center text-[11px] font-semibold text-charcoal-soft"
+                  className="sticky top-0 border-b border-r p-0 text-center font-semibold text-charcoal-soft"
                   style={{
+                    fontSize: headerFontPx,
                     background: c === selection.c ? HEADER_SELECTED_BG : HEADER_BG,
                     borderColor: GRIDLINE,
                     left: c < sheet.freeze.cols ? leftOf[c] : undefined,
@@ -263,8 +324,9 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledB
                 <th
                   scope="row"
                   aria-colindex={1}
-                  className="sticky left-0 border-b border-r p-0 text-center text-[11px] font-semibold text-charcoal-soft"
+                  className="sticky left-0 border-b border-r p-0 text-center font-semibold text-charcoal-soft"
                   style={{
+                    fontSize: headerFontPx,
                     background: r === selection.r ? HEADER_SELECTED_BG : HEADER_BG,
                     borderColor: GRIDLINE,
                     top: frozenRow ? topOf[r] : undefined,
@@ -282,10 +344,15 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledB
                   const selected = selection.r === r && selection.c === c;
                   const span = spans.get(`${r},${c}`);
                   const background = style.fill ?? (sticky ? "#FFFFFF" : undefined);
-                  const fontPx = Math.max(((style.font?.sz ?? DEFAULT_FONT_PT) * 4) / 3, compact ? MIN_COMPACT_FONT_PX : 0);
-                  const ellipsis = compact && frozenCol;
-                  const wrap = Boolean(style.align?.wrap) && !ellipsis;
-                  const spill = !ellipsis && cell ? spillPx(sheet, row, cell, style, (i) => widths[i]) : 0;
+                  const fontPx = Math.max(((style.font?.sz ?? DEFAULT_FONT_PT) * 4 * zoom) / 3, compact ? MIN_COMPACT_FONT_PX : 0);
+                  const narrowed = frozenCol && (compact || frozenNarrowed);
+                  const wrap = Boolean(style.align?.wrap) && !narrowed;
+                  // A narrowed frozen column still lets text run on when the rest of its row is
+                  // empty (titles), except in the dialog, which always truncates the label column.
+                  const spill =
+                    !(compact && frozenCol) && cell
+                      ? spillPx(sheet, row, cell, style, (i) => widths[i], (i) => covered.has(`${r},${i}`))
+                      : 0;
                   const v = style.align?.v;
                   const text = displayText(cell);
                   const cellStyle: CSSProperties = {
@@ -318,12 +385,13 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledB
                     >
                       <div
                         aria-hidden="true"
-                        className="flex overflow-hidden px-1"
+                        className="flex overflow-hidden"
                         style={{
                           height: h - 1,
                           width: spill ? w + spill - 1 : undefined,
                           alignItems: v === "top" ? "flex-start" : v === "center" ? "center" : "flex-end",
-                          paddingLeft: style.align?.indent ? 4 + style.align.indent * 9 : undefined,
+                          paddingLeft: padPx + (style.align?.indent ? style.align.indent * 9 * zoom : 0),
+                          paddingRight: padPx,
                           fontSize: fontPx,
                           lineHeight: 1.2,
                           fontWeight: style.font?.b ? 700 : 400,
@@ -339,7 +407,8 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, gridId, labelledB
                             whiteSpace: wrap ? "normal" : "pre",
                             overflowWrap: wrap ? "break-word" : undefined,
                             overflow: "hidden",
-                            textOverflow: ellipsis ? "ellipsis" : "clip",
+                            // Text cut at a frozen column's edge ends in an ellipsis; elsewhere it clips like Excel.
+                            textOverflow: frozenCol && !wrap && !spill ? "ellipsis" : "clip",
                           }}
                         >
                           {text}
@@ -384,7 +453,6 @@ function SheetTabs({
       role="tablist"
       aria-label="Workbook sheets"
       className={`flex shrink-0 gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${compact ? "py-2" : "items-end pt-2"}`}
-      style={compact ? undefined : { height: TABS_PX }}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") move(active + 1);
         else if (e.key === "ArrowLeft") move(active - 1);
@@ -418,6 +486,38 @@ function SheetTabs({
           {s.name}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** Zoom out / current zoom (activates reset) / zoom in, through ZOOM_STEPS. */
+function ZoomControls({ zoom, onZoom, resetTo }: { zoom: number; onZoom: (z: number) => void; resetTo: number }) {
+  const i = ZOOM_STEPS.indexOf(zoom);
+  const pct = (z: number) => `${Math.round(z * 100)}%`;
+  const button =
+    "flex h-7 items-center justify-center rounded-md border border-forest/20 bg-white text-sm font-semibold text-charcoal hover:border-forest/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brass disabled:cursor-not-allowed disabled:opacity-40";
+  return (
+    <div role="group" aria-label="Zoom" className="flex shrink-0 items-center gap-1">
+      <button type="button" aria-label="Zoom out" disabled={i <= 0} onClick={() => onZoom(ZOOM_STEPS[i - 1])} className={`${button} w-7`}>
+        <span aria-hidden="true">−</span>
+      </button>
+      <button
+        type="button"
+        aria-label={`Zoom ${pct(zoom)}. Reset zoom to ${pct(resetTo)}`}
+        onClick={() => onZoom(resetTo)}
+        className={`${button} w-14 tabular-nums`}
+      >
+        {pct(zoom)}
+      </button>
+      <button
+        type="button"
+        aria-label="Zoom in"
+        disabled={i >= ZOOM_STEPS.length - 1}
+        onClick={() => onZoom(ZOOM_STEPS[i + 1])}
+        className={`${button} w-7`}
+      >
+        <span aria-hidden="true">+</span>
+      </button>
     </div>
   );
 }
@@ -493,6 +593,20 @@ export default function WorkbookPreview({
   const [active, setActive] = useState(0);
   const [selections, setSelections] = useState<Record<number, Selection>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
+  // Zoom is remembered while the page is open (no storage).
+  const [deskZoom, setDeskZoom] = useState(DESKTOP_ZOOM);
+  const [dialogZoom, setDialogZoom] = useState(DIALOG_ZOOM);
+  // The desktop panel's inner width, measured before the data arrives so the
+  // grid's first render already knows how wide its frozen columns may be.
+  const deskRef = useRef<HTMLDivElement>(null);
+  const [deskWidth, setDeskWidth] = useState(0);
+  useEffect(() => {
+    const el = deskRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setDeskWidth(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const started = useRef(false);
 
   const load = useCallback(() => {
@@ -569,14 +683,19 @@ export default function WorkbookPreview({
   const panel = (compact: boolean, prefix: string) =>
     doc && sheet ? (
       <>
-        <SheetTabs sheets={doc.sheets} active={active} onChange={setActive} idPrefix={prefix} compact={compact} />
+        <div className="flex shrink-0 items-center gap-2 pr-3" style={compact ? undefined : { height: TABS_PX }}>
+          <div className="min-w-0 flex-1 self-end">
+            <SheetTabs sheets={doc.sheets} active={active} onChange={setActive} idPrefix={prefix} compact={compact} />
+          </div>
+          {!compact && <ZoomControls zoom={deskZoom} onZoom={setDeskZoom} resetTo={DESKTOP_ZOOM} />}
+        </div>
         {!compact && <FormulaBar sheet={sheet} selection={selection} cell={selectedCell} compact={false} />}
         <div
           id={`${prefix}-panel`}
           role="tabpanel"
           aria-labelledby={`${prefix}-tab-${active}`}
-          className={compact ? "min-h-0 flex-1 border-t border-forest/15" : ""}
-          style={compact ? undefined : { height: GRID_PX }}
+          className={compact ? "min-h-0 flex-1 border-t border-forest/15" : "shrink-0"}
+          style={compact ? undefined : { height: GRID_HEIGHT }}
         >
           <SheetGrid
             key={`${prefix}-${active}`}
@@ -585,6 +704,8 @@ export default function WorkbookPreview({
             selection={selection}
             onSelect={setSelection}
             compact={compact}
+            zoom={compact ? dialogZoom : deskZoom}
+            viewportWidth={compact ? 0 : deskWidth}
             gridId={`${prefix}-grid`}
             labelledBy={`${prefix}-tab-${active}`}
           />
@@ -603,8 +724,9 @@ export default function WorkbookPreview({
 
       {/* Desktop and tablet: the interactive preview, in a fixed-size panel. */}
       <div
+        ref={deskRef}
         className="hidden overflow-hidden rounded-xl border border-forest/15 bg-cream md:flex md:flex-col"
-        style={{ height: TABS_PX + FORMULA_BAR_PX + GRID_PX + 2 }}
+        style={{ height: `calc(${TABS_PX + FORMULA_BAR_PX + 2}px + ${GRID_HEIGHT})` }}
         aria-busy={status !== "ready"}
       >
         {panel(false, `${uid}-desk`)}
@@ -636,6 +758,9 @@ export default function WorkbookPreview({
               <h2 id={`${uid}-dialog-title`} className="text-base font-bold text-charcoal">
                 Model Preview
               </h2>
+              <div className="ml-auto">
+                {doc && <ZoomControls zoom={dialogZoom} onZoom={setDialogZoom} resetTo={DIALOG_ZOOM} />}
+              </div>
               <button
                 type="button"
                 onClick={() => dialogRef.current?.close()}

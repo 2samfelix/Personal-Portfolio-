@@ -155,8 +155,15 @@ export function readableColor(color: string | undefined, background: string): st
 }
 
 /**
- * How far (in px) a cell's text may run into the empty cells to its right, as
- * Excel lets unwrapped, left-aligned text overflow. Returns 0 when it cannot spill.
+ * How far (in px) a cell's text may run into the cells to its right, as Excel
+ * lets unwrapped, left-aligned text overflow. It may only cross cells that are
+ * truly empty: no value, no formula, no fill or border of their own, and not
+ * part of a merged range. It stops at the first cell that is not.
+ *
+ * A cell in a frozen column stays put while the other columns scroll under it,
+ * so whatever its overflow covered would change as the grid scrolls. Its text
+ * therefore overflows only when every cell to its right is empty, and is
+ * otherwise clipped at its own edge.
  */
 export function spillPx(
   sheet: PreviewSheet,
@@ -164,11 +171,16 @@ export function spillPx(
   cell: SheetCell,
   style: CellStyle,
   widthOf: (c: number) => number,
+  isCovered: (c: number) => boolean,
 ): number {
   if (style.align?.wrap || typeof cell.v !== "string" || horizontalAlign(cell, style) !== "left") return 0;
+  const blocks = (c: number) => isCovered(c) || row?.has(c) === true; // any cell entry: content or its own style
+  if (cell.c < sheet.freeze.cols) {
+    for (let c = cell.c + 1; c < sheet.cols; c++) if (blocks(c)) return 0;
+  }
   let px = 0;
   for (let c = cell.c + 1; c < sheet.cols; c++) {
-    if (row?.has(c)) break;
+    if (blocks(c)) break;
     px += widthOf(c);
   }
   return px;
