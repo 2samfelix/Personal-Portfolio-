@@ -1,3 +1,4 @@
+import { Fragment, type CSSProperties } from "react";
 import { siteConfig } from "@/lib/site-config";
 
 const badges = [
@@ -5,6 +6,25 @@ const badges = [
   "$3.64B Synergy Breakeven Modeled",
   "Monte Carlo & Scenario Analysis",
 ];
+
+const HEADLINE_LEAD = "Good financial models don't end in a number.";
+const HEADLINE_BRASS = "They end in a decision.";
+
+/**
+ * The headline as one span per word, so it can reveal word by word on load
+ * (globals.css, .hero-word). The stagger index continues across both parts,
+ * so the brass sentence lands last. The text and its wrapping are unchanged.
+ */
+function words(text: string, offset = 0) {
+  return text.split(" ").map((word, i) => (
+    <Fragment key={word + i}>
+      {i > 0 && " "}
+      <span className="hero-word" style={{ "--i": offset + i } as CSSProperties}>
+        {word}
+      </span>
+    </Fragment>
+  ));
+}
 
 export default function Hero() {
   return (
@@ -15,8 +35,8 @@ export default function Hero() {
             Sam Felix &mdash; Financial Analyst
           </span>
           <h1 className="text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl sm:leading-[1.05]">
-            Good financial models don&apos;t end in a number.{" "}
-            <span className="text-brass">They end in a decision.</span>
+            {words(HEADLINE_LEAD)}{" "}
+            <span className="text-brass">{words(HEADLINE_BRASS, HEADLINE_LEAD.split(" ").length)}</span>
           </h1>
           <p className="max-w-xl text-base leading-7 text-charcoal-soft">
             I build financial models from real company filings, then push
@@ -63,7 +83,7 @@ export default function Hero() {
           <img
             src="/headshot.png"
             alt="Sam Felix"
-            className="h-full w-full object-cover"
+            className="hero-photo h-full w-full object-cover"
           />
         </div>
       </div>
