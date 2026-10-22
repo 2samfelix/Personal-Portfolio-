@@ -1,16 +1,18 @@
 // Types and helpers for the Model Preview JSON written by
-// scripts/export-caterpillar-model-preview.py. Shared by the client grid and the
+// scripts/export-model-preview.py. Shared by the client grid and the
 // server-rendered mobile preview card.
 
 export type CellStyle = {
   nf?: string;
-  font?: { b?: boolean; i?: boolean; u?: boolean; sz?: number; color?: string };
+  /** Font name, when it is not the default (Arial). */
+  font?: { name?: string; b?: boolean; i?: boolean; u?: boolean; sz?: number; color?: string };
   fill?: string | null;
   align?: { h?: string; v?: string; wrap?: boolean; indent?: number };
   border?: Partial<Record<"t" | "r" | "b" | "l", string>>;
 };
 
 export type SheetCell = {
+  /** Row and column position in the tab (see PreviewSheet.rowIndex / colIndex). */
   r: number;
   c: number;
   /** Index into the style table; omitted for the default style (0). */
@@ -24,7 +26,17 @@ export type SheetCell = {
 };
 
 export type PreviewSheet = {
+  /** Tab label: the sheet name, or a curated view's name. */
   name: string;
+  /** For a view: the workbook sheet it comes from, its ranges, and a one-line caption. */
+  sheet?: string;
+  ranges?: string[];
+  caption?: string;
+  /** For a view: the real zero-based sheet row of each row position (null for the
+   *  spacer between two ranges), and the real column of each column position.
+   *  Absent for a whole sheet, where position and sheet row/column are the same. */
+  rowIndex?: (number | null)[];
+  colIndex?: number[];
   rows: number;
   cols: number;
   truncated: boolean;
@@ -42,7 +54,12 @@ export type PreviewSheet = {
 
 export type ModelPreviewDoc = {
   version: number;
-  workbook: { file: string; sha256: string };
+  workbook: {
+    file: string;
+    sha256: string;
+    /** For a workbook copied from another repository: where it came from. */
+    source?: { repo: string; commit: string; path: string; sha256: string };
+  };
   note: string;
   styles: CellStyle[];
   sheets: PreviewSheet[];
@@ -64,6 +81,48 @@ export function colLetter(index: number): string {
 
 export function cellAddress(r: number, c: number): string {
   return `${colLetter(c)}${r + 1}`;
+}
+
+/** The real sheet row for a row position (null for a spacer row). */
+export function sheetRow(sheet: PreviewSheet, r: number): number | null {
+  return sheet.rowIndex ? sheet.rowIndex[r] : r;
+}
+
+/** The real sheet column for a column position. */
+export function sheetCol(sheet: PreviewSheet, c: number): number {
+  return sheet.colIndex ? sheet.colIndex[c] : c;
+}
+
+/** The workbook address of the cell at a position, e.g. "B45". */
+export function addressAt(sheet: PreviewSheet, r: number, c: number): string {
+  return cellAddress(sheetRow(sheet, r) ?? 0, sheetCol(sheet, c));
+}
+
+const FONT_FALLBACKS: Record<string, string> = {
+  // Carlito is metric-compatible with Calibri and common where Calibri is not installed.
+  Calibri: '"Calibri", "Carlito", Arial, Helvetica, sans-serif',
+};
+
+/** CSS font-family for a cell; the preview's default is Arial. */
+export function fontFamily(style: CellStyle): string {
+  const name = style.font?.name;
+  if (!name) return "Arial, Helvetica, sans-serif";
+  return FONT_FALLBACKS[name] ?? `"${name}", Arial, Helvetica, sans-serif`;
+}
+
+const SHEET_REF =
+  /(?:'((?:[^']|'')+)'|([A-Za-z_][A-Za-z0-9_.]*))!\$?([A-Z]{1,3})\$?(\d+)(?::\$?([A-Z]{1,3})\$?(\d+))?/g;
+
+/** References to other sheets in a formula, e.g. 'Post-IPO Performance'!C49 -> {sheet, ref}. */
+export function crossSheetRefs(formula: string | undefined): { sheet: string; ref: string }[] {
+  if (!formula) return [];
+  const out: { sheet: string; ref: string }[] = [];
+  for (const m of formula.matchAll(SHEET_REF)) {
+    const sheet = m[1] ? m[1].replace(/''/g, "'") : m[2];
+    const ref = `${m[3]}${m[4]}${m[5] ? `:${m[5]}${m[6]}` : ""}`;
+    if (!out.some((x) => x.sheet === sheet && x.ref === ref)) out.push({ sheet, ref });
+  }
+  return out;
 }
 
 /** Excel column width (characters) to CSS pixels, as Excel does for a 7px digit. */
