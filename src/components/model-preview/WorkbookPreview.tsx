@@ -590,7 +590,7 @@ function FormulaBar({
     <div
       role="group"
       aria-label="Formula bar"
-      className={`flex gap-3 border-forest/15 bg-white px-3 py-2 text-sm ${compact ? "border-t" : "shrink-0 border-b"}`}
+      className={`flex gap-3 border-forest/15 bg-white px-3 py-2 text-sm ${compact ? "shrink-0 border-t" : "shrink-0 border-b"}`}
       style={compact ? undefined : { height }}
     >
       <span className="h-fit max-w-[45%] shrink-0 truncate rounded-md border border-forest/20 bg-cream px-2 py-1 font-mono text-xs font-bold text-charcoal" title={address}>
@@ -794,7 +794,9 @@ export default function WorkbookPreview({
           id={`${prefix}-panel`}
           role="tabpanel"
           aria-labelledby={`${prefix}-tab-${active}`}
-          className={compact ? "min-h-0 flex-1 border-t border-forest/15" : "shrink-0"}
+          // In the dialog the grid takes its own height, shrinking (and scrolling) only
+          // when the view is taller than the space left, so the formula bar sits right under it.
+          className={compact ? "min-h-0 flex-initial border-t border-forest/15" : "shrink-0"}
           style={compact ? undefined : { height: gridHeight }}
         >
           <SheetGrid

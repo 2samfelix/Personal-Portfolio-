@@ -78,7 +78,7 @@ PROJECTS: dict[str, dict] = {
             {
                 "name": "From WACC to share price",
                 "sheet": "DCF Valuation",
-                "ranges": ["A4:C11", "A42:B50"],
+                "ranges": ["A4:B11", "A42:B50"],
                 "caption": "The DCF-implied price is about $51.54, against a $272.21 market price on Aug 10, 2026.",
             },
             {
