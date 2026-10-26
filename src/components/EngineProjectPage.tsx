@@ -1,10 +1,20 @@
 import Link from "next/link";
 import type { Project } from "@/lib/projects";
+import EngineTrace, { type TraceHeaders } from "@/components/engine/EngineTrace";
+// Written by scripts/export-engine-trace.py. Imported here only for the lists and the provenance
+// line, which render before the data loads; the trace itself is fetched lazily.
+import traceJson from "../../public/engine/trace.json";
 import { MEASURE, STACK_BODY, STACK_HEAD, STACK_LABEL, STACK_ROW, STACK_TABLE, STACK_VALUE, STACK_WIDE } from "@/components/project/layout";
 
 const ENGINE_REPO = "https://github.com/2samfelix/fpa-intelligence-engine";
 const STATUS_DOC = `${ENGINE_REPO}/blob/main/docs/project_status.md`;
 const CATERPILLAR_PAGE = "/projects/caterpillar-demand-quality";
+const TRACE_HEADERS: TraceHeaders = {
+  statements: traceJson.statements.map(({ id, kind, severity, text }) => ({ id, kind, severity, text })),
+  tests: traceJson.tests.map(({ file, status, description }) => ({ file, status, description })),
+  commit: traceJson.engine.commit,
+};
+const TRACE_RUN = traceJson.run;
 
 const STEPS: { title: string; owner: string; body: string }[] = [
   {
@@ -245,6 +255,31 @@ export default function EngineProjectPage({
           </p>
         </section>
 
+        <section aria-labelledby="trace-heading" className="mt-12 border-t border-forest/10 pt-12">
+          <h2 id="trace-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+            Trace a statement
+          </h2>
+          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
+            Follow any sentence of the accepted brief back to the facts, bridges and evidence it cites, and see what the
+            validator checked. The second tab shows what the checker rejects. This shows that the figures trace to their
+            evidence and that the checker enforces its rules, not that the brief&apos;s reading is right (see{" "}
+            <a href="#what-this-doesnt-prove" className="font-semibold text-forest underline-offset-2 hover:underline">
+              What this doesn&apos;t prove
+            </a>
+            ).
+          </p>
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs leading-5 text-charcoal-soft">
+            <span>
+              Run {TRACE_RUN.run} of {TRACE_RUN.of_runs}, prompt {TRACE_RUN.prompt_version}, model {TRACE_RUN.served_model},
+              packet {TRACE_RUN.packet_hash.slice(0, 12)}, engine commit {TRACE_HEADERS.commit.slice(0, 7)}.
+            </span>
+            <a href={ENGINE_REPO} target="_blank" rel="noopener noreferrer" className="font-semibold text-forest hover:text-forest-dark">
+              Engine on GitHub ↗
+            </a>
+          </p>
+          <EngineTrace headers={TRACE_HEADERS} src="/engine/trace.json" />
+        </section>
+
         <section className="mt-12 border-t border-forest/10 pt-12">
           <SectionHeading>How it works</SectionHeading>
           <StepFlow />
@@ -327,7 +362,7 @@ export default function EngineProjectPage({
           </p>
         </section>
 
-        <section className="mt-12 border-t border-forest/10 pt-12">
+        <section id="what-this-doesnt-prove" className="mt-12 scroll-mt-8 border-t border-forest/10 pt-12">
           <SectionHeading>What this doesn&apos;t prove</SectionHeading>
           <ul className={`mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-charcoal-soft marker:text-brass ${MEASURE}`}>
             {LIMITATIONS.map((item) => (
