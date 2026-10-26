@@ -21,7 +21,7 @@ export default function ProjectPage({
 
   return (
     <main className="bg-cream">
-      <div className="mx-auto w-full max-w-4xl px-6 py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
         <Link
           href="/#work"
           className="text-sm font-semibold text-forest hover:text-forest-dark"

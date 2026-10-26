@@ -22,6 +22,7 @@ import {
 import { ProjectHero } from "@/components/project/ProjectHero";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
+import { BESIDE, MEASURE } from "@/components/project/layout";
 
 const DELIVERABLE_DETAIL: Record<string, string> = {
   "Financial Model":
@@ -66,7 +67,7 @@ function ChartCaption({
   explainer: string;
 }) {
   return (
-    <div className="mt-3 flex flex-col gap-3">
+    <div className="mt-3 flex flex-col gap-3 lg:mt-0">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-forest/15 bg-white px-4 py-3">
         <div>
           <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
@@ -98,10 +99,11 @@ function ChartSection({
   children: React.ReactNode;
   first?: boolean;
 }) {
+  // Children are a chart and its ChartCaption: stacked on small screens, side by side from lg up.
   return (
     <section className={`rounded-xl border border-forest/15 bg-white p-4 sm:p-6 ${first ? "" : "mt-6"}`}>
       <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{label}</h2>
-      {children}
+      <div className={`lg:mt-4 ${BESIDE}`}>{children}</div>
     </section>
   );
 }
@@ -143,7 +145,7 @@ export default function NikeProjectPage({
 
   return (
     <main className="bg-cream">
-      <div className="mx-auto w-full max-w-4xl px-6 py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
         <Link href="/#work" className="text-sm font-semibold text-forest hover:text-forest-dark">
           &larr; Back to Projects
         </Link>
@@ -237,7 +239,7 @@ export default function NikeProjectPage({
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Overview</h2>
-          <p className="mt-3 text-base leading-7 text-charcoal-soft">{cs.overview}</p>
+          <p className={`mt-3 text-base leading-7 text-charcoal-soft ${MEASURE}`}>{cs.overview}</p>
         </section>
 
         {/* Methodology */}
@@ -255,7 +257,7 @@ export default function NikeProjectPage({
           </div>
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-charcoal">Major Assumptions</h3>
-            <ul className="mt-2 flex flex-col gap-1.5">
+            <ul className={`mt-2 flex flex-col gap-1.5 ${MEASURE}`}>
               {cs.assumptions.map((item) => (
                 <li key={item} className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']">
                   {item}
@@ -265,7 +267,7 @@ export default function NikeProjectPage({
           </div>
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-charcoal">Limitations</h3>
-            <ul className="mt-2 flex flex-col gap-1.5">
+            <ul className={`mt-2 flex flex-col gap-1.5 ${MEASURE}`}>
               {MODEL_LIMITATIONS.map((item) => (
                 <li key={item} className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']">
                   {item}
@@ -278,7 +280,7 @@ export default function NikeProjectPage({
         {/* Key findings */}
         <section className="mt-12 border-t border-forest/10 pt-12">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Key Findings</h2>
-          <ul className="mt-4 flex flex-col gap-4">
+          <ul className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {cs.findings.map((finding) => (
               <li key={finding} className="rounded-xl border border-forest/15 bg-white p-4 text-sm leading-6 text-charcoal-soft">
                 {finding}

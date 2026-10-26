@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Project } from "@/lib/projects";
+import { MEASURE } from "@/components/project/layout";
 
 const ENGINE_REPO = "https://github.com/2samfelix/fpa-intelligence-engine";
 const STATUS_DOC = `${ENGINE_REPO}/blob/main/docs/project_status.md`;
@@ -179,7 +180,7 @@ export default function EngineProjectPage({
 }) {
   return (
     <main className="bg-cream">
-      <div className="mx-auto w-full max-w-4xl px-6 py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
         <Link href="/#work" className="text-sm font-semibold text-forest hover:text-forest-dark">
           &larr; Back to Projects
         </Link>
@@ -217,7 +218,7 @@ export default function EngineProjectPage({
 
         <section className="mt-16 border-t border-forest/10 pt-12">
           <SectionHeading>The problem</SectionHeading>
-          <p className="mt-4 text-base leading-7 text-charcoal">
+          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             AI can write a convincing finance summary, but it can also invent a number or misattribute a quote. In
             FP&amp;A, one bad figure undermines the whole brief. I built the engine so that code, not the model, is
             responsible for the math and for accepting or rejecting what the model writes.
@@ -226,7 +227,7 @@ export default function EngineProjectPage({
 
         <section className="mt-12 border-t border-forest/10 pt-12">
           <SectionHeading>What it produces</SectionHeading>
-          <p className="mt-4 text-base leading-7 text-charcoal">
+          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             This is part of a real brief the engine produced and accepted. It is shown unedited. Each statement carries
             a type and the evidence it points to, which the validator checks.
           </p>
@@ -235,7 +236,7 @@ export default function EngineProjectPage({
               <StatementCard key={statement.id} statement={statement} />
             ))}
           </ul>
-          <p className="mt-3 text-xs leading-5 text-charcoal-soft">
+          <p className={`mt-3 text-xs leading-5 text-charcoal-soft ${MEASURE}`}>
             Run 1 of 5. Accepted on the first attempt. The full brief has 8 statements; four are shown. This brief was
             checked against the evidence for the numbers it contains, not for whether its reading of them is right.
           </p>
@@ -244,11 +245,11 @@ export default function EngineProjectPage({
         <section className="mt-12 border-t border-forest/10 pt-12">
           <SectionHeading>How it works</SectionHeading>
           <StepFlow />
-          <ol className="mt-8 space-y-4">
+          <ol className={`mt-8 space-y-4 ${MEASURE}`}>
             {STEPS.map((step, index) => (
               <li key={step.title} className="flex gap-4">
                 <span className="w-5 shrink-0 text-sm font-bold text-forest">{index + 1}.</span>
-                <p className="text-sm leading-6 text-charcoal-soft">
+                <p className={`text-sm leading-6 text-charcoal-soft ${MEASURE}`}>
                   <span className="font-semibold text-charcoal">{step.title}.</span> {step.body}
                 </p>
               </li>
@@ -258,7 +259,7 @@ export default function EngineProjectPage({
 
         <section className="mt-12 border-t border-forest/10 pt-12">
           <SectionHeading>The test case</SectionHeading>
-          <p className="mt-4 text-base leading-7 text-charcoal">
+          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             The engine runs on my Caterpillar Q2 2026 case study: 40 sourced facts, 25 derived facts, 7 disclosure
             gaps, 13 bridges and 24 sources.
           </p>
@@ -311,12 +312,12 @@ export default function EngineProjectPage({
 
         <section className="mt-12 border-t border-forest/10 pt-12">
           <SectionHeading>What I tested</SectionHeading>
-          <p className="mt-4 text-base leading-7 text-charcoal">
+          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             I ran the engine five times on the same pinned input. All five briefs were accepted on the first attempt,
             with no retries, no rejections, no provider errors and no number problems flagged. Each brief had 8 to 10
             statements.
           </p>
-          <p className="mt-3 text-xs leading-5 text-charcoal-soft">
+          <p className={`mt-3 text-xs leading-5 text-charcoal-soft ${MEASURE}`}>
             Pinned configuration: prompt synthesis_v3, packet version 2, model claude-opus-5-5. Evaluated at commit
             f33a569, with one small error-message wording fix (72d5299) added afterward.
           </p>
@@ -324,7 +325,7 @@ export default function EngineProjectPage({
 
         <section className="mt-12 border-t border-forest/10 pt-12">
           <SectionHeading>What this doesn&apos;t prove</SectionHeading>
-          <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-charcoal-soft marker:text-brass">
+          <ul className={`mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-charcoal-soft marker:text-brass ${MEASURE}`}>
             {LIMITATIONS.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -333,7 +334,7 @@ export default function EngineProjectPage({
 
         <section className="mt-12 border-t border-forest/10 pt-12">
           <SectionHeading>What I&apos;d do next</SectionHeading>
-          <p className="mt-4 text-base leading-7 text-charcoal">
+          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             Extract evidence from raw filings with its own validator, correct the known benchmark entries under a new
             evaluation, and add automated testing on every change.
           </p>
