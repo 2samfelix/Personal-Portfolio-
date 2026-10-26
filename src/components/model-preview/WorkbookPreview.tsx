@@ -14,8 +14,12 @@ import {
 } from "react";
 import {
   DEFAULT_FONT_PT,
-  cellAddress,
+  addressAt,
   colLetter,
+  crossSheetRefs,
+  fontFamily,
+  sheetCol,
+  sheetRow,
   colPx,
   displayText,
   horizontalAlign,
@@ -66,9 +70,28 @@ const SELECT_RING = "#1E3A2B";
 
 const BORDER_WIDTH: Record<string, number> = { thin: 1, hair: 1, dotted: 1, dashed: 1, medium: 2, mediumDashed: 2, thick: 3, double: 3 };
 
+/** Whole sheet: the first cell past the frozen panes. Curated view: its first formula. */
 function defaultSelection(sheet: PreviewSheet): Selection {
+  if (sheet.rowIndex) {
+    const first = sheet.cells.filter((c) => c.f).sort((a, b) => a.r - b.r || a.c - b.c)[0];
+    if (first) return { r: first.r, c: first.c };
+  }
   return { r: Math.min(sheet.freeze.rows, sheet.rows - 1), c: Math.min(sheet.freeze.cols, sheet.cols - 1) };
 }
+
+/** Optional per-page layout; the defaults are the whole-sheet (Caterpillar) layout. */
+export type PreviewLayout = {
+  /** Default desktop zoom (one of ZOOM_STEPS). */
+  zoom?: number;
+  /** Desktop formula bar height, for workbooks with long formulas. */
+  formulaBarPx?: number;
+  /** Desktop grid viewport height (CSS length). */
+  gridHeight?: string;
+  /** Show each tab's caption above the grid (curated views). */
+  captions?: boolean;
+};
+
+const CAPTION_PX = 34;
 
 function borderCss(spec: string | undefined, fallback: string): string {
   if (!spec) return fallback;
@@ -100,6 +123,10 @@ type GridProps = {
 function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWidth, gridId, labelledBy }: GridProps) {
   const rows = useMemo(() => indexCells(sheet), [sheet]);
   const hiddenRows = useMemo(() => new Set(sheet.hiddenRows), [sheet]);
+  const spacerRows = useMemo(
+    () => new Set(Array.from({ length: sheet.rows }, (_, r) => r).filter((r) => sheetRow(sheet, r) === null)),
+    [sheet],
+  );
   const hiddenCols = useMemo(() => new Set(sheet.hiddenCols), [sheet]);
   const rowHeader = Math.round((compact ? ROW_HEADER_COMPACT_PX : ROW_HEADER_PX) * zoom);
   const colHeader = Math.max(18, Math.round(COL_HEADER_PX * zoom));
@@ -220,8 +247,15 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
       nc = Math.max(0, Math.min(sheet.cols - 1, nc + dc));
       if (nr === 0 || nr === sheet.rows - 1) dr = 0;
       if (nc === 0 || nc === sheet.cols - 1) dc = 0;
-    } while ((hiddenRows.has(nr) || hiddenCols.has(nc) || covered.has(`${nr},${nc}`)) && (dr || dc));
+    } while ((hiddenRows.has(nr) || spacerRows.has(nr) || hiddenCols.has(nc) || covered.has(`${nr},${nc}`)) && (dr || dc));
     return { r: nr, c: nc };
+  };
+  /** Moves a target that lands on a spacer row to the next real row (or the previous one at the end). */
+  const land = (s: Selection): Selection => {
+    let r = s.r;
+    while (spacerRows.has(r) && r < sheet.rows - 1) r++;
+    while (spacerRows.has(r) && r > 0) r--;
+    return { r, c: s.c };
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -240,7 +274,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
     }
     if (next) {
       e.preventDefault();
-      select(next);
+      select(land(next));
     }
   };
 
@@ -308,7 +342,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
                     zIndex: c < sheet.freeze.cols ? 38 : 35,
                   }}
                 >
-                  {colLetter(c)}
+                  {colLetter(sheetCol(sheet, c))}
                 </th>
               ) : null,
             )}
@@ -317,6 +351,13 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
         <tbody>
           {heights.map((h, r) => {
             if (!h) return null;
+            if (spacerRows.has(r)) {
+              return (
+                <tr key={r} aria-hidden="true" style={{ height: h }}>
+                  <td colSpan={sheet.cols + 1} className="p-0" style={{ background: HEADER_BG }} />
+                </tr>
+              );
+            }
             const row = rows.get(r);
             const frozenRow = r < sheet.freeze.rows;
             return (
@@ -333,7 +374,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
                     zIndex: frozenRow ? 33 : 28,
                   }}
                 >
-                  {r + 1}
+                  {(sheetRow(sheet, r) ?? r) + 1}
                 </th>
                 {widths.map((w, c) => {
                   if (!w || covered.has(`${r},${c}`)) return null;
@@ -373,7 +414,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
                       role="gridcell"
                       aria-colindex={c + 2}
                       aria-selected={selected}
-                      aria-label={`${cellAddress(r, c)}${text ? ` ${text}` : " empty"}`}
+                      aria-label={`${addressAt(sheet, r, c)}${text ? ` ${text}` : " empty"}`}
                       tabIndex={selected ? 0 : -1}
                       rowSpan={span?.rowSpan}
                       colSpan={span?.colSpan}
@@ -393,6 +434,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
                           paddingLeft: padPx + (style.align?.indent ? style.align.indent * 9 * zoom : 0),
                           paddingRight: padPx,
                           fontSize: fontPx,
+                          fontFamily: fontFamily(style),
                           lineHeight: 1.2,
                           fontWeight: style.font?.b ? 700 : 400,
                           fontStyle: style.font?.i ? "italic" : undefined,
@@ -522,40 +564,77 @@ function ZoomControls({ zoom, onZoom, resetTo }: { zoom: number; onZoom: (z: num
   );
 }
 
-function FormulaBar({ sheet, selection, cell, compact }: { sheet: PreviewSheet; selection: Selection; cell: SheetCell | undefined; compact: boolean }) {
-  const address = cellAddress(selection.r, selection.c);
+function FormulaBar({
+  sheet,
+  selection,
+  cell,
+  compact,
+  height,
+}: {
+  sheet: PreviewSheet;
+  selection: Selection;
+  cell: SheetCell | undefined;
+  compact: boolean;
+  height: number;
+}) {
+  const cellRef = addressAt(sheet, selection.r, selection.c);
+  const address = sheet.sheet ? `${sheet.sheet}!${cellRef}` : cellRef;
   const shown = displayText(cell);
   const raw = rawText(cell);
-  const announce = `${sheet.name}, ${address}: ${shown || "empty"}${cell?.f ? `. Formula ${cell.f}` : ""}`;
+  const links = crossSheetRefs(cell?.f);
+  const linkText = links.map((l) => `${l.sheet}!${l.ref}`).join(", ");
+  const announce = `${sheet.name}, ${address}: ${shown || "empty"}${cell?.f ? `. Formula ${cell.f}` : ""}${
+    links.length ? `. Links to ${linkText}` : ""
+  }`;
   return (
     <div
       role="group"
       aria-label="Formula bar"
-      className={`grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-forest/15 bg-white px-3 py-2 text-sm ${compact ? "border-t" : "border-b"}`}
-      style={compact ? undefined : { height: FORMULA_BAR_PX }}
+      className={`flex gap-3 border-forest/15 bg-white px-3 py-2 text-sm ${compact ? "shrink-0 border-t" : "shrink-0 border-b"}`}
+      style={compact ? undefined : { height }}
     >
-      <span className="row-span-2 self-start rounded-md border border-forest/20 bg-cream px-2 py-1 font-mono text-xs font-bold text-charcoal">
+      <span className="h-fit max-w-[45%] shrink-0 truncate rounded-md border border-forest/20 bg-cream px-2 py-1 font-mono text-xs font-bold text-charcoal" title={address}>
         {address}
       </span>
-      <p className="flex min-w-0 items-baseline gap-2">
-        <span className="shrink-0 font-serif text-sm italic text-brass" aria-hidden="true">
-          fx
-        </span>
-        <span className="sr-only">Formula:</span>
-        <code className="min-w-0 overflow-x-auto whitespace-nowrap font-mono text-[13px] text-charcoal [scrollbar-width:thin]">
-          {cell?.f ?? <span className="font-sans text-charcoal-soft">No formula (entered value)</span>}
-        </code>
-      </p>
-      <dl className="col-start-2 grid min-w-0 grid-cols-[auto_1fr] gap-x-2 text-xs text-charcoal-soft">
-        <dt>Shows</dt>
-        <dd className={`min-w-0 text-charcoal ${compact ? "max-h-[3.75rem] overflow-y-auto" : "truncate"}`} title={shown}>
-          {shown || "—"}
-        </dd>
-        <dt>Raw value</dt>
-        <dd className="min-w-0 truncate font-mono text-charcoal" title={raw}>
-          {raw || "—"}
-        </dd>
-      </dl>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="flex min-h-0 flex-1 items-start gap-2">
+          <span className="shrink-0 font-serif text-sm italic leading-5 text-brass" aria-hidden="true">
+            fx
+          </span>
+          <span className="sr-only">Formula:</span>
+          {/* Long formulas (e.g. SUMPRODUCT) wrap and scroll inside the bar. */}
+          <code
+            className={`min-h-0 min-w-0 flex-1 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[13px] leading-5 text-charcoal [scrollbar-width:thin] ${
+              compact ? "max-h-[3.75rem]" : "h-full"
+            }`}
+          >
+            {cell?.f ?? <span className="font-sans text-charcoal-soft">No formula (entered value)</span>}
+          </code>
+        </p>
+        <dl className="grid shrink-0 grid-cols-[auto_1fr] gap-x-2 text-xs text-charcoal-soft">
+          <dt>Shows</dt>
+          <dd className={`min-w-0 text-charcoal ${compact ? "max-h-[3.75rem] overflow-y-auto" : "truncate"}`} title={shown}>
+            {shown || "—"}
+          </dd>
+          <dt>Raw value</dt>
+          <dd className="min-w-0 truncate font-mono text-charcoal" title={raw}>
+            {raw || "—"}
+          </dd>
+          {links.length > 0 && (
+            <>
+              <dt>Links to</dt>
+              <dd className="min-w-0 truncate text-charcoal" title={linkText}>
+                {links.map((l, i) => (
+                  <span key={`${l.sheet}!${l.ref}`}>
+                    {i > 0 && ", "}
+                    sheet <span className="font-semibold">{l.sheet}</span>, cell <span className="font-mono">{l.ref}</span>
+                  </span>
+                ))}
+              </dd>
+            </>
+          )}
+        </dl>
+      </div>
       <p className="sr-only" aria-live="polite">
         {announce}
       </p>
@@ -578,12 +657,18 @@ export default function WorkbookPreview({
   title,
   downloadUrl,
   teaser,
+  layout = {},
 }: {
   src: string;
   title: string;
   downloadUrl?: string;
   teaser: ReactNode;
+  layout?: PreviewLayout;
 }) {
+  const startZoom = layout.zoom ?? DESKTOP_ZOOM;
+  const formulaBarPx = layout.formulaBarPx ?? FORMULA_BAR_PX;
+  const gridHeight = layout.gridHeight ?? GRID_HEIGHT;
+  const captionPx = layout.captions ? CAPTION_PX : 0;
   const uid = useId().replace(/:/g, "");
   const rootRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -594,7 +679,7 @@ export default function WorkbookPreview({
   const [selections, setSelections] = useState<Record<number, Selection>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   // Zoom is remembered while the page is open (no storage).
-  const [deskZoom, setDeskZoom] = useState(DESKTOP_ZOOM);
+  const [deskZoom, setDeskZoom] = useState(startZoom);
   const [dialogZoom, setDialogZoom] = useState(DIALOG_ZOOM);
   // The desktop panel's inner width, measured before the data arrives so the
   // grid's first render already knows how wide its frozen columns may be.
@@ -687,15 +772,32 @@ export default function WorkbookPreview({
           <div className="min-w-0 flex-1 self-end">
             <SheetTabs sheets={doc.sheets} active={active} onChange={setActive} idPrefix={prefix} compact={compact} />
           </div>
-          {!compact && <ZoomControls zoom={deskZoom} onZoom={setDeskZoom} resetTo={DESKTOP_ZOOM} />}
+          {!compact && <ZoomControls zoom={deskZoom} onZoom={setDeskZoom} resetTo={startZoom} />}
         </div>
-        {!compact && <FormulaBar sheet={sheet} selection={selection} cell={selectedCell} compact={false} />}
+        {!compact && <FormulaBar sheet={sheet} selection={selection} cell={selectedCell} compact={false} height={formulaBarPx} />}
+        {layout.captions && sheet.caption && (
+          <p
+            className={`flex shrink-0 items-center justify-between gap-3 border-b border-forest/10 bg-cream px-3 text-sm text-charcoal ${
+              compact ? "py-2" : ""
+            }`}
+            style={compact ? undefined : { height: captionPx }}
+          >
+            <span className={compact ? "" : "truncate"}>{sheet.caption}</span>
+            {!compact && sheet.sheet && (
+              <span className="shrink-0 font-mono text-[11px] text-charcoal-soft">
+                {sheet.sheet}!{sheet.ranges?.join(", ")}
+              </span>
+            )}
+          </p>
+        )}
         <div
           id={`${prefix}-panel`}
           role="tabpanel"
           aria-labelledby={`${prefix}-tab-${active}`}
-          className={compact ? "min-h-0 flex-1 border-t border-forest/15" : "shrink-0"}
-          style={compact ? undefined : { height: GRID_HEIGHT }}
+          // In the dialog the grid takes its own height, shrinking (and scrolling) only
+          // when the view is taller than the space left, so the formula bar sits right under it.
+          className={compact ? "min-h-0 flex-initial border-t border-forest/15" : "shrink-0"}
+          style={compact ? undefined : { height: gridHeight }}
         >
           <SheetGrid
             key={`${prefix}-${active}`}
@@ -710,7 +812,7 @@ export default function WorkbookPreview({
             labelledBy={`${prefix}-tab-${active}`}
           />
         </div>
-        {compact && <FormulaBar sheet={sheet} selection={selection} cell={selectedCell} compact />}
+        {compact && <FormulaBar sheet={sheet} selection={selection} cell={selectedCell} compact height={0} />}
       </>
     ) : (
       fallback
@@ -726,7 +828,7 @@ export default function WorkbookPreview({
       <div
         ref={deskRef}
         className="hidden overflow-hidden rounded-xl border border-forest/15 bg-cream md:flex md:flex-col"
-        style={{ height: `calc(${TABS_PX + FORMULA_BAR_PX + 2}px + ${GRID_HEIGHT})` }}
+        style={{ height: `calc(${TABS_PX + formulaBarPx + captionPx + 2}px + ${gridHeight})` }}
         aria-busy={status !== "ready"}
       >
         {panel(false, `${uid}-desk`)}
