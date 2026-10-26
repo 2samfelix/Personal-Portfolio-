@@ -26,6 +26,7 @@ import {
 import { ProjectHero } from "@/components/project/ProjectHero";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
+import { BESIDE, MEASURE } from "@/components/project/layout";
 
 const DELIVERABLE_DETAIL: Record<string, string> = {
   "M&A Model":
@@ -72,7 +73,7 @@ function ChartCaption({
   explainer: string;
 }) {
   return (
-    <div className="mt-3 flex flex-col gap-3">
+    <div className="mt-3 flex flex-col gap-3 lg:mt-0">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-forest/15 bg-white px-4 py-3">
         <div>
           <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">{statLabel}</span>
@@ -92,10 +93,11 @@ function ChartCaption({
 }
 
 function ChartSection({ label, children, first = false }: { label: string; children: React.ReactNode; first?: boolean }) {
+  // Children are a chart and its ChartCaption: stacked on small screens, side by side from lg up.
   return (
     <section className={`rounded-xl border border-forest/15 bg-white p-4 sm:p-6 ${first ? "" : "mt-6"}`}>
       <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{label}</h2>
-      {children}
+      <div className={`lg:mt-4 ${BESIDE}`}>{children}</div>
     </section>
   );
 }
@@ -117,7 +119,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
 
   return (
     <main className="bg-cream">
-      <div className="mx-auto w-full max-w-4xl px-6 py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
         <Link href="/#work" className="text-sm font-semibold text-forest hover:text-forest-dark">
           &larr; Back to Projects
         </Link>
@@ -212,7 +214,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
         {/* Reconciliation bridge — its own block, not a chart */}
         <section className="mt-10 rounded-2xl border border-forest/20 bg-forest/5 p-6">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Reconciliation Against Microsoft&apos;s Own Disclosure</h2>
-          <p className="mt-3 text-sm leading-6 text-charcoal-soft">
+          <p className={`mt-3 text-sm leading-6 text-charcoal-soft ${MEASURE}`}>
             The model&apos;s Accretion Dilution tab already checks itself against Microsoft&apos;s reported pro forma figures
             in the FY2024 10-K. Nobody had decomposed the gap — it decomposes to one line item.
           </p>
@@ -242,7 +244,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
               </tbody>
             </table>
           </div>
-          <p className="mt-4 text-sm leading-6 text-charcoal-soft">
+          <p className={`mt-4 text-sm leading-6 text-charcoal-soft ${MEASURE}`}>
             A difference of {formatUsdM(RECONCILIATION.reconciledNetIncome - RECONCILIATION.msftReportedProFormaNetIncome)}, or about 0.003%. The entire gap between this
             model&apos;s -4.07% dilution and Microsoft&apos;s implied -1.34% is exactly one item: the opportunity cost of
             deploying $61.8B of cash. Microsoft&apos;s GAAP pro forma cannot include foregone interest income — it isn&apos;t a
@@ -253,7 +255,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Overview</h2>
-          <p className="mt-3 text-base leading-7 text-charcoal-soft">{cs.overview}</p>
+          <p className={`mt-3 text-base leading-7 text-charcoal-soft ${MEASURE}`}>{cs.overview}</p>
         </section>
 
         {/* Methodology */}
@@ -271,7 +273,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
           </div>
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-charcoal">Major Assumptions</h3>
-            <ul className="mt-2 flex flex-col gap-1.5">
+            <ul className={`mt-2 flex flex-col gap-1.5 ${MEASURE}`}>
               {cs.assumptions.map((item) => (
                 <li key={item} className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']">
                   {item}
@@ -281,7 +283,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
           </div>
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-charcoal">Limitations</h3>
-            <ul className="mt-2 flex flex-col gap-1.5">
+            <ul className={`mt-2 flex flex-col gap-1.5 ${MEASURE}`}>
               {LIMITATIONS.map((item) => (
                 <li key={item} className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']">
                   {item}
@@ -291,7 +293,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
           </div>
           <div className="mt-6 rounded-xl border border-brass/30 bg-brass-pale/40 p-4">
             <h3 className="text-sm font-semibold text-charcoal">A Disclosed Inconsistency</h3>
-            <p className="mt-2 text-sm leading-6 text-charcoal-soft">
+            <p className={`mt-2 text-sm leading-6 text-charcoal-soft ${MEASURE}`}>
               The Year-1 base case (above) measures dilution against Microsoft&apos;s <em>reported</em> FY2023A diluted EPS of{" "}
               ${BASIS_INCONSISTENCY.reportedStandaloneEps.toFixed(2)} (Accretion Dilution!B21): {formatPercent(BASIS_INCONSISTENCY.dilutionVsReported)}. The five-year
               build (below) instead measures against a <em>computed</em> standalone EPS of ${BASIS_INCONSISTENCY.computedStandaloneEps.toFixed(4)} — Microsoft&apos;s own
@@ -305,7 +307,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
         {/* Key findings */}
         <section className="mt-12 border-t border-forest/10 pt-12">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Key Findings</h2>
-          <ul className="mt-4 flex flex-col gap-4">
+          <ul className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {cs.findings.map((finding) => (
               <li key={finding} className="rounded-xl border border-forest/15 bg-white p-4 text-sm leading-6 text-charcoal-soft">
                 {finding}
