@@ -1,10 +1,26 @@
+import { Fragment, type CSSProperties } from "react";
 import { siteConfig } from "@/lib/site-config";
 
-const badges = [
-  "SEC-Sourced Financials",
-  "$3.64B Synergy Breakeven Modeled",
-  "Monte Carlo & Scenario Analysis",
-];
+const badges = ["SEC-Sourced Financials", "Monte Carlo & Scenario Analysis"];
+
+const HEADLINE_LEAD = "Good financial models don't end in a number.";
+const HEADLINE_BRASS = "They end in a decision.";
+
+/**
+ * The headline as one span per word, so it can reveal word by word on load
+ * (globals.css, .hero-word). The stagger index continues across both parts,
+ * so the brass sentence lands last. The text and its wrapping are unchanged.
+ */
+function words(text: string, offset = 0) {
+  return text.split(" ").map((word, i) => (
+    <Fragment key={word + i}>
+      {i > 0 && " "}
+      <span className="hero-word" style={{ "--i": offset + i } as CSSProperties}>
+        {word}
+      </span>
+    </Fragment>
+  ));
+}
 
 export default function Hero() {
   return (
@@ -15,8 +31,8 @@ export default function Hero() {
             Sam Felix &mdash; Financial Analyst
           </span>
           <h1 className="text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl sm:leading-[1.05]">
-            Good financial models don&apos;t end in a number.{" "}
-            <span className="text-brass">They end in a decision.</span>
+            {words(HEADLINE_LEAD)}{" "}
+            <span className="text-brass">{words(HEADLINE_BRASS, HEADLINE_LEAD.split(" ").length)}</span>
           </h1>
           <p className="max-w-xl text-base leading-7 text-charcoal-soft">
             I build financial models from real company filings, then push
@@ -24,6 +40,10 @@ export default function Hero() {
             trade-offs, and risk. From forecasting and valuation to capital
             allocation and M&amp;A, the goal is the same: structure the
             decision and find the number that matters.
+          </p>
+          <p className="text-sm font-semibold text-charcoal">
+            Open to junior FP&amp;A and analyst roles &middot;{" "}
+            <span className="whitespace-nowrap">Chicago area</span>
           </p>
 
           <div className="flex flex-wrap gap-1.5 pt-1 sm:gap-2">
@@ -40,7 +60,7 @@ export default function Hero() {
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             <a
               href="#work"
               className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
@@ -48,10 +68,16 @@ export default function Hero() {
               Explore the Work &rarr;
             </a>
             <a
+              href={`mailto:${siteConfig.email}`}
+              className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
+            >
+              Email me
+            </a>
+            <a
               href={siteConfig.resumeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
+              className="rounded-full px-1 py-2.5 text-sm font-semibold text-charcoal-soft underline decoration-forest/30 underline-offset-4 transition-colors hover:text-charcoal hover:decoration-forest"
             >
               Download Resume
             </a>
@@ -63,7 +89,7 @@ export default function Hero() {
           <img
             src="/headshot.png"
             alt="Sam Felix"
-            className="h-full w-full object-cover"
+            className="hero-photo h-full w-full object-cover"
           />
         </div>
       </div>

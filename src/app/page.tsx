@@ -1,5 +1,7 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
+import ProofStrip from "@/components/ProofStrip";
+import ScrollReveal from "@/components/ScrollReveal";
 import WhyAnalyticsStrategy from "@/components/WhyAnalyticsStrategy";
 import WorkGrid from "@/components/WorkGrid";
 import Builds from "@/components/Builds";
@@ -15,6 +17,7 @@ export default function Home() {
       <Header />
       <main className="flex flex-1 flex-col">
         <Hero />
+        <ProofStrip />
         <WhyAnalyticsStrategy />
         <Expertise />
         <WorkGrid />
@@ -24,6 +27,7 @@ export default function Home() {
         <Contact />
       </main>
       <Footer />
+      <ScrollReveal />
     </div>
   );
 }
