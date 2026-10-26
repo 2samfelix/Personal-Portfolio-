@@ -13,8 +13,9 @@ Requires Python 3 with openpyxl, and LibreOffice (`soffice`) on PATH.
   formats render exactly as the spreadsheet shows them (no formatter of our own).
 
 A project exports either whole sheets (one tab per sheet) or curated views (one
-tab per view: a sheet plus one or more ranges, with a caption). Views keep the
-real row and column numbers, so the formula bar shows true cell references.
+tab per view: a sheet plus one or more ranges, with a caption, and optionally
+`freeze_cols` to keep its label columns in view). Views keep the real row and
+column numbers, so the formula bar shows true cell references.
 
 The output is a read-only snapshot: nothing is recalculated in the browser. The
 workbook's SHA-256 is recorded so `npm run check:model-preview` can detect a
@@ -74,18 +75,21 @@ PROJECTS: dict[str, dict] = {
                 "sheet": "IPO Valuation",
                 "ranges": ["A15:F19"],
                 "caption": "Arm priced above every central peer-implied value.",
+                "freeze_cols": 1,
             },
             {
                 "name": "From WACC to share price",
                 "sheet": "DCF Valuation",
                 "ranges": ["A4:B11", "A42:B50"],
                 "caption": "The DCF-implied price is about $51.54, against a $272.21 market price on Aug 10, 2026.",
+                "freeze_cols": 1,
             },
             {
                 "name": "Sensitivity",
                 "sheet": "DCF Valuation",
                 "ranges": ["A52:F58"],
                 "caption": "Every cell is below the current price. Highest value in the grid: $94.39.",
+                "freeze_cols": 1,
             },
         ],
     },
@@ -441,7 +445,9 @@ def export_view(view, ws_f, ws_v, shown, styles: Styles, cfg) -> dict:
         "rowIndex": [None if r is None else r - 1 for r in row_index],
         "colIndex": [c - 1 for c in columns],
         "truncated": False,
-        "freeze": {"rows": 0, "cols": 0},
+        # A view may freeze its first columns (e.g. the row labels) so they stay put
+        # while the values scroll; nothing is frozen unless the view asks for it.
+        "freeze": {"rows": 0, "cols": view.get("freeze_cols", 0)},
         "colWidths": widths,
         "rowHeights": heights,
         "hiddenRows": hidden_rows,
