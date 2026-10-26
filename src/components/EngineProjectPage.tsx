@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Project } from "@/lib/projects";
-import { MEASURE } from "@/components/project/layout";
+import { MEASURE, STACK_BODY, STACK_HEAD, STACK_LABEL, STACK_ROW, STACK_TABLE, STACK_VALUE, STACK_WIDE } from "@/components/project/layout";
 
 const ENGINE_REPO = "https://github.com/2samfelix/fpa-intelligence-engine";
 const STATUS_DOC = `${ENGINE_REPO}/blob/main/docs/project_status.md`;
@@ -83,14 +83,17 @@ const WORKBOOK_ROWS: [string, string, string, string, string, string][] = [
   ["Q2 2026", "CI only", "10-Q: \"Construction Industries dealer inventory increased by $400 million\"  |  Call (corroborating): \"Dealer inventory increased by $400 million in Construction Industries compared to a decrease in the second quarter of 2025.\"", "Q2 2026 Form 10-Q, Item 2 MD&A — accession 0000018230-26-000046; corroborated by Q2 2026 earnings call", "SOURCED (CI)", "400"],
 ];
 // Long-text columns wrap at a minimum width; the rest stay on one line.
+// Below md the minimum widths are dropped and each row stacks (see STACK_* in layout.ts).
 const WORKBOOK_COL_CLASS = [
   "whitespace-nowrap",
-  "min-w-[7rem]",
-  "min-w-[16rem] whitespace-pre-wrap",
-  "min-w-[10rem]",
+  "min-w-[7rem] max-md:min-w-0",
+  "min-w-[16rem] whitespace-pre-wrap max-md:min-w-0",
+  "min-w-[10rem] max-md:min-w-0",
   "whitespace-nowrap",
   "whitespace-nowrap text-right tabular-nums",
 ];
+// Stacked below md: the verbatim language and the source take the full width.
+const WORKBOOK_STACK_WIDE = [false, false, true, true, false, false];
 
 const linkClass = "font-semibold text-forest hover:text-forest-dark";
 
@@ -265,8 +268,8 @@ export default function EngineProjectPage({
           </p>
           <figure className="mt-6">
             <div className="overflow-x-auto rounded-xl border border-forest/15 bg-white">
-              <table className="w-full min-w-[720px] text-left align-top text-xs leading-5">
-                <thead>
+              <table className={`w-full min-w-[720px] text-left align-top text-xs leading-5 ${STACK_TABLE}`}>
+                <thead className={STACK_HEAD}>
                   <tr className="border-b border-forest/15">
                     {WORKBOOK_HEADERS.map((header, col) => (
                       <th
@@ -281,15 +284,16 @@ export default function EngineProjectPage({
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className={STACK_BODY}>
                   {WORKBOOK_ROWS.map((row) => (
-                    <tr key={row[0]} className="border-b border-forest/10 last:border-0">
+                    <tr key={row[0]} className={`border-b border-forest/10 last:border-0 ${STACK_ROW}`}>
                       {row.map((cell, col) => (
                         <td
                           key={col}
+                          data-label={col ? WORKBOOK_HEADERS[col] : undefined}
                           className={`px-3 py-2.5 align-top text-charcoal-soft ${WORKBOOK_COL_CLASS[col]} ${
                             col === 5 ? "font-semibold text-charcoal" : ""
-                          }`}
+                          } ${col === 0 ? `font-semibold text-charcoal ${STACK_LABEL}` : `${STACK_VALUE} ${WORKBOOK_STACK_WIDE[col] ? STACK_WIDE : ""}`}`}
                         >
                           {cell}
                         </td>

@@ -7,6 +7,8 @@
 // valuation project needs chart types (a football field, a heatmap) a
 // forecast page never did.
 
+import { ChartScroll } from "@/components/project/ChartScroll";
+
 const LINE_CHART_WIDTH = 640;
 const LINE_CHART_HEIGHT = 280;
 const PAD_LEFT = 64;
@@ -91,41 +93,43 @@ export function TwoLineChart({
 
   return (
     <div className="mt-2">
-      <svg viewBox={`0 0 ${LINE_CHART_WIDTH} ${LINE_CHART_HEIGHT}`} className="w-full" role="img" aria-label={ariaLabel}>
-        {gridValues.map((v, i) => (
-          <line key={i} x1={PAD_LEFT} x2={LINE_CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
-        ))}
-        {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
-          <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[10px]">
-            {valueFormatter(v)}
-          </text>
-        ))}
-        {periods.map((label, i) => (
-          <text key={label} x={periodX(i, count)} y={LINE_CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[10px]">
-            {label}
-          </text>
-        ))}
-        {series.map((s) => (
-          <polyline
-            key={s.key}
-            points={s.values.map((v, i) => `${periodX(i, count)},${valueY(v, minValue, maxValue)}`).join(" ")}
-            fill="none"
-            stroke={s.stroke}
-            strokeWidth={2}
-            strokeDasharray={s.dash}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ))}
-        {series.map((s) =>
-          s.values.map((v, i) => <circle key={`${s.key}-${i}`} cx={periodX(i, count)} cy={valueY(v, minValue, maxValue)} r={2.5} fill={s.stroke} />)
-        )}
-        {series.map((s) => (
-          <text key={s.key} x={LINE_CHART_WIDTH - PAD_RIGHT - 4} y={endLabelY[s.key] - 6} textAnchor="end" fontSize={10} fontWeight={700} fill={s.stroke} stroke="#f5f1e6" strokeWidth={4} paintOrder="stroke">
-            {s.label}
-          </text>
-        ))}
-      </svg>
+      <ChartScroll minWidth={LINE_CHART_WIDTH}>
+        <svg viewBox={`0 0 ${LINE_CHART_WIDTH} ${LINE_CHART_HEIGHT}`} className="w-full" role="img" aria-label={ariaLabel}>
+          {gridValues.map((v, i) => (
+            <line key={i} x1={PAD_LEFT} x2={LINE_CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
+          ))}
+          {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
+            <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[10px]">
+              {valueFormatter(v)}
+            </text>
+          ))}
+          {periods.map((label, i) => (
+            <text key={label} x={periodX(i, count)} y={LINE_CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[10px]">
+              {label}
+            </text>
+          ))}
+          {series.map((s) => (
+            <polyline
+              key={s.key}
+              points={s.values.map((v, i) => `${periodX(i, count)},${valueY(v, minValue, maxValue)}`).join(" ")}
+              fill="none"
+              stroke={s.stroke}
+              strokeWidth={2}
+              strokeDasharray={s.dash}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
+          {series.map((s) =>
+            s.values.map((v, i) => <circle key={`${s.key}-${i}`} cx={periodX(i, count)} cy={valueY(v, minValue, maxValue)} r={2.5} fill={s.stroke} />)
+          )}
+          {series.map((s) => (
+            <text key={s.key} x={LINE_CHART_WIDTH - PAD_RIGHT - 4} y={endLabelY[s.key] - 6} textAnchor="end" fontSize={10} fontWeight={700} fill={s.stroke} stroke="#f5f1e6" strokeWidth={4} paintOrder="stroke">
+              {s.label}
+            </text>
+          ))}
+        </svg>
+      </ChartScroll>
       <Legend series={series} />
     </div>
   );
@@ -149,40 +153,42 @@ export function MilestoneChart({
 
   return (
     <div className="mt-2">
-      <svg viewBox={`0 0 ${LINE_CHART_WIDTH} ${LINE_CHART_HEIGHT}`} className="w-full" role="img" aria-label={ariaLabel}>
-        {gridValues.map((v, i) => (
-          <line key={i} x1={PAD_LEFT} x2={LINE_CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
-        ))}
-        {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
-          <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[10px]">
-            {formatUsd(v)}
-          </text>
-        ))}
-        {points.map((p, i) => (
-          <text key={p.label} x={periodX(i, count)} y={LINE_CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[10px]">
-            {p.label}
-          </text>
-        ))}
-        <polyline
-          points={points.map((p, i) => `${periodX(i, count)},${valueY(p.price, minValue, maxValue)}`).join(" ")}
-          fill="none"
-          stroke="#1e3a2b"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {points.map((p, i) => {
-          const y = valueY(p.price, minValue, maxValue);
-          return (
-            <g key={p.label}>
-              <circle cx={periodX(i, count)} cy={y} r={3.5} fill="#96703e" />
-              <text x={periodX(i, count)} y={y - 10} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} fontSize={11} fontWeight={700} fill="#2a2820" stroke="#f5f1e6" strokeWidth={4} paintOrder="stroke">
-                {formatUsd(p.price)}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+      <ChartScroll minWidth={LINE_CHART_WIDTH}>
+        <svg viewBox={`0 0 ${LINE_CHART_WIDTH} ${LINE_CHART_HEIGHT}`} className="w-full" role="img" aria-label={ariaLabel}>
+          {gridValues.map((v, i) => (
+            <line key={i} x1={PAD_LEFT} x2={LINE_CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
+          ))}
+          {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
+            <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[10px]">
+              {formatUsd(v)}
+            </text>
+          ))}
+          {points.map((p, i) => (
+            <text key={p.label} x={periodX(i, count)} y={LINE_CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[10px]">
+              {p.label}
+            </text>
+          ))}
+          <polyline
+            points={points.map((p, i) => `${periodX(i, count)},${valueY(p.price, minValue, maxValue)}`).join(" ")}
+            fill="none"
+            stroke="#1e3a2b"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {points.map((p, i) => {
+            const y = valueY(p.price, minValue, maxValue);
+            return (
+              <g key={p.label}>
+                <circle cx={periodX(i, count)} cy={y} r={3.5} fill="#96703e" />
+                <text x={periodX(i, count)} y={y - 10} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} fontSize={11} fontWeight={700} fill="#2a2820" stroke="#f5f1e6" strokeWidth={4} paintOrder="stroke">
+                  {formatUsd(p.price)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </ChartScroll>
     </div>
   );
 }
@@ -223,51 +229,53 @@ export function FootballFieldChart({
 
   return (
     <div className="mt-2">
-      <svg viewBox={`0 0 ${FIELD_WIDTH} ${height}`} className="w-full" role="img" aria-label={ariaLabel}>
-        {[0, 0.25, 0.5, 0.75, 1].map((f) => {
-          const x = barX + f * plotWidth;
-          return <line key={f} x1={x} x2={x} y1={12} y2={height - 24} stroke="#1e3a2b" strokeOpacity={0.08} />;
-        })}
-        {[0, 0.5, 1].map((f) => (
-          <text key={f} x={barX + f * plotWidth} y={height - 8} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
-            {formatUsd(f * axisMax)}
-          </text>
-        ))}
-        {items.map((item, i) => {
-          const w = (item.price / axisMax) * plotWidth;
-          const y = rowY(i);
-          return (
-            <g key={item.label}>
-              <text x={barX - 10} y={y + FIELD_ROW_HEIGHT / 2 + 4} textAnchor="end" fontSize={11} fontWeight={600} className="fill-charcoal">
-                {item.label}
-              </text>
-              <rect x={barX} y={y} width={Math.max(w, 2)} height={FIELD_ROW_HEIGHT} fill="#1e3a2b" fillOpacity={item.label === "Actual IPO" || item.label === "DCF Implied (2026)" ? 1 : 0.55} rx={3} />
-              <text x={barX + w + 8} y={y + FIELD_ROW_HEIGHT / 2 + 4} fontSize={11} fontWeight={700} className="fill-charcoal">
-                {formatUsd(item.price)}
-              </text>
-            </g>
-          );
-        })}
-        {(() => {
-          const i = items.length;
-          const y = rowY(i);
-          const breakX = plotWidth * 0.86;
-          return (
-            <g>
-              <text x={barX - 10} y={y + FIELD_ROW_HEIGHT / 2 + 4} textAnchor="end" fontSize={11} fontWeight={600} className="fill-charcoal">
-                Current Market Price
-              </text>
-              <rect x={barX} y={y} width={plotWidth} height={FIELD_ROW_HEIGHT} fill="#a1462f" rx={3} />
-              {[breakX - 6, breakX + 6].map((bx, k) => (
-                <polygon key={k} points={`${barX + bx - 5},${y} ${barX + bx + 5},${y} ${barX + bx - 5},${y + FIELD_ROW_HEIGHT} ${barX + bx + 5 - 10},${y + FIELD_ROW_HEIGHT}`} fill="#f5f1e6" />
-              ))}
-              <text x={barX + plotWidth + 8} y={y + FIELD_ROW_HEIGHT / 2 + 4} fontSize={11} fontWeight={700} className="fill-rust">
-                {formatUsd(marketPrice)}
-              </text>
-            </g>
-          );
-        })()}
-      </svg>
+      <ChartScroll minWidth={FIELD_WIDTH}>
+        <svg viewBox={`0 0 ${FIELD_WIDTH} ${height}`} className="w-full" role="img" aria-label={ariaLabel}>
+          {[0, 0.25, 0.5, 0.75, 1].map((f) => {
+            const x = barX + f * plotWidth;
+            return <line key={f} x1={x} x2={x} y1={12} y2={height - 24} stroke="#1e3a2b" strokeOpacity={0.08} />;
+          })}
+          {[0, 0.5, 1].map((f) => (
+            <text key={f} x={barX + f * plotWidth} y={height - 8} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
+              {formatUsd(f * axisMax)}
+            </text>
+          ))}
+          {items.map((item, i) => {
+            const w = (item.price / axisMax) * plotWidth;
+            const y = rowY(i);
+            return (
+              <g key={item.label}>
+                <text x={barX - 10} y={y + FIELD_ROW_HEIGHT / 2 + 4} textAnchor="end" fontSize={11} fontWeight={600} className="fill-charcoal">
+                  {item.label}
+                </text>
+                <rect x={barX} y={y} width={Math.max(w, 2)} height={FIELD_ROW_HEIGHT} fill="#1e3a2b" fillOpacity={item.label === "Actual IPO" || item.label === "DCF Implied (2026)" ? 1 : 0.55} rx={3} />
+                <text x={barX + w + 8} y={y + FIELD_ROW_HEIGHT / 2 + 4} fontSize={11} fontWeight={700} className="fill-charcoal">
+                  {formatUsd(item.price)}
+                </text>
+              </g>
+            );
+          })}
+          {(() => {
+            const i = items.length;
+            const y = rowY(i);
+            const breakX = plotWidth * 0.86;
+            return (
+              <g>
+                <text x={barX - 10} y={y + FIELD_ROW_HEIGHT / 2 + 4} textAnchor="end" fontSize={11} fontWeight={600} className="fill-charcoal">
+                  Current Market Price
+                </text>
+                <rect x={barX} y={y} width={plotWidth} height={FIELD_ROW_HEIGHT} fill="#a1462f" rx={3} />
+                {[breakX - 6, breakX + 6].map((bx, k) => (
+                  <polygon key={k} points={`${barX + bx - 5},${y} ${barX + bx + 5},${y} ${barX + bx - 5},${y + FIELD_ROW_HEIGHT} ${barX + bx + 5 - 10},${y + FIELD_ROW_HEIGHT}`} fill="#f5f1e6" />
+                ))}
+                <text x={barX + plotWidth + 8} y={y + FIELD_ROW_HEIGHT / 2 + 4} fontSize={11} fontWeight={700} className="fill-rust">
+                  {formatUsd(marketPrice)}
+                </text>
+              </g>
+            );
+          })()}
+        </svg>
+      </ChartScroll>
       <p className="mt-1 text-center text-[10px] text-charcoal-soft">
         The break marks the point where the market-price bar leaves this chart&apos;s scale — it is not drawn proportionally.
       </p>
@@ -316,30 +324,32 @@ export function ReturnDecompositionChart({
 
   return (
     <div className="mt-2">
-      <svg viewBox={`0 0 ${DECOMP_WIDTH} ${DECOMP_HEIGHT}`} className="w-full" role="img" aria-label={`Return decomposition: total return ${totalReturn.toFixed(2)}x equals ${epsGrowth.toFixed(2)}x from EPS growth times ${peExpansion.toFixed(2)}x from P/E expansion; independently, EV/Revenue expanded ${evRevenueCheck.toFixed(2)}x`}>
-        <line x1={DECOMP_PAD_LEFT} x2={DECOMP_WIDTH - DECOMP_PAD_RIGHT} y1={y(0)} y2={y(0)} stroke="#2a2820" strokeOpacity={0.2} />
-        {bars.map((b, i) => {
-          const x = DECOMP_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
-          const yTop = y(b.value);
-          const height = y(0) - yTop;
-          return (
-            <g key={b.label}>
-              <rect x={x} y={yTop} width={barWidth} height={height} fill={b.fill} rx={3} />
-              <text x={x + barWidth / 2} y={yTop - 8} textAnchor="middle" fontSize={13} fontWeight={700} className="fill-charcoal">
-                {b.value.toFixed(2)}x
-              </text>
-              <text x={x + barWidth / 2} y={DECOMP_HEIGHT - DECOMP_PAD_BOTTOM + 20} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
-                {b.label}
-              </text>
-            </g>
-          );
-        })}
-        {/* EV/Revenue corroboration marker on the P/E Expansion bar */}
-        <line x1={DECOMP_PAD_LEFT + colWidth * 2 + (colWidth - barWidth) / 2 - 6} x2={DECOMP_PAD_LEFT + colWidth * 2 + (colWidth - barWidth) / 2 + barWidth + 6} y1={checkY} y2={checkY} stroke="#a1462f" strokeWidth={1.5} strokeDasharray="4 3" />
-        <text x={DECOMP_PAD_LEFT + colWidth * 2 + (colWidth - barWidth) / 2 + barWidth + 10} y={checkY + 4} fontSize={9} fontWeight={700} className="fill-rust">
-          EV/Rev check: {evRevenueCheck.toFixed(2)}x
-        </text>
-      </svg>
+      <ChartScroll minWidth={DECOMP_WIDTH}>
+        <svg viewBox={`0 0 ${DECOMP_WIDTH} ${DECOMP_HEIGHT}`} className="w-full" role="img" aria-label={`Return decomposition: total return ${totalReturn.toFixed(2)}x equals ${epsGrowth.toFixed(2)}x from EPS growth times ${peExpansion.toFixed(2)}x from P/E expansion; independently, EV/Revenue expanded ${evRevenueCheck.toFixed(2)}x`}>
+          <line x1={DECOMP_PAD_LEFT} x2={DECOMP_WIDTH - DECOMP_PAD_RIGHT} y1={y(0)} y2={y(0)} stroke="#2a2820" strokeOpacity={0.2} />
+          {bars.map((b, i) => {
+            const x = DECOMP_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
+            const yTop = y(b.value);
+            const height = y(0) - yTop;
+            return (
+              <g key={b.label}>
+                <rect x={x} y={yTop} width={barWidth} height={height} fill={b.fill} rx={3} />
+                <text x={x + barWidth / 2} y={yTop - 8} textAnchor="middle" fontSize={13} fontWeight={700} className="fill-charcoal">
+                  {b.value.toFixed(2)}x
+                </text>
+                <text x={x + barWidth / 2} y={DECOMP_HEIGHT - DECOMP_PAD_BOTTOM + 20} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
+                  {b.label}
+                </text>
+              </g>
+            );
+          })}
+          {/* EV/Revenue corroboration marker on the P/E Expansion bar */}
+          <line x1={DECOMP_PAD_LEFT + colWidth * 2 + (colWidth - barWidth) / 2 - 6} x2={DECOMP_PAD_LEFT + colWidth * 2 + (colWidth - barWidth) / 2 + barWidth + 6} y1={checkY} y2={checkY} stroke="#a1462f" strokeWidth={1.5} strokeDasharray="4 3" />
+          <text x={DECOMP_PAD_LEFT + colWidth * 2 + (colWidth - barWidth) / 2 + barWidth + 10} y={checkY + 4} fontSize={9} fontWeight={700} className="fill-rust">
+            EV/Rev check: {evRevenueCheck.toFixed(2)}x
+          </text>
+        </svg>
+      </ChartScroll>
     </div>
   );
 }
@@ -371,7 +381,7 @@ export function DCFHeatmap({
 
   return (
     <div className="mt-2 overflow-x-auto">
-      <table className="w-full min-w-[480px] border-separate border-spacing-1 text-center text-xs">
+      <table className="w-full min-w-[480px] border-separate border-spacing-1 text-center text-xs max-md:min-w-0 max-md:border-spacing-0.5">
         <thead>
           <tr>
             <th className="p-1 text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft">WACC \ g</th>
@@ -391,7 +401,7 @@ export function DCFHeatmap({
                 return (
                   <td
                     key={c}
-                    className={`rounded-md p-2 font-semibold text-charcoal ${isLive ? "ring-2 ring-brass" : ""}`}
+                    className={`rounded-md p-2 font-semibold text-charcoal max-md:px-0.5 max-md:text-[11px] ${isLive ? "ring-2 ring-brass" : ""}`}
                     style={{ backgroundColor: `rgba(30,58,43,${opacityFor(v)})` }}
                   >
                     {formatUsd(v)}

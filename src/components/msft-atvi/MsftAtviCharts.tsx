@@ -8,6 +8,8 @@
 // additive EPS waterfall, a synergy heatmap with a crossing line) neither
 // of the other two pages used.
 
+import { ChartScroll } from "@/components/project/ChartScroll";
+
 const CHART_WIDTH = 640;
 const CHART_HEIGHT = 280;
 const PAD_LEFT = 64;
@@ -93,29 +95,31 @@ export function EpsBridgeWaterfall({ steps }: { steps: BridgeStep[] }) {
 
   return (
     <div className="mt-2">
-      <svg viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`} className="w-full" role="img" aria-label="EPS bridge: Microsoft standalone net income $72,361M, plus Activision net income $1,513M, minus foregone after-tax interest $2,002.85M, minus after-tax PPA amortization $2,488.67M, equals pro forma net income $69,382.48M">
-        {positioned.map((step, i) => {
-          const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
-          const yTop = y(step.to);
-          const yBottom = y(step.from);
-          const height = Math.max(1.5, yBottom - yTop);
-          const valueLabel = step.kind === "anchor" ? formatUsdM(step.value) : `${step.value > 0 ? "+" : ""}${formatUsdM(step.value)}`;
-          return (
-            <g key={step.label}>
-              <rect x={x} y={yTop} width={barWidth} height={height} fill={fillFor(step.kind)} rx={2} />
-              <text x={x + barWidth / 2} y={yTop - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="#2a2820">
-                {valueLabel}
-              </text>
-              <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 16} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
-                {step.label}
-              </text>
-              <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 28} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
-                {step.sublabel}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+      <ChartScroll minWidth={BRIDGE_WIDTH}>
+        <svg viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`} className="w-full" role="img" aria-label="EPS bridge: Microsoft standalone net income $72,361M, plus Activision net income $1,513M, minus foregone after-tax interest $2,002.85M, minus after-tax PPA amortization $2,488.67M, equals pro forma net income $69,382.48M">
+          {positioned.map((step, i) => {
+            const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
+            const yTop = y(step.to);
+            const yBottom = y(step.from);
+            const height = Math.max(1.5, yBottom - yTop);
+            const valueLabel = step.kind === "anchor" ? formatUsdM(step.value) : `${step.value > 0 ? "+" : ""}${formatUsdM(step.value)}`;
+            return (
+              <g key={step.label}>
+                <rect x={x} y={yTop} width={barWidth} height={height} fill={fillFor(step.kind)} rx={2} />
+                <text x={x + barWidth / 2} y={yTop - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="#2a2820">
+                  {valueLabel}
+                </text>
+                <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 16} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
+                  {step.label}
+                </text>
+                <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 28} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
+                  {step.sublabel}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </ChartScroll>
       <div className="mt-2 flex flex-wrap gap-4">
         <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
           <span className="h-2.5 w-2.5 rounded-full bg-charcoal" /> Starting / Ending
@@ -154,44 +158,46 @@ export function EpsPathChart({ labels, values }: { labels: string[]; values: num
 
   return (
     <div className="mt-2">
-      <svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} className="w-full" role="img" aria-label="Five-year EPS accretion/dilution path: -3.10%, -1.42%, -0.39%, +0.24%, +2.33%">
-        {gridValues.map((v, i) => (
-          <line key={i} x1={PAD_LEFT} x2={CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
-        ))}
-        {showZeroLine && (
-          <line x1={PAD_LEFT} x2={CHART_WIDTH - PAD_RIGHT} y1={valueY(0, minValue, maxValue)} y2={valueY(0, minValue, maxValue)} stroke="#2a2820" strokeOpacity={0.4} strokeDasharray="3 3" />
-        )}
-        {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
-          <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[10px]">
-            {formatPercent(v, 1)}
-          </text>
-        ))}
-        {labels.map((label, i) => (
-          <text key={label} x={periodX(i, count)} y={CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[10px]">
-            {label}
-          </text>
-        ))}
-        <polyline
-          points={values.map((v, i) => `${periodX(i, count)},${valueY(v, minValue, maxValue)}`).join(" ")}
-          fill="none"
-          stroke="#1e3a2b"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {values.map((v, i) => {
-          const y = valueY(v, minValue, maxValue);
-          const color = v >= 0 ? "#1e3a2b" : "#a1462f";
-          return (
-            <g key={i}>
-              <circle cx={periodX(i, count)} cy={y} r={3.5} fill={color} />
-              <text x={periodX(i, count)} y={y - 10} textAnchor="middle" fontSize={11} fontWeight={700} fill={color} stroke="#f5f1e6" strokeWidth={4} paintOrder="stroke">
-                {formatPercent(v, 2)}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+      <ChartScroll minWidth={CHART_WIDTH}>
+        <svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} className="w-full" role="img" aria-label="Five-year EPS accretion/dilution path: -3.10%, -1.42%, -0.39%, +0.24%, +2.33%">
+          {gridValues.map((v, i) => (
+            <line key={i} x1={PAD_LEFT} x2={CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
+          ))}
+          {showZeroLine && (
+            <line x1={PAD_LEFT} x2={CHART_WIDTH - PAD_RIGHT} y1={valueY(0, minValue, maxValue)} y2={valueY(0, minValue, maxValue)} stroke="#2a2820" strokeOpacity={0.4} strokeDasharray="3 3" />
+          )}
+          {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
+            <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[10px]">
+              {formatPercent(v, 1)}
+            </text>
+          ))}
+          {labels.map((label, i) => (
+            <text key={label} x={periodX(i, count)} y={CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[10px]">
+              {label}
+            </text>
+          ))}
+          <polyline
+            points={values.map((v, i) => `${periodX(i, count)},${valueY(v, minValue, maxValue)}`).join(" ")}
+            fill="none"
+            stroke="#1e3a2b"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {values.map((v, i) => {
+            const y = valueY(v, minValue, maxValue);
+            const color = v >= 0 ? "#1e3a2b" : "#a1462f";
+            return (
+              <g key={i}>
+                <circle cx={periodX(i, count)} cy={y} r={3.5} fill={color} />
+                <text x={periodX(i, count)} y={y - 10} textAnchor="middle" fontSize={11} fontWeight={700} fill={color} stroke="#f5f1e6" strokeWidth={4} paintOrder="stroke">
+                  {formatPercent(v, 2)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </ChartScroll>
     </div>
   );
 }
@@ -218,26 +224,28 @@ export function AmortizationBarChart({ labels, values }: { labels: string[]; val
 
   return (
     <div className="mt-2">
-      <svg viewBox={`0 0 ${BAR_WIDTH} ${BAR_HEIGHT}`} className="w-full" role="img" aria-label="Total purchase-accounting amortization by year: $3,071.6M in years 1-4, then $484.1M in year 5">
-        <line x1={BAR_PAD_LEFT} x2={BAR_WIDTH - BAR_PAD_RIGHT} y1={y(0)} y2={y(0)} stroke="#2a2820" strokeOpacity={0.2} />
-        {values.map((v, i) => {
-          const x = BAR_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
-          const yTop = y(v);
-          const height = y(0) - yTop;
-          const isStepDown = i === values.length - 1;
-          return (
-            <g key={labels[i]}>
-              <rect x={x} y={yTop} width={barWidth} height={height} fill={isStepDown ? "#96703e" : "#1e3a2b"} rx={3} />
-              <text x={x + barWidth / 2} y={yTop - 8} textAnchor="middle" fontSize={11} fontWeight={700} className="fill-charcoal">
-                {formatUsdM(v)}
-              </text>
-              <text x={x + barWidth / 2} y={BAR_HEIGHT - BAR_PAD_BOTTOM + 18} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
-                {labels[i]}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+      <ChartScroll minWidth={BAR_WIDTH}>
+        <svg viewBox={`0 0 ${BAR_WIDTH} ${BAR_HEIGHT}`} className="w-full" role="img" aria-label="Total purchase-accounting amortization by year: $3,071.6M in years 1-4, then $484.1M in year 5">
+          <line x1={BAR_PAD_LEFT} x2={BAR_WIDTH - BAR_PAD_RIGHT} y1={y(0)} y2={y(0)} stroke="#2a2820" strokeOpacity={0.2} />
+          {values.map((v, i) => {
+            const x = BAR_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
+            const yTop = y(v);
+            const height = y(0) - yTop;
+            const isStepDown = i === values.length - 1;
+            return (
+              <g key={labels[i]}>
+                <rect x={x} y={yTop} width={barWidth} height={height} fill={isStepDown ? "#96703e" : "#1e3a2b"} rx={3} />
+                <text x={x + barWidth / 2} y={yTop - 8} textAnchor="middle" fontSize={11} fontWeight={700} className="fill-charcoal">
+                  {formatUsdM(v)}
+                </text>
+                <text x={x + barWidth / 2} y={BAR_HEIGHT - BAR_PAD_BOTTOM + 18} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
+                  {labels[i]}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </ChartScroll>
     </div>
   );
 }
@@ -290,49 +298,51 @@ export function SynergyHeatmap({
 
   return (
     <div className="mt-2 overflow-x-auto">
-      <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" role="img" aria-label="Synergy breakeven sensitivity grid: EPS accretion/dilution by annual synergies and foregone cash yield, with base case at $0 synergies and 4.0% yield">
-        {yieldCols.map((g, c) => (
-          <text key={c} x={cellCenterX(c)} y={16} textAnchor="middle" fontSize={10} fontWeight={700} className={c === baseCol ? "fill-brass" : "fill-charcoal-soft"}>
-            {(g * 100).toFixed(0)}%
-          </text>
-        ))}
-        {synergyRows.map((s, r) => (
-          <text key={r} x={labelColW - 8} y={headerH + r * cellH + cellH / 2 + 4} textAnchor="end" fontSize={10} fontWeight={700} className={r === baseRow ? "fill-brass" : "fill-charcoal-soft"}>
-            ${(s / 1000).toFixed(0)}B
-          </text>
-        ))}
-        {synergyRows.map((s, r) =>
-          yieldCols.map((g, c) => {
-            const v = grid[r][c];
-            const isBase = r === baseRow && c === baseCol;
-            return (
-              <g key={`${r}-${c}`}>
-                <rect
-                  x={labelColW + c * cellW + 2}
-                  y={headerH + r * cellH + 2}
-                  width={cellW - 4}
-                  height={cellH - 4}
-                  fill={colorFor(v)}
-                  fillOpacity={opacityFor(v)}
-                  stroke={isBase ? "#96703e" : "none"}
-                  strokeWidth={isBase ? 2 : 0}
-                  rx={3}
-                />
-                <text x={cellCenterX(c)} y={headerH + r * cellH + cellH / 2 + 4} textAnchor="middle" fontSize={10} fontWeight={700} className="fill-charcoal">
-                  {formatPercent(v, 1)}
-                </text>
-              </g>
-            );
-          })
-        )}
-        <polyline
-          points={crossingRowFrac.map((rf, c) => `${cellCenterX(c)},${cellCenterY(rf)}`).join(" ")}
-          fill="none"
-          stroke="#2a2820"
-          strokeWidth={2}
-          strokeDasharray="5 3"
-        />
-      </svg>
+      <ChartScroll minWidth={svgW}>
+        <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" role="img" aria-label="Synergy breakeven sensitivity grid: EPS accretion/dilution by annual synergies and foregone cash yield, with base case at $0 synergies and 4.0% yield">
+          {yieldCols.map((g, c) => (
+            <text key={c} x={cellCenterX(c)} y={16} textAnchor="middle" fontSize={10} fontWeight={700} className={c === baseCol ? "fill-brass" : "fill-charcoal-soft"}>
+              {(g * 100).toFixed(0)}%
+            </text>
+          ))}
+          {synergyRows.map((s, r) => (
+            <text key={r} x={labelColW - 8} y={headerH + r * cellH + cellH / 2 + 4} textAnchor="end" fontSize={10} fontWeight={700} className={r === baseRow ? "fill-brass" : "fill-charcoal-soft"}>
+              ${(s / 1000).toFixed(0)}B
+            </text>
+          ))}
+          {synergyRows.map((s, r) =>
+            yieldCols.map((g, c) => {
+              const v = grid[r][c];
+              const isBase = r === baseRow && c === baseCol;
+              return (
+                <g key={`${r}-${c}`}>
+                  <rect
+                    x={labelColW + c * cellW + 2}
+                    y={headerH + r * cellH + 2}
+                    width={cellW - 4}
+                    height={cellH - 4}
+                    fill={colorFor(v)}
+                    fillOpacity={opacityFor(v)}
+                    stroke={isBase ? "#96703e" : "none"}
+                    strokeWidth={isBase ? 2 : 0}
+                    rx={3}
+                  />
+                  <text x={cellCenterX(c)} y={headerH + r * cellH + cellH / 2 + 4} textAnchor="middle" fontSize={10} fontWeight={700} className="fill-charcoal">
+                    {formatPercent(v, 1)}
+                  </text>
+                </g>
+              );
+            })
+          )}
+          <polyline
+            points={crossingRowFrac.map((rf, c) => `${cellCenterX(c)},${cellCenterY(rf)}`).join(" ")}
+            fill="none"
+            stroke="#2a2820"
+            strokeWidth={2}
+            strokeDasharray="5 3"
+          />
+        </svg>
+      </ChartScroll>
       <p className="mt-2 text-[10px] text-charcoal-soft">
         Rows: annual pre-tax synergies. Columns: foregone cash yield. Brass outline: base case ($0 synergies, 4.0% yield). Dashed line: where the grid crosses from dilutive (rust) to accretive (forest).
       </p>

@@ -125,6 +125,14 @@ export function crossSheetRefs(formula: string | undefined): { sheet: string; re
   return out;
 }
 
+/** A formula's cross-sheet references grouped by sheet, in order of appearance:
+ *  [["Sources & Uses", ["B15", "B17"]], ...]. */
+export function crossSheetGroups(formula: string | undefined): [string, string[]][] {
+  const bySheet = new Map<string, string[]>();
+  for (const l of crossSheetRefs(formula)) bySheet.set(l.sheet, [...(bySheet.get(l.sheet) ?? []), l.ref]);
+  return [...bySheet];
+}
+
 /** Excel column width (characters) to CSS pixels, as Excel does for a 7px digit. */
 export function colPx(width: number): number {
   return Math.round(width * 7 + 5);
@@ -162,6 +170,39 @@ export function viewGridHeights(doc: ModelPreviewDoc, zoom: number, maxPx: numbe
   return doc.sheets.map((sheet) =>
     Math.min(maxPx, colHeaderPx(zoom) + rowHeightsPx(sheet, zoom).reduce((a, b) => a + b, 0) + SCROLLBAR_RESERVE_PX),
   );
+}
+
+// Desktop formula bar: the formula, then "Shows", "Raw value" and (for
+// cross-sheet formulas) "Links to" directly beneath it. Its height is set per tab
+// from the data, so it takes the space its longest entry needs and stays fixed
+// while cells are selected. Two estimates: "narrow" for desktop panels below the
+// full page width (768px viewport and up) and "wide" for the full 1152px panel
+// (1200px viewport and up; WorkbookPreview switches between them at that width).
+// A formula longer than the bar allows scrolls.
+const BAR_PAD_PX = 18; // vertical padding plus the bottom border
+const BAR_CODE_LINE_PX = 20;
+const BAR_CODE_MAX_LINES = 5;
+const BAR_GAP_PX = 4;
+const BAR_NOTE_LINE_PX = 16;
+const BAR_CHARS = {
+  narrow: { code: 60, note: 65 },
+  wide: { code: 105, note: 115 },
+};
+/** For each tab, the desktop formula bar height its longest formula and links need. */
+export function formulaBarHeights(doc: ModelPreviewDoc, panel: "narrow" | "wide"): number[] {
+  const chars = BAR_CHARS[panel];
+  return doc.sheets.map((sheet) => {
+    let need = 0;
+    for (const cell of sheet.cells.length ? sheet.cells : [{ r: 0, c: 0 } as SheetCell]) {
+      const codeLines = Math.min(BAR_CODE_MAX_LINES, Math.max(1, Math.ceil((cell.f?.length ?? 0) / chars.code)));
+      const links = crossSheetGroups(cell.f)
+        .map(([name, refs]) => `sheet ${name}, ${refs.length > 1 ? "cells" : "cell"} ${refs.join(", ")}`)
+        .join("; ");
+      const noteLines = 2 + (links ? Math.ceil(links.length / chars.note) : 0);
+      need = Math.max(need, BAR_PAD_PX + codeLines * BAR_CODE_LINE_PX + BAR_GAP_PX + noteLines * BAR_NOTE_LINE_PX);
+    }
+    return need;
+  });
 }
 
 /** The text the spreadsheet shows for a cell. */

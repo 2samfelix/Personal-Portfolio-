@@ -17,6 +17,7 @@ import {
   addressAt,
   colHeaderPx,
   colLetter,
+  crossSheetGroups,
   crossSheetRefs,
   fontFamily,
   sheetCol,
@@ -85,6 +86,10 @@ export type PreviewLayout = {
   zoom?: number;
   /** Desktop formula bar height, for workbooks with long formulas. */
   formulaBarPx?: number;
+  /** Desktop formula bar height per tab, in px, for a narrow and a full-width
+   *  panel (see formulaBarHeights); takes precedence over formulaBarPx.
+   *  Computed at build time. */
+  formulaBarHeights?: { narrow: number[]; wide: number[] };
   /** Desktop grid viewport height (CSS length). */
   gridHeight?: string;
   /** Desktop grid height per tab, in px, sized to each view (see viewGridHeights);
@@ -570,13 +575,11 @@ function FormulaBar({
   selection,
   cell,
   compact,
-  height,
 }: {
   sheet: PreviewSheet;
   selection: Selection;
   cell: SheetCell | undefined;
   compact: boolean;
-  height: number;
 }) {
   const cellRef = addressAt(sheet, selection.r, selection.c);
   const address = sheet.sheet ? `${sheet.sheet}!${cellRef}` : cellRef;
@@ -586,8 +589,7 @@ function FormulaBar({
   const linkText = links.map((l) => `${l.sheet}!${l.ref}`).join(", ");
   // Grouped by source sheet, so a formula that reads several cells of one sheet
   // names it once: "sheet Sources & Uses, cells B15, B17".
-  const bySheet = new Map<string, string[]>();
-  for (const l of links) bySheet.set(l.sheet, [...(bySheet.get(l.sheet) ?? []), l.ref]);
+  const bySheet = crossSheetGroups(cell?.f);
   const announce = `${sheet.name}, ${address}: ${shown || "empty"}${cell?.f ? `. Formula ${cell.f}` : ""}${
     links.length ? `. Links to ${linkText}` : ""
   }`;
@@ -596,13 +598,16 @@ function FormulaBar({
       role="group"
       aria-label="Formula bar"
       className={`flex gap-3 border-forest/15 bg-white px-3 py-2 text-sm ${compact ? "shrink-0 border-t" : "shrink-0 border-b"}`}
-      style={compact ? undefined : { height }}
+      // Desktop: the panel sets --fb (and --fb-wide for the full-width panel).
+      style={compact ? undefined : { height: "var(--fb)" }}
     >
       <span className="h-fit max-w-[45%] shrink-0 truncate rounded-md border border-forest/20 bg-cream px-2 py-1 font-mono text-xs font-bold text-charcoal" title={address}>
         {address}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="flex min-h-0 flex-1 items-start gap-2">
+        {/* Takes only the lines the formula needs, so "Shows" sits right under it; a
+            formula longer than the bar allows shrinks this and scrolls. */}
+        <p className="flex min-h-0 items-start gap-2">
           <span className="shrink-0 font-serif text-sm italic leading-5 text-brass" aria-hidden="true">
             fx
           </span>
@@ -630,7 +635,7 @@ function FormulaBar({
               <dt>Links to</dt>
               {/* Wraps rather than truncating, so every source stays named; the formula above scrolls if squeezed. */}
               <dd className="min-w-0 text-charcoal" title={linkText}>
-                {[...bySheet].map(([name, refs], i) => (
+                {bySheet.map(([name, refs], i) => (
                   <span key={name}>
                     {i > 0 && "; "}
                     sheet <span className="font-semibold">{name}</span>, {refs.length > 1 ? "cells" : "cell"}{" "}
@@ -673,7 +678,6 @@ export default function WorkbookPreview({
   layout?: PreviewLayout;
 }) {
   const startZoom = layout.zoom ?? DESKTOP_ZOOM;
-  const formulaBarPx = layout.formulaBarPx ?? FORMULA_BAR_PX;
   const captionLines = layout.captionLines ?? 1;
   const captionPx = layout.captions ? CAPTION_PX + (captionLines - 1) * CAPTION_LINE_PX : 0;
   const uid = useId().replace(/:/g, "");
@@ -683,6 +687,9 @@ export default function WorkbookPreview({
   const [doc, setDoc] = useState<ModelPreviewDoc | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [active, setActive] = useState(0);
+  const barFor = (heights: number[] | undefined) => heights && (heights[active] ?? heights[0]);
+  const formulaBarPx = barFor(layout.formulaBarHeights?.narrow) ?? layout.formulaBarPx ?? FORMULA_BAR_PX;
+  const formulaBarWidePx = barFor(layout.formulaBarHeights?.wide) ?? formulaBarPx;
   const gridHeight = layout.gridHeights
     ? `${layout.gridHeights[active] ?? layout.gridHeights[0]}px`
     : (layout.gridHeight ?? GRID_HEIGHT);
@@ -784,7 +791,7 @@ export default function WorkbookPreview({
           </div>
           {!compact && <ZoomControls zoom={deskZoom} onZoom={setDeskZoom} resetTo={startZoom} />}
         </div>
-        {!compact && <FormulaBar sheet={sheet} selection={selection} cell={selectedCell} compact={false} height={formulaBarPx} />}
+        {!compact && <FormulaBar sheet={sheet} selection={selection} cell={selectedCell} compact={false} />}
         {layout.captions && sheet.caption && (
           <p
             className={`flex shrink-0 items-center justify-between gap-3 border-b border-forest/10 bg-cream px-3 text-sm text-charcoal ${
@@ -827,7 +834,7 @@ export default function WorkbookPreview({
             labelledBy={`${prefix}-tab-${active}`}
           />
         </div>
-        {compact && <FormulaBar sheet={sheet} selection={selection} cell={selectedCell} compact height={0} />}
+        {compact && <FormulaBar sheet={sheet} selection={selection} cell={selectedCell} compact />}
       </>
     ) : (
       fallback
@@ -842,8 +849,17 @@ export default function WorkbookPreview({
       {/* Desktop and tablet: the interactive preview, in a fixed-size panel. */}
       <div
         ref={deskRef}
-        className="hidden overflow-hidden rounded-xl border border-forest/15 bg-cream md:flex md:flex-col"
-        style={{ height: `calc(${TABS_PX + formulaBarPx + captionPx + 2}px + ${gridHeight})` }}
+        // The formula bar's height (--fb) steps up to its full-width value from
+        // 1200px, where the page container reaches its full width (see formulaBarHeights);
+        // both are known before the data loads.
+        className="hidden overflow-hidden rounded-xl border border-forest/15 bg-cream [--fb:var(--fb-narrow)] md:flex md:flex-col min-[1200px]:[--fb:var(--fb-wide)]"
+        style={
+          {
+            "--fb-narrow": `${formulaBarPx}px`,
+            "--fb-wide": `${formulaBarWidePx}px`,
+            height: `calc(${TABS_PX + captionPx + 2}px + ${gridHeight} + var(--fb))`,
+          } as CSSProperties
+        }
         aria-busy={status !== "ready"}
       >
         {panel(false, `${uid}-desk`)}
