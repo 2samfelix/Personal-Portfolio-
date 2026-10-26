@@ -1,179 +1,194 @@
-const tools = [
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+
+// Each skill points at real work. Figures checked against the sources:
+// - 1,205 formula cells across the four preview workbooks (Caterpillar 234,
+//   Arm 307, Microsoft x Activision 363, Nike 301), counted in the workbook XML.
+// - 735 tests in fpa-intelligence-engine (all passing at the engine's main;
+//   only the README changed since the commit the site's trace is pinned to).
+// - Run 1 of 5 of the engine evaluation; the engine page states all five were
+//   accepted on the first attempt.
+// Images are Playwright captures of the built site (public/expertise).
+const SKILLS = [
   {
+    id: "excel",
     name: "Excel",
-    description: "Financial modeling, forecasting, valuation, variance analysis",
+    proof: "1,205 live formulas across four workbooks.",
+    image: "/expertise/excel-deal-model.webp",
+    alt: "Microsoft × Activision deal model preview: the accretion/dilution bridge, with pro forma EPS of $9.29 against $9.68 standalone, a 4.07% dilution.",
+    caption: "Microsoft × Activision Blizzard: inside the deal model",
+    href: "/projects/microsoft-activision#inside-the-deal-model",
   },
   {
-    name: "SQL",
-    description: "Querying, cleaning, and structuring relational data",
-  },
-  {
-    name: "Power BI",
-    description: "Interactive dashboards, KPI tracking, and financial reporting",
-  },
-  {
+    id: "python",
     name: "Python",
-    description: "Data analysis, automation, and finance workflows",
+    proof: "FP&A Intelligence Engine: AI drafts, code validates. 735 tests.",
+    image: "/expertise/python-engine-trace.webp",
+    alt: "FP&A Intelligence Engine trace: statement B1 of the accepted brief with the four sourced facts and the reconciliation it cites.",
+    caption: "FP&A Intelligence Engine: trace a statement",
+    href: "/projects/fpa-intelligence-engine#trace-a-statement",
   },
   {
-    name: "AI / LLM Tools",
-    description: "Research, workflow automation, prototyping, and analysis support",
+    id: "ai",
+    name: "AI / LLM tools",
+    proof: "Accepted run 1 of 5 on a Caterpillar Q2 2026 benchmark. All five were accepted on the first attempt.",
+    image: "/expertise/ai-accepted-brief.webp",
+    alt: "The start of the engine's accepted Caterpillar Q2 2026 brief: statement B1, a fact linked to four facts and one reconciliation.",
+    caption: "FP&A Intelligence Engine: accepted brief, run 1 of 5",
+    href: "/projects/fpa-intelligence-engine#trace-a-statement",
   },
 ];
 
-const gridRows = [90, 60, 75, 45];
+const AUTO_MS = 7000;
+// Auto-advance only on wide screens with a fine pointer that can hover, and
+// never with reduced motion.
+const AUTO_QUERY = "(min-width: 1024px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
 
-function ExcelReelItem() {
-  return (
-    <div className="flex h-full flex-col justify-center p-4">
-      <div className="flex gap-1.5 pb-3">
-        <span className="h-2.5 w-2.5 rounded-full bg-forest/20" />
-        <span className="h-2.5 w-2.5 rounded-full bg-forest/20" />
-        <span className="h-2.5 w-2.5 rounded-full bg-brass/40" />
-      </div>
-      <div className="flex flex-col gap-2">
-        {gridRows.map((w, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className="h-2.5 w-6 shrink-0 rounded-sm bg-forest/10" />
-            <div
-              className="h-2.5 rounded-sm bg-forest/15"
-              style={{ width: `${w}%` }}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SqlReelItem() {
-  return (
-    <div className="flex h-full flex-col justify-center p-4 font-mono text-[11px] leading-5 text-charcoal-soft">
-      <p className="text-brass">SELECT client_id,</p>
-      <p className="pl-3">SUM(revenue) AS total</p>
-      <p>FROM transactions</p>
-      <p>
-        <span className="text-brass">GROUP BY</span> client_id
-      </p>
-      <p>
-        <span className="text-brass">ORDER BY</span> total DESC;
-      </p>
-    </div>
-  );
-}
-
-function DashboardReelItem() {
-  return (
-    <div className="flex h-full flex-col justify-center p-4">
-      <div className="mb-3 h-2 w-16 rounded-sm bg-forest/15" />
-      <div className="flex items-end gap-1.5">
-        {[40, 65, 30, 80, 55].map((h, i) => (
-          <div
-            key={i}
-            className="w-4 rounded-sm bg-forest/70"
-            style={{ height: `${h * 0.4}px` }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AiReelItem() {
-  return (
-    <div className="flex h-full flex-col justify-center gap-3 p-4">
-      <div className="flex items-center gap-2">
-        <span className="text-lg">✨</span>
-        <div className="h-2 w-20 rounded-sm bg-forest/15" />
-      </div>
-      <div className="flex items-center gap-1.5 pl-1">
-        <span className="h-1.5 w-1.5 rounded-full bg-brass/60" />
-        <div className="h-px w-6 bg-forest/20" />
-        <span className="h-1.5 w-1.5 rounded-full bg-forest/30" />
-        <div className="h-px w-6 bg-forest/20" />
-        <span className="h-1.5 w-1.5 rounded-full bg-forest/30" />
-      </div>
-    </div>
-  );
-}
-
-function PhotoReelItem() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/headshot.png"
-      alt="Sam Felix"
-      className="h-full w-full object-cover"
-    />
-  );
-}
-
-function ModelReelItem() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/project-visuals/nike.png"
-      alt="Nike scenario model preview"
-      className="h-full w-full object-cover object-top"
-    />
-  );
-}
-
-const reelItems = [
-  { key: "excel", height: "h-36", node: <ExcelReelItem /> },
-  { key: "sql", height: "h-40", node: <SqlReelItem /> },
-  { key: "dashboard", height: "h-44", node: <DashboardReelItem /> },
-  { key: "photo", height: "h-52", node: <PhotoReelItem /> },
-  { key: "model", height: "h-40", node: <ModelReelItem /> },
-  { key: "ai", height: "h-36", node: <AiReelItem /> },
-];
-
-function VisualReel() {
-  const doubled = [...reelItems, ...reelItems];
-
-  return (
-    <div className="reel reel-mask relative mx-auto h-[440px] w-full max-w-sm overflow-hidden">
-      <div className="reel-track flex flex-col">
-        {doubled.map((item, i) => (
-          <div
-            key={`${item.key}-${i}`}
-            className={`mb-4 w-full overflow-hidden rounded-2xl border border-forest/15 bg-white ${item.height}`}
-          >
-            {item.node}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
+/**
+ * "Core Expertise" as a proof stage: each skill row is a tab that shows a real
+ * capture of the work behind it. Clicking, hovering or focusing a row selects
+ * it; arrow keys, Home and End move between rows (roving tabindex). On wide
+ * screens with a mouse it advances every 7s while in view, pausing while the
+ * pointer or focus is in the section. The stage has a fixed aspect ratio and
+ * the images crossfade in place, so nothing shifts. The rows come before the
+ * stage in the DOM (tabs, then their panel); on phones CSS order shows the
+ * image above the rows.
+ */
 export default function Expertise() {
+  const [active, setActive] = useState(0);
+  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const section = useRef<HTMLElement>(null);
+  const paused = useRef(false);
+
+  useEffect(() => {
+    const el = section.current;
+    if (!el || !window.matchMedia(AUTO_QUERY).matches) return;
+    let inView = false;
+    const observer =
+      typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver(([entry]) => (inView = entry.isIntersecting), { threshold: 0.5 });
+    observer?.observe(el);
+    const id = window.setInterval(() => {
+      if (inView && !paused.current && !document.hidden && window.matchMedia(AUTO_QUERY).matches) {
+        setActive((i) => (i + 1) % SKILLS.length);
+      }
+    }, AUTO_MS);
+    return () => {
+      observer?.disconnect();
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const onKeyDown = (e: KeyboardEvent, i: number) => {
+    const next =
+      e.key === "ArrowDown" || e.key === "ArrowRight"
+        ? (i + 1) % SKILLS.length
+        : e.key === "ArrowUp" || e.key === "ArrowLeft"
+          ? (i - 1 + SKILLS.length) % SKILLS.length
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? SKILLS.length - 1
+              : null;
+    if (next === null) return;
+    e.preventDefault();
+    setActive(next);
+    tabs.current[next]?.focus();
+  };
+
+  const skill = SKILLS[active];
+
   return (
-    <section id="expertise" className="border-t border-forest/10 bg-mist">
-      <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-40">
-        <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-center">
-          <VisualReel />
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-widest text-brass">
-              Core Expertise
-            </p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
-              I model, query, and visualize financial data.
-            </h2>
-            <ul className="mt-8 flex flex-col divide-y divide-forest/10">
-              {tools.map((tool) => (
-                <li key={tool.name} className="py-4 first:pt-0 last:pb-0">
-                  <h3 className="text-base font-semibold text-charcoal">
-                    {tool.name}
-                  </h3>
-                  <p className="mt-1 text-sm leading-6 text-charcoal-soft">
-                    {tool.description}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
+    <section
+      ref={section}
+      id="expertise"
+      className="border-t border-forest/10 bg-mist"
+      onMouseEnter={() => (paused.current = true)}
+      onMouseLeave={() => (paused.current = false)}
+      onFocus={() => (paused.current = true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) paused.current = false;
+      }}
+    >
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-6 py-28 sm:py-40 lg:grid-cols-2 lg:gap-x-16 lg:gap-y-8">
+        <div className="order-1 lg:order-none lg:col-start-2">
+          {/* A darker brass than the site's: brass on mist is 3.72:1; this is 4.70:1 (AA). */}
+          <p className="text-sm font-semibold uppercase tracking-widest text-[#826136]">Core Expertise</p>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">Skills, with the proof.</h2>
         </div>
+
+        <div
+          role="tablist"
+          aria-orientation="vertical"
+          aria-label="Skills"
+          className="order-3 flex flex-col gap-2 lg:order-none lg:col-start-2"
+        >
+          {SKILLS.map((s, i) => (
+            <button
+              key={s.id}
+              ref={(el) => {
+                tabs.current[i] = el;
+              }}
+              id={`expertise-tab-${s.id}`}
+              type="button"
+              role="tab"
+              aria-selected={i === active}
+              aria-controls="expertise-stage"
+              tabIndex={i === active ? 0 : -1}
+              onClick={() => setActive(i)}
+              onMouseEnter={() => setActive(i)}
+              onFocus={() => setActive(i)}
+              onKeyDown={(e) => onKeyDown(e, i)}
+              className={`rounded-xl border px-5 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-mist ${
+                i === active ? "border-forest/25 bg-white shadow-sm" : "border-transparent hover:bg-white/60"
+              }`}
+            >
+              <span className="flex items-center gap-2 text-base font-semibold text-charcoal">
+                <span
+                  aria-hidden="true"
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${i === active ? "bg-brass" : "bg-forest/25"}`}
+                />
+                {s.name}
+              </span>
+              <span className="mt-1 block text-sm leading-6 text-charcoal-soft">{s.proof}</span>
+            </button>
+          ))}
+        </div>
+
+        <figure
+          id="expertise-stage"
+          role="tabpanel"
+          aria-labelledby={`expertise-tab-${skill.id}`}
+          className="order-2 min-w-0 lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-center"
+        >
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-forest/15 bg-white shadow-sm">
+            {SKILLS.map((s, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={s.id}
+                src={s.image}
+                alt={i === active ? s.alt : ""}
+                aria-hidden={i === active ? undefined : true}
+                width={1056}
+                height={792}
+                loading="lazy"
+                decoding="async"
+                className={`absolute inset-0 h-full w-full object-cover object-left-top transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+                  i === active ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            ))}
+          </div>
+          <figcaption className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
+            <span className="text-charcoal-soft">{skill.caption}</span>
+            <Link href={skill.href} className="font-semibold text-forest hover:text-forest-dark">
+              See it in the project &rarr;
+            </Link>
+          </figcaption>
+        </figure>
       </div>
     </section>
   );

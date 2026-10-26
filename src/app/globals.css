@@ -30,56 +30,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-@keyframes reel-scroll-up {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-50%);
-  }
-}
-
-.reel-track {
-  animation: reel-scroll-up 55s linear infinite;
-}
-
-.reel:hover .reel-track {
-  animation-play-state: paused;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   html {
     scroll-behavior: smooth;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reel-track {
-    animation: none;
-  }
-}
-
-@media (max-width: 639px) {
-  .reel-track {
-    animation: none;
-  }
-}
-
-.reel-mask {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 14%,
-    black 86%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 14%,
-    black 86%,
-    transparent 100%
-  );
 }
 
 .bg-dot-grid {

@@ -16,9 +16,9 @@ export default function Home() {
       <main className="flex flex-1 flex-col">
         <Hero />
         <WhyAnalyticsStrategy />
-        <Expertise />
         <WorkGrid />
         <Builds />
+        <Expertise />
         <Philosophy />
         <Experience />
         <Contact />

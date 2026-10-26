@@ -6,9 +6,9 @@ import { siteConfig } from "@/lib/site-config";
 const links = [
   { href: "#work", label: "Work" },
   { href: "#interactive-tools", label: "Interactive Tools" },
+  { href: "#expertise", label: "Expertise" },
   { href: "#philosophy", label: "Philosophy" },
   { href: "#experience", label: "Experience" },
-  { href: "#expertise", label: "Expertise" },
   { href: "#contact", label: "Contact" },
 ];
 
