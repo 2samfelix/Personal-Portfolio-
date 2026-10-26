@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 
 // Each skill points at real work, with one figure checked against its source:
 // - Arm: DCF Valuation!B48 ($51.54, implied share price) and B49 ($272.21,
@@ -80,21 +80,57 @@ const AUTO_MS = 7000;
 // never with reduced motion.
 const AUTO_QUERY = "(min-width: 1024px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
 
+// Below 768px the rows are an accordion (globals: md breakpoint).
+const PHONE_QUERY = "(max-width: 767px)";
+
+/** The capture, at a fixed 4:3 so swapping or opening it never shifts the layout. */
+function Shot({ skill, shown = true }: { skill: (typeof SKILLS)[number]; shown?: boolean }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={skill.image}
+      alt={shown ? skill.alt : ""}
+      aria-hidden={shown ? undefined : true}
+      width={1056}
+      height={792}
+      loading="lazy"
+      decoding="async"
+      className={`absolute inset-0 h-full w-full object-cover object-left-top transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+        shown ? "opacity-100" : "opacity-0"
+      }`}
+    />
+  );
+}
+
+const FRAME = "relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-forest/15 bg-white shadow-sm";
+const LINK = "font-semibold text-forest hover:text-forest-dark";
+
 /**
- * "Core Expertise" as a proof stage: each skill row is a tab that shows a real
- * capture of the work behind it. Clicking, hovering or focusing a row selects
- * it; arrow keys, Home and End move between rows (roving tabindex). On wide
- * screens with a mouse it advances every 7s while in view, pausing while the
- * pointer or focus is in the section. The stage has a fixed aspect ratio and
- * the images crossfade in place, so nothing shifts. The rows come before the
- * stage in the DOM (tabs, then their panel); on phones CSS order shows the
- * image above the rows.
+ * "Core Expertise" as a proof stage: each skill row shows a real capture of
+ * the work behind it.
+ *
+ * From 768px the rows are tabs and the capture is their tabpanel. Clicking,
+ * hovering or focusing a row selects it; arrow keys, Home and End move between
+ * rows (roving tabindex). From 1024px the stage sits beside the rows and stays
+ * vertically centred in the viewport (sticky) while they scroll; with a mouse
+ * it advances every 7s while in view, pausing while the pointer or focus is in
+ * the section. The images crossfade in a fixed 4:3 frame, so nothing shifts.
+ *
+ * Below 768px the rows are an accordion: the selected row opens to show its
+ * capture, caption and link directly under its sentence, so the image is never
+ * off-screen. If opening a row leaves its top off-screen (a row above it
+ * closed), the page scrolls it back into view, smoothly unless reduced motion.
+ *
+ * Both patterns are in the DOM; CSS shows one, and the hidden one (display:
+ * none) is out of the accessibility tree and the tab order.
  */
 export default function Expertise() {
   const [active, setActive] = useState(0);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const toggles = useRef<(HTMLButtonElement | null)[]>([]);
   const section = useRef<HTMLElement>(null);
   const paused = useRef(false);
+  const opened = useRef<number | null>(null);
 
   useEffect(() => {
     const el = section.current;
@@ -116,6 +152,20 @@ export default function Expertise() {
     };
   }, []);
 
+  // Phones: after a row opens (before paint), bring its top back into view if
+  // the row above that closed pushed it off-screen.
+  useLayoutEffect(() => {
+    const i = opened.current;
+    opened.current = null;
+    const row = i === null ? null : toggles.current[i];
+    if (!row || !window.matchMedia(PHONE_QUERY).matches) return;
+    const headerBottom = document.querySelector("header")?.getBoundingClientRect().bottom ?? 0;
+    const top = row.getBoundingClientRect().top;
+    if (top >= headerBottom && top < window.innerHeight) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: window.scrollY + top - headerBottom - 12, behavior: reduce ? "instant" : "smooth" });
+  }, [active]);
+
   const onKeyDown = (e: KeyboardEvent, i: number) => {
     const next =
       e.key === "ArrowDown" || e.key === "ArrowRight"
@@ -134,6 +184,21 @@ export default function Expertise() {
   };
 
   const skill = SKILLS[active];
+  const rowName = (s: (typeof SKILLS)[number], i: number) => (
+    <>
+      <span className="flex items-start gap-2 text-base font-semibold text-charcoal">
+        <span
+          aria-hidden="true"
+          className={`mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full ${i === active ? "bg-brass" : "bg-forest/25"}`}
+        />
+        {s.name}
+      </span>
+      <span className="mt-1 block text-sm leading-6 text-charcoal-soft">{s.proof}</span>
+    </>
+  );
+  const rowSurface = (i: number) => (i === active ? "border-forest/25 bg-white shadow-sm" : "border-transparent");
+  const focusRing =
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-mist";
 
   return (
     <section
@@ -154,11 +219,52 @@ export default function Expertise() {
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">Skills, with the proof.</h2>
         </div>
 
+        {/* Phones: accordion. */}
+        <div className="order-2 flex flex-col gap-2 md:hidden">
+          {SKILLS.map((s, i) => (
+            <div key={s.id} className={`rounded-xl border transition-colors ${rowSurface(i)}`}>
+              <h3>
+                <button
+                  ref={(el) => {
+                    toggles.current[i] = el;
+                  }}
+                  id={`expertise-row-${s.id}`}
+                  type="button"
+                  aria-expanded={i === active}
+                  aria-controls={`expertise-panel-${s.id}`}
+                  onClick={() => {
+                    opened.current = i;
+                    setActive(i);
+                  }}
+                  className={`w-full rounded-xl px-5 py-4 text-left ${focusRing}`}
+                >
+                  {rowName(s, i)}
+                </button>
+              </h3>
+              <div
+                id={`expertise-panel-${s.id}`}
+                role="region"
+                aria-labelledby={`expertise-row-${s.id}`}
+                hidden={i !== active}
+                className="px-5 pb-5"
+              >
+                <div className={FRAME}>{i === active && <Shot skill={s} />}</div>
+                {/* Two caption lines reserved, so every open panel is the same height. */}
+                <p className="mt-3 min-h-10 text-sm leading-5 text-charcoal-soft">{s.caption}</p>
+                <Link href={s.href} className={`mt-1 inline-block text-sm ${LINK}`}>
+                  See it in the project &rarr;
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* From 768px: tabs and their panel. */}
         <div
           role="tablist"
           aria-orientation="vertical"
           aria-label="Skills"
-          className="order-3 flex flex-col gap-2 lg:order-none lg:col-start-2"
+          className="order-3 hidden flex-col gap-2 md:flex lg:order-none lg:col-start-2"
         >
           {SKILLS.map((s, i) => (
             <button
@@ -176,49 +282,31 @@ export default function Expertise() {
               onMouseEnter={() => setActive(i)}
               onFocus={() => setActive(i)}
               onKeyDown={(e) => onKeyDown(e, i)}
-              className={`rounded-xl border px-5 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-mist ${
-                i === active ? "border-forest/25 bg-white shadow-sm" : "border-transparent hover:bg-white/60"
+              className={`rounded-xl border px-5 py-4 text-left transition-colors ${focusRing} ${
+                i === active ? rowSurface(i) : "border-transparent hover:bg-white/60"
               }`}
             >
-              <span className="flex items-start gap-2 text-base font-semibold text-charcoal">
-                <span
-                  aria-hidden="true"
-                  className={`mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full ${i === active ? "bg-brass" : "bg-forest/25"}`}
-                />
-                {s.name}
-              </span>
-              <span className="mt-1 block text-sm leading-6 text-charcoal-soft">{s.proof}</span>
+              {rowName(s, i)}
             </button>
           ))}
         </div>
 
+        {/* Sticky from 1024px: centred in the viewport (the frame is 3/4 of the
+            column wide, plus about 2rem of caption), never under the header. */}
         <figure
           id="expertise-stage"
           role="tabpanel"
           aria-labelledby={`expertise-tab-${skill.id}`}
-          className="order-2 min-w-0 lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-center"
+          className="order-2 hidden min-w-0 md:block lg:sticky lg:top-[max(5.5rem,calc(50vh-((min(100vw,72rem)-7rem)/2*0.75+2rem)/2))] lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start"
         >
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-forest/15 bg-white shadow-sm">
+          <div className={FRAME}>
             {SKILLS.map((s, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={s.id}
-                src={s.image}
-                alt={i === active ? s.alt : ""}
-                aria-hidden={i === active ? undefined : true}
-                width={1056}
-                height={792}
-                loading="lazy"
-                decoding="async"
-                className={`absolute inset-0 h-full w-full object-cover object-left-top transition-opacity duration-200 ease-out motion-reduce:transition-none ${
-                  i === active ? "opacity-100" : "opacity-0"
-                }`}
-              />
+              <Shot key={s.id} skill={s} shown={i === active} />
             ))}
           </div>
           <figcaption className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
             <span className="text-charcoal-soft">{skill.caption}</span>
-            <Link href={skill.href} className="font-semibold text-forest hover:text-forest-dark">
+            <Link href={skill.href} className={LINK}>
               See it in the project &rarr;
             </Link>
           </figcaption>
