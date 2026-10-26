@@ -232,6 +232,7 @@ export default function CaterpillarProjectPage({
               : []),
             { label: "Explore the model ↓", href: "#model-preview", variant: "secondary" },
           ]}
+          wideText
         />
 
         <QuestionApproachFinding
