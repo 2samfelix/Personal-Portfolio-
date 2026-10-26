@@ -181,7 +181,10 @@ export default function NikeProjectPage({
             },
             { value: "$43.7B → $52.2B", label: "FY2029E consolidated revenue, bear → bull range" },
           ]}
-          ctas={[{ label: "View the analysis ↓", href: "#analysis", variant: "primary" }]}
+          ctas={[
+            { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
+            { label: "Explore the model ↓", href: "#inside-the-model", variant: "secondary" },
+          ]}
         />
 
         <QuestionApproachFinding
@@ -198,6 +201,57 @@ export default function NikeProjectPage({
             body: "The offset holds under the base case: North America's modeled ~4.25% annualized growth clears the ~3.2% required to cover Greater China's decline, a $439M cushion. But FY2029E consolidated revenue still spans $43.7B (bear) to $52.2B (bull) — this is a thesis that survives stress-testing under the base case, not a single-point forecast with room for execution slippage.",
           }}
         />
+
+        {/* Headline chart */}
+        <div id="analysis" className="mt-16 scroll-mt-8">
+          <ChartSection label="North America vs. Greater China Revenue, FY2024A–FY2029E" first>
+            <SegmentTrajectoryChart
+              periods={HISTORY_AND_FORECAST}
+              northAmerica={naSeries}
+              greaterChina={gcSeries}
+              markerIndex={HISTORY_AND_FORECAST.indexOf("FY2028E")}
+              markerLabel="FY2028E offset point"
+            />
+            <ChartCaption
+              statLabel="North America Revenue, FY2028E (Base)"
+              statValue={formatNikeBillions(BREAKEVEN.northAmericaActualFY28E)}
+              deltaText={`▲ ${formatNikeBillions(BREAKEVEN.northAmericaActualFY28E - BREAKEVEN.northAmericaFY26A)} vs FY2026A`}
+              badgeLabel="Offset holds"
+              badgeTone="good"
+              alertLead="Offset holds, but thinly."
+              alertText={`North America needs $${BREAKEVEN.northAmericaRequiredFY28E.toLocaleString("en-US", { maximumFractionDigits: 0 })}M by FY2028E to fully offset Greater China's modeled decline (Scenario Dashboard!B38); the Base case delivers $${BREAKEVEN.northAmericaActualFY28E.toLocaleString("en-US", { maximumFractionDigits: 0 })}M (Scenario Dashboard!B40) — a ${formatNikePercent(BREAKEVEN.actualAnnualizedGrowth, 2)} annualized growth rate vs. the ${formatNikePercent(BREAKEVEN.requiredAnnualizedGrowth)} required, a $${BREAKEVEN.cushion.toFixed(0)}M cushion (Scenario Dashboard!B42).`}
+              explainer="Required growth is the CAGR North America needs from its FY2026A base to cover Greater China's modeled dollar decline by FY2028E; actual growth is what the Base case's segment-level growth assumptions (Assumptions tab) actually produce, run through the same linked model."
+            />
+          </ChartSection>
+        </div>
+
+        {/* Inside the model: three curated views of the three-statement model */}
+        <section id="inside-the-model" aria-labelledby="inside-model-heading" className="mt-16 scroll-mt-24">
+          <h2 id="inside-model-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+            Inside the model
+          </h2>
+          <p className="mt-4 text-base leading-7 text-charcoal">
+            Three views from the three-statement model. Click any cell to see its formula and where it comes from.
+          </p>
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-charcoal-soft">
+            <a
+              href={WORKBOOK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-forest hover:text-forest-dark"
+            >
+              Download Workbook ↗
+            </a>
+            <span>This preview is a snapshot of recalculated values; it does not recalculate on the page.</span>
+          </p>
+          <WorkbookPreview
+            src="/nike/model-preview.json"
+            title="Nike three-statement model: three scenarios, the model against consensus, and the North America offset"
+            downloadUrl={WORKBOOK_URL}
+            teaser={<ModelPreviewTeaser doc={MODEL_PREVIEW} />}
+            layout={{ zoom: PREVIEW_ZOOM, formulaBarHeights: PREVIEW_BAR_HEIGHTS, gridHeights: PREVIEW_GRID_HEIGHTS, captions: true, captionLines: 2 }}
+          />
+        </section>
 
         <WhatIBuiltGrid
           items={[
@@ -232,57 +286,6 @@ export default function NikeProjectPage({
             },
           ]}
         />
-
-        {/* Headline chart */}
-        <div id="analysis" className="mt-16 scroll-mt-8">
-          <ChartSection label="North America vs. Greater China Revenue, FY2024A–FY2029E" first>
-            <SegmentTrajectoryChart
-              periods={HISTORY_AND_FORECAST}
-              northAmerica={naSeries}
-              greaterChina={gcSeries}
-              markerIndex={HISTORY_AND_FORECAST.indexOf("FY2028E")}
-              markerLabel="FY2028E offset point"
-            />
-            <ChartCaption
-              statLabel="North America Revenue, FY2028E (Base)"
-              statValue={formatNikeBillions(BREAKEVEN.northAmericaActualFY28E)}
-              deltaText={`▲ ${formatNikeBillions(BREAKEVEN.northAmericaActualFY28E - BREAKEVEN.northAmericaFY26A)} vs FY2026A`}
-              badgeLabel="Offset holds"
-              badgeTone="good"
-              alertLead="Offset holds, but thinly."
-              alertText={`North America needs $${BREAKEVEN.northAmericaRequiredFY28E.toLocaleString("en-US", { maximumFractionDigits: 0 })}M by FY2028E to fully offset Greater China's modeled decline (Scenario Dashboard!B38); the Base case delivers $${BREAKEVEN.northAmericaActualFY28E.toLocaleString("en-US", { maximumFractionDigits: 0 })}M (Scenario Dashboard!B40) — a ${formatNikePercent(BREAKEVEN.actualAnnualizedGrowth, 2)} annualized growth rate vs. the ${formatNikePercent(BREAKEVEN.requiredAnnualizedGrowth)} required, a $${BREAKEVEN.cushion.toFixed(0)}M cushion (Scenario Dashboard!B42).`}
-              explainer="Required growth is the CAGR North America needs from its FY2026A base to cover Greater China's modeled dollar decline by FY2028E; actual growth is what the Base case's segment-level growth assumptions (Assumptions tab) actually produce, run through the same linked model."
-            />
-          </ChartSection>
-        </div>
-
-        {/* Inside the model: three curated views of the three-statement model */}
-        <section aria-labelledby="inside-model-heading" className="mt-16">
-          <h2 id="inside-model-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
-            Inside the model
-          </h2>
-          <p className="mt-4 text-base leading-7 text-charcoal">
-            Three views from the three-statement model. Click any cell to see its formula and where it comes from.
-          </p>
-          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-charcoal-soft">
-            <a
-              href={WORKBOOK_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-forest hover:text-forest-dark"
-            >
-              Download Workbook ↗
-            </a>
-            <span>This preview is a snapshot of recalculated values; it does not recalculate on the page.</span>
-          </p>
-          <WorkbookPreview
-            src="/nike/model-preview.json"
-            title="Nike three-statement model: three scenarios, the model against consensus, and the North America offset"
-            downloadUrl={WORKBOOK_URL}
-            teaser={<ModelPreviewTeaser doc={MODEL_PREVIEW} />}
-            layout={{ zoom: PREVIEW_ZOOM, formulaBarHeights: PREVIEW_BAR_HEIGHTS, gridHeights: PREVIEW_GRID_HEIGHTS, captions: true, captionLines: 2 }}
-          />
-        </section>
 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">

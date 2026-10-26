@@ -154,7 +154,10 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
             },
             { value: "5.3x", label: "Market price as a multiple of the DCF-implied value" },
           ]}
-          ctas={[{ label: "View the analysis ↓", href: "#analysis", variant: "primary" }]}
+          ctas={[
+            { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
+            { label: "Explore the model ↓", href: "#inside-the-valuation", variant: "secondary" },
+          ]}
         />
 
         <QuestionApproachFinding
@@ -171,6 +174,55 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
             body: "All three methods cluster between $35 and $52 — the DCF lands at $51.54, almost exactly the original $51.00 IPO price. The market prices Arm at $272.21, roughly 5.3x that cluster: not a disagreement at the margin, but a valuation built on a multiple no comp-based or DCF method in this analysis supports.",
           }}
         />
+
+        {/* Headline chart */}
+        <div id="analysis" className="mt-16 scroll-mt-8">
+          <ChartSection label="Valuation Football Field: IPO Price vs. Comp-Implied Range vs. Market" first>
+            <FootballFieldChart
+              items={FOOTBALL_FIELD}
+              marketPrice={CURRENT_MARKET_PRICE}
+              ariaLabel="Valuation football field: full peer median $35.00, core IP/EDA average $43.41, peer 75th percentile $45.22, actual IPO $51.00, DCF implied $51.54, and current market price $272.21"
+            />
+            <ChartCaption
+              statLabel="DCF-Implied Value (2026)"
+              statValue={formatUsd(51.54)}
+              deltaText={`Market is ${(CURRENT_MARKET_PRICE / 51.54).toFixed(1)}x this`}
+              badgeLabel="Cluster holds"
+              badgeTone="neutral"
+              alertLead="Five fundamentals-based methods cluster within $17 of each other."
+              alertText={`Full peer median ($35.00, IPO Valuation!E16), core IP/EDA average ($43.41, IPO Valuation!E17), peer 75th percentile ($45.22, CCA!L27 / IPO Valuation!B18), the actual IPO price ($51.00), and a 2026 fundamentals-only DCF ($51.54, DCF Valuation!B48) all land between $35 and $52. The market price, $272.21, sits ${(CURRENT_MARKET_PRICE / 51.54).toFixed(1)}x above the DCF figure and outside every comp-based range in this analysis.`}
+              explainer="Each comp-based method applies its own EV/Revenue multiple to Arm's FY2023A revenue, then backs into an implied share price using the IPO-date share count and net cash position."
+            />
+          </ChartSection>
+        </div>
+
+        {/* Inside the valuation: three curated views of the valuation workbook */}
+        <section id="inside-the-valuation" aria-labelledby="inside-valuation-heading" className="mt-16 scroll-mt-24">
+          <h2 id="inside-valuation-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+            Inside the valuation
+          </h2>
+          <p className="mt-4 text-base leading-7 text-charcoal">
+            Three views from the valuation workbook. Click any cell to see its formula.
+          </p>
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-charcoal-soft">
+            <a
+              href={WORKBOOK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-forest hover:text-forest-dark"
+            >
+              Download Workbook ↗
+            </a>
+            <span>This preview is a snapshot of the saved workbook; it does not recalculate.</span>
+          </p>
+          <WorkbookPreview
+            src="/arm/model-preview.json"
+            title="Arm IPO valuation workbook: IPO vs. peers, from WACC to share price, and the DCF sensitivity grid"
+            downloadUrl={WORKBOOK_URL}
+            teaser={<ModelPreviewTeaser doc={MODEL_PREVIEW} />}
+            layout={{ zoom: PREVIEW_ZOOM, formulaBarHeights: PREVIEW_BAR_HEIGHTS, gridHeights: PREVIEW_GRID_HEIGHTS, captions: true }}
+          />
+        </section>
 
         <WhatIBuiltGrid
           items={[
@@ -212,55 +264,6 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
             },
           ]}
         />
-
-        {/* Headline chart */}
-        <div id="analysis" className="mt-16 scroll-mt-8">
-          <ChartSection label="Valuation Football Field: IPO Price vs. Comp-Implied Range vs. Market" first>
-            <FootballFieldChart
-              items={FOOTBALL_FIELD}
-              marketPrice={CURRENT_MARKET_PRICE}
-              ariaLabel="Valuation football field: full peer median $35.00, core IP/EDA average $43.41, peer 75th percentile $45.22, actual IPO $51.00, DCF implied $51.54, and current market price $272.21"
-            />
-            <ChartCaption
-              statLabel="DCF-Implied Value (2026)"
-              statValue={formatUsd(51.54)}
-              deltaText={`Market is ${(CURRENT_MARKET_PRICE / 51.54).toFixed(1)}x this`}
-              badgeLabel="Cluster holds"
-              badgeTone="neutral"
-              alertLead="Five fundamentals-based methods cluster within $17 of each other."
-              alertText={`Full peer median ($35.00, IPO Valuation!E16), core IP/EDA average ($43.41, IPO Valuation!E17), peer 75th percentile ($45.22, CCA!L27 / IPO Valuation!B18), the actual IPO price ($51.00), and a 2026 fundamentals-only DCF ($51.54, DCF Valuation!B48) all land between $35 and $52. The market price, $272.21, sits ${(CURRENT_MARKET_PRICE / 51.54).toFixed(1)}x above the DCF figure and outside every comp-based range in this analysis.`}
-              explainer="Each comp-based method applies its own EV/Revenue multiple to Arm's FY2023A revenue, then backs into an implied share price using the IPO-date share count and net cash position."
-            />
-          </ChartSection>
-        </div>
-
-        {/* Inside the valuation: three curated views of the valuation workbook */}
-        <section aria-labelledby="inside-valuation-heading" className="mt-16">
-          <h2 id="inside-valuation-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
-            Inside the valuation
-          </h2>
-          <p className="mt-4 text-base leading-7 text-charcoal">
-            Three views from the valuation workbook. Click any cell to see its formula.
-          </p>
-          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-charcoal-soft">
-            <a
-              href={WORKBOOK_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-forest hover:text-forest-dark"
-            >
-              Download Workbook ↗
-            </a>
-            <span>This preview is a snapshot of the saved workbook; it does not recalculate.</span>
-          </p>
-          <WorkbookPreview
-            src="/arm/model-preview.json"
-            title="Arm IPO valuation workbook: IPO vs. peers, from WACC to share price, and the DCF sensitivity grid"
-            downloadUrl={WORKBOOK_URL}
-            teaser={<ModelPreviewTeaser doc={MODEL_PREVIEW} />}
-            layout={{ zoom: PREVIEW_ZOOM, formulaBarHeights: PREVIEW_BAR_HEIGHTS, gridHeights: PREVIEW_GRID_HEIGHTS, captions: true }}
-          />
-        </section>
 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">

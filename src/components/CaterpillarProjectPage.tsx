@@ -230,6 +230,7 @@ export default function CaterpillarProjectPage({
             ...(pdfDeliverable
               ? [{ label: "Open case study ↗", href: pdfDeliverable.url, variant: "secondary" as const, external: true }]
               : []),
+            { label: "Explore the model ↓", href: "#model-preview", variant: "secondary" },
           ]}
         />
 
@@ -247,6 +248,36 @@ export default function CaterpillarProjectPage({
             body: "The evidence points to a material shift toward end-user demand in Q2 2026: the disclosed CI dealer build fell from $1.5B to $400M while retail sales growth rose from 7% to 22%.",
           }}
         />
+
+        {/* Model Preview: read-only snapshot of the operating workbook */}
+        <section id="model-preview" aria-labelledby="model-preview-heading" className="mt-16 scroll-mt-24">
+          <h2 id="model-preview-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+            Model Preview
+          </h2>
+          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
+            A read-only snapshot of four sheets from the operating workbook. Click any cell to see its formula.
+          </p>
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-charcoal-soft">
+            {xlsxDeliverable && (
+              <a
+                href={xlsxDeliverable.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-forest hover:text-forest-dark"
+              >
+                Download Workbook ↗
+              </a>
+            )}
+            <span>This preview is a snapshot of the saved workbook; it does not recalculate.</span>
+          </p>
+          <WorkbookPreview
+            src="/caterpillar/model-preview.json"
+            title="Caterpillar operating workbook: Analysis, Construction Industries, Dealer Inventory and Retail Statistics sheets"
+            downloadUrl={xlsxDeliverable?.url}
+            teaser={<ModelPreviewTeaser doc={MODEL_PREVIEW} />}
+            layout={{ formulaBarHeights: PREVIEW_BAR_HEIGHTS }}
+          />
+        </section>
 
         <WhatIBuiltGrid
           items={[
@@ -284,36 +315,6 @@ export default function CaterpillarProjectPage({
             },
           ]}
         />
-
-        {/* Model Preview: read-only snapshot of the operating workbook */}
-        <section aria-labelledby="model-preview-heading" className="mt-16">
-          <h2 id="model-preview-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
-            Model Preview
-          </h2>
-          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
-            A read-only snapshot of four sheets from the operating workbook. Click any cell to see its formula.
-          </p>
-          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-charcoal-soft">
-            {xlsxDeliverable && (
-              <a
-                href={xlsxDeliverable.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-forest hover:text-forest-dark"
-              >
-                Download Workbook ↗
-              </a>
-            )}
-            <span>This preview is a snapshot of the saved workbook; it does not recalculate.</span>
-          </p>
-          <WorkbookPreview
-            src="/caterpillar/model-preview.json"
-            title="Caterpillar operating workbook: Analysis, Construction Industries, Dealer Inventory and Retail Statistics sheets"
-            downloadUrl={xlsxDeliverable?.url}
-            teaser={<ModelPreviewTeaser doc={MODEL_PREVIEW} />}
-            layout={{ formulaBarHeights: PREVIEW_BAR_HEIGHTS }}
-          />
-        </section>
 
         {/* Verification strip */}
         <div id="analysis" className="mt-16 scroll-mt-8">
