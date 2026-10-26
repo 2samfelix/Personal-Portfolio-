@@ -77,7 +77,7 @@ export const flagshipProjects: Project[] = [
         {
           label: "Financial Model",
           format: "XLSX",
-          url: "https://raw.githubusercontent.com/2samfelix/nike-three-statement-model/main/Sam_Felix_Nike_Three_Statement_Model%20(4).xlsx",
+          url: "https://raw.githubusercontent.com/2samfelix/nike-three-statement-model/356bcae65f6be02507865391d0b54b4bf824685d/Sam_Felix_Nike_Three_Statement_Model%20%284%29.xlsx",
         },
         {
           label: "Full Report",
