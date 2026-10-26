@@ -6,6 +6,7 @@
 // around its month-index model output — these operate on plain labeled
 // period arrays instead.
 
+import { BridgeList } from "@/components/project/BridgeList";
 import { ChartScroll } from "@/components/project/ChartScroll";
 
 const CHART_WIDTH = 640;
@@ -393,33 +394,40 @@ export function MarginBridgeWaterfall({ steps }: { steps: MarginBridgeStep[] }) 
 
   return (
     <div className="mt-2">
-      <ChartScroll minWidth={BRIDGE_WIDTH}>
-        <svg
-          viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`}
-          className="w-full"
-          role="img"
-          aria-label={`Gross margin bridge: starting 42.9%, tariff and sourcing pressure -40 bps, tariff mitigation +50 bps, inventory normalization +35 bps, mix +30 bps, other -5 bps, ending 43.6%`}
-        >
-          {positioned.map((step, i) => {
-            const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
-            const yTop = y(step.to);
-            const yBottom = y(step.from);
-            const height = Math.max(1.5, yBottom - yTop);
-            const valueLabel = step.bpsLabel;
-            return (
-              <g key={step.label}>
-                <rect x={x} y={yTop} width={barWidth} height={height} fill={fillFor(step.kind)} rx={2} />
-                <text x={x + barWidth / 2} y={yTop - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="#2a2820">
-                  {valueLabel}
-                </text>
-                <foreignObject x={x - colWidth / 2 + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 6} width={colWidth} height={34}>
-                  <div className="text-center text-[9px] leading-[10px] text-charcoal-soft">{step.label}</div>
-                </foreignObject>
-              </g>
-            );
-          })}
-        </svg>
-      </ChartScroll>
+      {/* Phones: the same steps as a list (below md). */}
+      <BridgeList
+        ariaLabel="Gross margin bridge, FY2026A to FY2029E (base case)"
+        steps={steps.map((step) => ({ label: step.label, valueLabel: step.bpsLabel, magnitude: step.pct, kind: step.kind }))}
+      />
+      <div className="max-md:hidden">
+        <ChartScroll minWidth={BRIDGE_WIDTH}>
+          <svg
+            viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`}
+            className="w-full"
+            role="img"
+            aria-label={`Gross margin bridge: starting 42.9%, tariff and sourcing pressure -40 bps, tariff mitigation +50 bps, inventory normalization +35 bps, mix +30 bps, other -5 bps, ending 43.6%`}
+          >
+            {positioned.map((step, i) => {
+              const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
+              const yTop = y(step.to);
+              const yBottom = y(step.from);
+              const height = Math.max(1.5, yBottom - yTop);
+              const valueLabel = step.bpsLabel;
+              return (
+                <g key={step.label}>
+                  <rect x={x} y={yTop} width={barWidth} height={height} fill={fillFor(step.kind)} rx={2} />
+                  <text x={x + barWidth / 2} y={yTop - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="#2a2820">
+                    {valueLabel}
+                  </text>
+                  <foreignObject x={x - colWidth / 2 + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 6} width={colWidth} height={34}>
+                    <div className="text-center text-[9px] leading-[10px] text-charcoal-soft">{step.label}</div>
+                  </foreignObject>
+                </g>
+              );
+            })}
+          </svg>
+        </ChartScroll>
+      </div>
       <div className="mt-2 flex flex-wrap gap-4">
         <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
           <span className="h-2.5 w-2.5 rounded-full bg-charcoal" /> Starting / Ending

@@ -211,6 +211,10 @@ const FIELD_PAD_RIGHT = 90;
  * cluster and an explicit, honestly-labeled signal that the market sits
  * far outside it, without silently understating the gap.
  */
+/** Full-strength fill for the two transaction-anchored rows, lighter for the comp-based ones. */
+const fieldOpacity = (label: string) => (label === "Actual IPO" || label === "DCF Implied (2026)" ? 1 : 0.55);
+const FIELD_BREAK_NOTE = "The break marks the point where the market-price bar leaves this chart's scale — it is not drawn proportionally.";
+
 export function FootballFieldChart({
   items,
   marketPrice,
@@ -229,56 +233,110 @@ export function FootballFieldChart({
 
   return (
     <div className="mt-2">
-      <ChartScroll minWidth={FIELD_WIDTH}>
-        <svg viewBox={`0 0 ${FIELD_WIDTH} ${height}`} className="w-full" role="img" aria-label={ariaLabel}>
-          {[0, 0.25, 0.5, 0.75, 1].map((f) => {
-            const x = barX + f * plotWidth;
-            return <line key={f} x1={x} x2={x} y1={12} y2={height - 24} stroke="#1e3a2b" strokeOpacity={0.08} />;
-          })}
-          {[0, 0.5, 1].map((f) => (
-            <text key={f} x={barX + f * plotWidth} y={height - 8} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
-              {formatUsd(f * axisMax)}
-            </text>
-          ))}
-          {items.map((item, i) => {
-            const w = (item.price / axisMax) * plotWidth;
-            const y = rowY(i);
-            return (
-              <g key={item.label}>
-                <text x={barX - 10} y={y + FIELD_ROW_HEIGHT / 2 + 4} textAnchor="end" fontSize={11} fontWeight={600} className="fill-charcoal">
-                  {item.label}
-                </text>
-                <rect x={barX} y={y} width={Math.max(w, 2)} height={FIELD_ROW_HEIGHT} fill="#1e3a2b" fillOpacity={item.label === "Actual IPO" || item.label === "DCF Implied (2026)" ? 1 : 0.55} rx={3} />
-                <text x={barX + w + 8} y={y + FIELD_ROW_HEIGHT / 2 + 4} fontSize={11} fontWeight={700} className="fill-charcoal">
-                  {formatUsd(item.price)}
-                </text>
-              </g>
-            );
-          })}
-          {(() => {
-            const i = items.length;
-            const y = rowY(i);
-            const breakX = plotWidth * 0.86;
-            return (
-              <g>
-                <text x={barX - 10} y={y + FIELD_ROW_HEIGHT / 2 + 4} textAnchor="end" fontSize={11} fontWeight={600} className="fill-charcoal">
-                  Current Market Price
-                </text>
-                <rect x={barX} y={y} width={plotWidth} height={FIELD_ROW_HEIGHT} fill="#a1462f" rx={3} />
-                {[breakX - 6, breakX + 6].map((bx, k) => (
-                  <polygon key={k} points={`${barX + bx - 5},${y} ${barX + bx + 5},${y} ${barX + bx - 5},${y + FIELD_ROW_HEIGHT} ${barX + bx + 5 - 10},${y + FIELD_ROW_HEIGHT}`} fill="#f5f1e6" />
-                ))}
-                <text x={barX + plotWidth + 8} y={y + FIELD_ROW_HEIGHT / 2 + 4} fontSize={11} fontWeight={700} className="fill-rust">
-                  {formatUsd(marketPrice)}
-                </text>
-              </g>
-            );
-          })()}
-        </svg>
-      </ChartScroll>
-      <p className="mt-1 text-center text-[10px] text-charcoal-soft">
-        The break marks the point where the market-price bar leaves this chart&apos;s scale — it is not drawn proportionally.
-      </p>
+      {/* Phones: a list with the same rows, values and colours (below md). */}
+      <FootballFieldList items={items} marketPrice={marketPrice} axisMax={axisMax} ariaLabel={ariaLabel} />
+      <div className="max-md:hidden">
+        <ChartScroll minWidth={FIELD_WIDTH}>
+          <svg viewBox={`0 0 ${FIELD_WIDTH} ${height}`} className="w-full" role="img" aria-label={ariaLabel}>
+            {[0, 0.25, 0.5, 0.75, 1].map((f) => {
+              const x = barX + f * plotWidth;
+              return <line key={f} x1={x} x2={x} y1={12} y2={height - 24} stroke="#1e3a2b" strokeOpacity={0.08} />;
+            })}
+            {[0, 0.5, 1].map((f) => (
+              <text key={f} x={barX + f * plotWidth} y={height - 8} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
+                {formatUsd(f * axisMax)}
+              </text>
+            ))}
+            {items.map((item, i) => {
+              const w = (item.price / axisMax) * plotWidth;
+              const y = rowY(i);
+              return (
+                <g key={item.label}>
+                  <text x={barX - 10} y={y + FIELD_ROW_HEIGHT / 2 + 4} textAnchor="end" fontSize={11} fontWeight={600} className="fill-charcoal">
+                    {item.label}
+                  </text>
+                  <rect x={barX} y={y} width={Math.max(w, 2)} height={FIELD_ROW_HEIGHT} fill="#1e3a2b" fillOpacity={fieldOpacity(item.label)} rx={3} />
+                  <text x={barX + w + 8} y={y + FIELD_ROW_HEIGHT / 2 + 4} fontSize={11} fontWeight={700} className="fill-charcoal">
+                    {formatUsd(item.price)}
+                  </text>
+                </g>
+              );
+            })}
+            {(() => {
+              const i = items.length;
+              const y = rowY(i);
+              const breakX = plotWidth * 0.86;
+              return (
+                <g>
+                  <text x={barX - 10} y={y + FIELD_ROW_HEIGHT / 2 + 4} textAnchor="end" fontSize={11} fontWeight={600} className="fill-charcoal">
+                    Current Market Price
+                  </text>
+                  <rect x={barX} y={y} width={plotWidth} height={FIELD_ROW_HEIGHT} fill="#a1462f" rx={3} />
+                  {[breakX - 6, breakX + 6].map((bx, k) => (
+                    <polygon key={k} points={`${barX + bx - 5},${y} ${barX + bx + 5},${y} ${barX + bx - 5},${y + FIELD_ROW_HEIGHT} ${barX + bx + 5 - 10},${y + FIELD_ROW_HEIGHT}`} fill="#f5f1e6" />
+                  ))}
+                  <text x={barX + plotWidth + 8} y={y + FIELD_ROW_HEIGHT / 2 + 4} fontSize={11} fontWeight={700} className="fill-rust">
+                    {formatUsd(marketPrice)}
+                  </text>
+                </g>
+              );
+            })()}
+          </svg>
+        </ChartScroll>
+        <p className="mt-1 text-center text-[10px] text-charcoal-soft">{FIELD_BREAK_NOTE}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The football field on phones: one row per method with its label, value and a
+ * bar on the same axis as the desktop chart, then the market price as a full-width
+ * bar with the same break mark, since it is not drawn to scale.
+ */
+function FootballFieldList({
+  items,
+  marketPrice,
+  axisMax,
+  ariaLabel,
+}: {
+  items: { label: string; price: number }[];
+  marketPrice: number;
+  axisMax: number;
+  ariaLabel: string;
+}) {
+  return (
+    <div className="md:hidden">
+      <ul aria-label={ariaLabel} className="flex flex-col gap-3">
+        {items.map((item) => (
+          <li key={item.label}>
+            <div className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="font-semibold text-charcoal">{item.label}</span>
+              <span className="font-bold text-charcoal tabular-nums">{formatUsd(item.price)}</span>
+            </div>
+            <div className="mt-1 h-3 rounded-sm bg-forest/5" aria-hidden="true">
+              <div
+                className="h-full rounded-sm bg-forest"
+                style={{ width: `${(item.price / axisMax) * 100}%`, opacity: fieldOpacity(item.label) }}
+              />
+            </div>
+          </li>
+        ))}
+        <li>
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="font-semibold text-charcoal">Current Market Price</span>
+            <span className="font-bold text-rust tabular-nums">{formatUsd(marketPrice)}</span>
+          </div>
+          <div className="relative mt-1 h-3 rounded-sm bg-rust" aria-hidden="true">
+            {/* The same break mark as the desktop chart: two cream slashes. */}
+            {[82, 86].map((left) => (
+              <span key={left} className="absolute inset-y-0 w-1.5 -skew-x-[30deg] bg-cream" style={{ left: `${left}%` }} />
+            ))}
+          </div>
+          <span className="sr-only"> (bar not drawn to scale)</span>
+        </li>
+      </ul>
+      <p className="mt-3 text-xs leading-5 text-charcoal-soft">{FIELD_BREAK_NOTE}</p>
     </div>
   );
 }

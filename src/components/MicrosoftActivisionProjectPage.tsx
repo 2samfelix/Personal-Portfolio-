@@ -14,6 +14,7 @@ import {
   BASIS_INCONSISTENCY,
   BREAKEVEN_SYNERGY_BY_YIELD,
   EPS_BRIDGE,
+  EPS_BRIDGE_STEPS,
   FIVE_YEAR_EPS_PATH,
   FIVE_YEAR_LABELS,
   LIMITATIONS,
@@ -128,14 +129,6 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
   const executiveSummaryDeliverable = cs.deliverables.find((d) => d.label === "Executive Summary");
   const presentationDeckDeliverable = cs.deliverables.find((d) => d.label === "Presentation Deck");
 
-  const bridgeSteps = [
-    { label: "Microsoft Standalone", sublabel: "$9.68/share", value: EPS_BRIDGE.msftStandaloneNetIncome, kind: "anchor" as const },
-    { label: "+ Activision Net Income", sublabel: "", value: EPS_BRIDGE.atviNetIncomeContribution, kind: "add" as const },
-    { label: "Foregone After-Tax Interest", sublabel: "", value: EPS_BRIDGE.foregoneAfterTaxInterest, kind: "subtract" as const },
-    { label: "After-Tax PPA Amortization", sublabel: "", value: EPS_BRIDGE.afterTaxPpaAmortization, kind: "subtract" as const },
-    { label: "Pro Forma", sublabel: `$${(EPS_BRIDGE.proFormaEps).toFixed(2)}/share`, value: EPS_BRIDGE.proFormaNetIncome, kind: "anchor" as const },
-  ];
-
   return (
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
@@ -216,7 +209,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
         {/* Headline chart */}
         <div id="analysis" className="mt-16 scroll-mt-8">
           <ChartSection label="EPS Bridge: Microsoft Standalone to Pro Forma (Year 1, No Synergies)" first>
-            <EpsBridgeWaterfall steps={bridgeSteps} />
+            <EpsBridgeWaterfall steps={EPS_BRIDGE_STEPS} />
             <ChartCaption
               statLabel="Pro Forma EPS (Year 1, No Synergies)"
               statValue={`$${EPS_BRIDGE.proFormaEps.toFixed(4)}`}

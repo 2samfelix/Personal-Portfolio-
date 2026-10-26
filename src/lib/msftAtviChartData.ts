@@ -19,6 +19,20 @@ export const EPS_BRIDGE = {
   epsDilution: -0.0407372259438016, // Accretion Dilution!B22
 };
 
+// The EPS bridge's five steps, read by both the desktop waterfall and the phone list.
+export const EPS_BRIDGE_STEPS: {
+  label: string;
+  sublabel: string;
+  value: number;
+  kind: "anchor" | "add" | "subtract";
+}[] = [
+  { label: "Microsoft Standalone", sublabel: `$${EPS_BRIDGE.msftStandaloneEps.toFixed(2)}/share`, value: EPS_BRIDGE.msftStandaloneNetIncome, kind: "anchor" },
+  { label: "+ Activision Net Income", sublabel: "", value: EPS_BRIDGE.atviNetIncomeContribution, kind: "add" },
+  { label: "Foregone After-Tax Interest", sublabel: "", value: EPS_BRIDGE.foregoneAfterTaxInterest, kind: "subtract" },
+  { label: "After-Tax PPA Amortization", sublabel: "", value: EPS_BRIDGE.afterTaxPpaAmortization, kind: "subtract" },
+  { label: "Pro Forma", sublabel: `$${EPS_BRIDGE.proFormaEps.toFixed(2)}/share`, value: EPS_BRIDGE.proFormaNetIncome, kind: "anchor" },
+];
+
 // --- Reconciliation bridge (its own block, not a chart) ---
 // Accretion Dilution!B18, B15, B26, B27, B28.
 export const RECONCILIATION = {
