@@ -147,7 +147,10 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
               label: "Annual pre-tax synergies required for EPS neutrality (~48% of Activision's FY2022 revenue)",
             },
           ]}
-          ctas={[{ label: "View the analysis ↓", href: "#analysis", variant: "primary" }]}
+          ctas={[
+            { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
+            { label: "Explore the model ↓", href: "#inside-the-deal-model", variant: "secondary" },
+          ]}
         />
 
         <QuestionApproachFinding
@@ -163,47 +166,6 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
             label: "03 — The Finding",
             body: "With zero synergies, the deal dilutes Microsoft's EPS by 4.07% in Year 1 — driven by foregone interest income and new intangible amortization, not operating weakness. Reaching EPS-neutral requires about $3.64B of annual pre-tax synergies, roughly 48% of Activision's entire FY2022 revenue: an exceptionally high bar for a conventional cost-synergy story.",
           }}
-        />
-
-        <WhatIBuiltGrid
-          items={[
-            {
-              title: "M&A Model",
-              format: "XLSX",
-              description: DELIVERABLE_DETAIL["M&A Model"],
-              href: maModelDeliverable?.url,
-              ctaLabel: "Download model ↗",
-            },
-            {
-              title: "Full Report",
-              format: "PDF",
-              description: DELIVERABLE_DETAIL["Full Report"],
-              href: fullReportDeliverable?.url,
-              ctaLabel: "Open report ↗",
-            },
-            {
-              title: "Executive Summary",
-              format: "PDF",
-              description: DELIVERABLE_DETAIL["Executive Summary"],
-              href: executiveSummaryDeliverable?.url,
-              ctaLabel: "Open summary ↗",
-            },
-            {
-              title: "Presentation Deck",
-              format: "PPTX",
-              description: DELIVERABLE_DETAIL["Presentation Deck"],
-              href: presentationDeckDeliverable?.url,
-              ctaLabel: "Open deck ↗",
-            },
-            {
-              title: "GitHub Project",
-              format: "REPOSITORY",
-              description:
-                "Source documentation, the full M&A model, and the written report, all in the public repository for this analysis.",
-              href: project.githubUrl,
-              ctaLabel: "View GitHub ↗",
-            },
-          ]}
         />
 
         {/* Headline chart */}
@@ -224,7 +186,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
         </div>
 
         {/* Inside the deal model: three curated views of the M&A model */}
-        <section aria-labelledby="inside-deal-model-heading" className="mt-16">
+        <section id="inside-the-deal-model" aria-labelledby="inside-deal-model-heading" className="mt-16 scroll-mt-24">
           <h2 id="inside-deal-model-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
             Inside the deal model
           </h2>
@@ -291,6 +253,47 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
             GAAP line. This model includes it deliberately, because it is economically real. (Accretion Dilution!B18, B15, B26, B27.)
           </p>
         </section>
+
+        <WhatIBuiltGrid
+          items={[
+            {
+              title: "M&A Model",
+              format: "XLSX",
+              description: DELIVERABLE_DETAIL["M&A Model"],
+              href: maModelDeliverable?.url,
+              ctaLabel: "Download model ↗",
+            },
+            {
+              title: "Full Report",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Full Report"],
+              href: fullReportDeliverable?.url,
+              ctaLabel: "Open report ↗",
+            },
+            {
+              title: "Executive Summary",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Executive Summary"],
+              href: executiveSummaryDeliverable?.url,
+              ctaLabel: "Open summary ↗",
+            },
+            {
+              title: "Presentation Deck",
+              format: "PPTX",
+              description: DELIVERABLE_DETAIL["Presentation Deck"],
+              href: presentationDeckDeliverable?.url,
+              ctaLabel: "Open deck ↗",
+            },
+            {
+              title: "GitHub Project",
+              format: "REPOSITORY",
+              description:
+                "Source documentation, the full M&A model, and the written report, all in the public repository for this analysis.",
+              href: project.githubUrl,
+              ctaLabel: "View GitHub ↗",
+            },
+          ]}
+        />
 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">

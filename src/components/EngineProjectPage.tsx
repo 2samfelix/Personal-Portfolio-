@@ -226,6 +226,12 @@ export default function EngineProjectPage({
             >
               Project status ↗
             </a>
+            <a
+              href="#trace-a-statement"
+              className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
+            >
+              Trace a statement ↓
+            </a>
           </div>
         </div>
 
@@ -255,7 +261,7 @@ export default function EngineProjectPage({
           </p>
         </section>
 
-        <section aria-labelledby="trace-heading" className="mt-12 border-t border-forest/10 pt-12">
+        <section id="trace-a-statement" aria-labelledby="trace-heading" className="mt-12 scroll-mt-24 border-t border-forest/10 pt-12">
           <h2 id="trace-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
             Trace a statement
           </h2>

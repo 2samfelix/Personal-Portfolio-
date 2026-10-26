@@ -20,6 +20,9 @@ export type HeroCta = {
  * lg:row-span-2 to sit in the right column, vertically centered beside the
  * text+CTAs stack in the left column — this is what keeps the metric above
  * the CTAs on mobile without affecting the two-column desktop layout.
+ *
+ * wideText (opt-in): from 1280px the text column takes 55% instead of half, so
+ * a third CTA fits on the same row; other heroes keep the even split.
  */
 export function ProjectHero({
   title,
@@ -27,15 +30,24 @@ export function ProjectHero({
   description,
   metrics,
   ctas,
+  wideText = false,
 }: {
   title: string;
   question: string;
   description: string;
   metrics: HeroMetric[];
   ctas: HeroCta[];
+  wideText?: boolean;
 }) {
   return (
-    <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-center lg:gap-12">
+    <div
+      className={[
+        "mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-center lg:gap-12",
+        wideText ? "xl:grid-cols-[minmax(0,11fr)_minmax(0,9fr)]" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div>
         <h1 className="text-4xl font-black tracking-tight text-charcoal sm:text-5xl">{title}</h1>
         <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">{question}</p>
