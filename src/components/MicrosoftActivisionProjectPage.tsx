@@ -226,6 +226,34 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
           </ChartSection>
         </div>
 
+        {/* Inside the deal model: three curated views of the M&A model */}
+        <section aria-labelledby="inside-deal-model-heading" className="mt-16">
+          <h2 id="inside-deal-model-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+            Inside the deal model
+          </h2>
+          <p className="mt-4 text-base leading-7 text-charcoal">
+            Three views from the M&amp;A model. Click any cell to see its formula and where it comes from.
+          </p>
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-charcoal-soft">
+            <a
+              href={WORKBOOK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-forest hover:text-forest-dark"
+            >
+              Download Workbook ↗
+            </a>
+            <span>This preview is a snapshot of the saved workbook; it does not recalculate.</span>
+          </p>
+          <WorkbookPreview
+            src="/microsoft-activision/model-preview.json"
+            title="Microsoft x Activision M&A model: why the deal dilutes, the synergy breakeven, and the EPS sensitivity grid"
+            downloadUrl={WORKBOOK_URL}
+            teaser={<ModelPreviewTeaser doc={MODEL_PREVIEW} />}
+            layout={{ zoom: PREVIEW_ZOOM, formulaBarPx: 148, gridHeights: PREVIEW_GRID_HEIGHTS, captions: true, captionLines: 2 }}
+          />
+        </section>
+
         {/* Reconciliation bridge — its own block, not a chart */}
         <section className="mt-10 rounded-2xl border border-forest/20 bg-forest/5 p-6">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Reconciliation Against Microsoft&apos;s Own Disclosure</h2>
@@ -265,34 +293,6 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
             deploying $61.8B of cash. Microsoft&apos;s GAAP pro forma cannot include foregone interest income — it isn&apos;t a
             GAAP line. This model includes it deliberately, because it is economically real. (Accretion Dilution!B18, B15, B26, B27.)
           </p>
-        </section>
-
-        {/* Inside the deal model: three curated views of the M&A model */}
-        <section aria-labelledby="inside-deal-model-heading" className="mt-16">
-          <h2 id="inside-deal-model-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
-            Inside the deal model
-          </h2>
-          <p className="mt-4 text-base leading-7 text-charcoal">
-            Three views from the M&amp;A model. Click any cell to see its formula and where it comes from.
-          </p>
-          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-charcoal-soft">
-            <a
-              href={WORKBOOK_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-forest hover:text-forest-dark"
-            >
-              Download Workbook ↗
-            </a>
-            <span>This preview is a snapshot of the saved workbook; it does not recalculate.</span>
-          </p>
-          <WorkbookPreview
-            src="/microsoft-activision/model-preview.json"
-            title="Microsoft x Activision M&A model: why the deal dilutes, the synergy breakeven, and the EPS sensitivity grid"
-            downloadUrl={WORKBOOK_URL}
-            teaser={<ModelPreviewTeaser doc={MODEL_PREVIEW} />}
-            layout={{ zoom: PREVIEW_ZOOM, formulaBarPx: 148, gridHeights: PREVIEW_GRID_HEIGHTS, captions: true, captionLines: 2 }}
-          />
         </section>
 
         {/* Overview */}
