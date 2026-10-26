@@ -195,7 +195,7 @@ export const flagshipProjects: Project[] = [
         {
           label: "M&A Model",
           format: "XLSX",
-          url: "https://raw.githubusercontent.com/2samfelix/microsoft-activision-ma-analysis/main/Sam_Felix_MSFT_ATVI_MA_Model.xlsx",
+          url: "https://raw.githubusercontent.com/2samfelix/microsoft-activision-ma-analysis/a5ed679f114caef98fc5fb60c1171e109c0a90b4/Sam_Felix_MSFT_ATVI_MA_Model.xlsx",
         },
         {
           label: "Full Report",

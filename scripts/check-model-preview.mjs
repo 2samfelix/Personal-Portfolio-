@@ -9,7 +9,11 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PREVIEWS = ["public/caterpillar/model-preview.json", "public/arm/model-preview.json"];
+const PREVIEWS = [
+  "public/caterpillar/model-preview.json",
+  "public/arm/model-preview.json",
+  "public/microsoft-activision/model-preview.json",
+];
 
 let failed = false;
 for (const rel of PREVIEWS) {

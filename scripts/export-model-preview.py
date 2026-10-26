@@ -21,10 +21,15 @@ The output is a read-only snapshot: nothing is recalculated in the browser. The
 workbook's SHA-256 is recorded so `npm run check:model-preview` can detect a
 workbook that changed without the JSON being regenerated.
 
+Colour-scale conditional formats (2- and 3-colour; min, max, number, percent and
+percentile thresholds) are evaluated here, as Excel does, and stored as each
+cell's fill; the preview itself never evaluates rules.
+
 Fails loudly (non-zero exit) if a requested sheet is missing, a formula has no
 cached value (other than known empty-string text formulas), a workbook copy does
 not match its recorded source hash, or the sheets use something this preview
-cannot show faithfully (tinted theme or indexed colours, conditional formatting).
+cannot show faithfully (tinted theme or indexed colours, conditional formats
+other than colour scales, a merged range cut by a view's range).
 """
 from __future__ import annotations
 
@@ -89,6 +94,41 @@ PROJECTS: dict[str, dict] = {
                 "sheet": "DCF Valuation",
                 "ranges": ["A52:F58"],
                 "caption": "Every cell is below the current price. Highest value in the grid: $94.39.",
+                "freeze_cols": 1,
+            },
+        ],
+    },
+    "microsoft-activision": {
+        # A copy of the workbook from the Microsoft x Activision repository; the export
+        # refuses to run if the copy no longer matches the source hash recorded here.
+        "workbook": "microsoft-activision-ma/model/Sam_Felix_MSFT_ATVI_MA_Model.xlsx",
+        "output": "public/microsoft-activision/model-preview.json",
+        "source": {
+            "repo": "2samfelix/microsoft-activision-ma-analysis",
+            "commit": "a5ed679f114caef98fc5fb60c1171e109c0a90b4",
+            "path": "Sam_Felix_MSFT_ATVI_MA_Model.xlsx",
+            "sha256": "3a5106c1ea0e699f05aa0e186a9dcc1b9e42affb9d542414e8a1d71bcde09340",
+        },
+        "views": [
+            {
+                "name": "Why the deal dilutes",
+                "sheet": "Accretion Dilution",
+                "ranges": ["A12:D22", "A25:D28"],
+                "caption": "With zero synergies, pro forma EPS is $9.29 against $9.68 standalone: 4.07% dilution. My base case sits $0.26 below Microsoft's reported pro forma EPS.",
+                "freeze_cols": 1,
+            },
+            {
+                "name": "How much synergy is enough?",
+                "sheet": "Synergy Breakeven",
+                "ranges": ["A5:D11"],
+                "caption": "Breakeven needs about $3.64B of annual pre-tax synergies, roughly 48% of Activision's FY2022 revenue.",
+                "freeze_cols": 1,
+            },
+            {
+                "name": "Sensitivity",
+                "sheet": "Synergy Breakeven",
+                "ranges": ["A19:F26"],
+                "caption": "Red marks the most dilutive cell (−5.5%), yellow the grid's median (−0.7%), green the most accretive (+4.0%). Accretive: $3B at a 2% yield, $4B up to 4%, $5B+ at any yield.",
                 "freeze_cols": 1,
             },
         ],
@@ -281,9 +321,9 @@ class Styles:
         return self.index[key]
 
 
-def cell_entry(sheet, ws_f, ws_v, shown, r, c, pos, styles: Styles, cfg) -> dict | None:
+def cell_entry(sheet, ws_f, ws_v, shown, r, c, pos, styles: Styles, cfg, cf_fills=None) -> dict | None:
     """One exported cell (1-based r, c in the sheet; pos = its position in the tab),
-    or None for a blank, unstyled cell."""
+    or None for a blank, unstyled cell. cf_fills: fills painted by colour scales."""
     cell = ws_f.cell(r, c)
     where = f"{sheet}!{cell.coordinate}"
     formula = None
@@ -302,6 +342,8 @@ def cell_entry(sheet, ws_f, ws_v, shown, r, c, pos, styles: Styles, cfg) -> dict
         return None
 
     style = style_of(cell, where)
+    if cf_fills and (r, c) in cf_fills:
+        style = {**style, "fill": cf_fills[(r, c)]}  # a colour scale paints over the cell's own fill
     if negative_red(cell.number_format, raw):
         style = {**style, "font": {**style.get("font", {}), "color": "#FF0000"}}
     sid = styles.id(style)
@@ -328,16 +370,87 @@ def cell_entry(sheet, ws_f, ws_v, shown, r, c, pos, styles: Styles, cfg) -> dict
     return out
 
 
-def check_sheet(sheet, ws_f) -> None:
-    if ws_f.conditional_formatting:
-        fail(f"{sheet}: conditional formatting cannot be reproduced by the preview")
+CFVO_TYPES = {"min", "max", "num", "percent", "percentile"}
+
+
+def percentile_inc(values: list[float], p: float) -> float:
+    """Excel's PERCENTILE.INC, which colour-scale percentile thresholds use."""
+    xs = sorted(values)
+    k = (len(xs) - 1) * p
+    lo = int(k)
+    hi = min(lo + 1, len(xs) - 1)
+    return xs[lo] + (xs[hi] - xs[lo]) * (k - lo)
+
+
+def color_scale_fills(sheet, ws_v, rule, sqref) -> dict[tuple[int, int], str]:
+    """The fill Excel paints on each numeric cell of a colour-scale rule: thresholds
+    from the rule's cfvo list over the whole rule range, then each value linearly
+    interpolated between the two surrounding threshold colours, per RGB channel."""
+    cs = rule.colorScale
+    where = f"{sheet}!{sqref} colour scale"
+    if len(cs.cfvo) not in (2, 3) or len(cs.color) != len(cs.cfvo):
+        fail(f"{where}: only 2- and 3-colour scales are supported")
+    cells = [(r, c) for rng in str(sqref).split()
+             for c1, r1, c2, r2 in [range_boundaries(rng)]
+             for r in range(r1, r2 + 1) for c in range(c1, c2 + 1)]
+    values = {rc: v for rc in cells
+              if isinstance(v := ws_v.cell(*rc).value, (int, float)) and not isinstance(v, bool)}
+    if not values:
+        return {}
+    nums = list(values.values())
+    lo, hi = min(nums), max(nums)
+    stops = []
+    for cfvo, col in zip(cs.cfvo, cs.color):
+        if cfvo.type not in CFVO_TYPES:
+            fail(f"{where}: threshold type {cfvo.type!r} is not supported")
+        v = float(cfvo.val) if cfvo.val is not None else None
+        t = {"min": lo, "max": hi, "num": v,
+             "percent": None if v is None else lo + (hi - lo) * v / 100,
+             "percentile": None if v is None else percentile_inc(nums, v / 100)}[cfvo.type]
+        rgb = color(col, f"{where} colour")
+        if rgb is None or t is None:
+            fail(f"{where}: threshold {cfvo.type} has no value or colour")
+        stops.append((t, tuple(int(rgb[i:i + 2], 16) for i in (1, 3, 5))))
+    out = {}
+    for rc, v in values.items():
+        if v <= stops[0][0]:
+            rgb = stops[0][1]
+        elif v >= stops[-1][0]:
+            rgb = stops[-1][1]
+        else:
+            (t0, c0), (t1, c1) = next((a, b) for a, b in zip(stops, stops[1:]) if v <= b[0])
+            f = (v - t0) / (t1 - t0) if t1 > t0 else 0.0
+            rgb = tuple(round(a + (b - a) * f) for a, b in zip(c0, c1))
+        out[rc] = "#" + "".join(f"{x:02X}" for x in rgb)
+    return out
+
+
+def check_sheet(sheet, ws_f, ws_v, bounds=None) -> dict[tuple[int, int], str]:
+    """Checks a sheet (or, with bounds, the ranges of a view) for features the preview
+    cannot show, and returns the fills that colour scales paint on its cells, keyed by
+    1-based (row, column). Conditional formats outside a view's ranges are ignored."""
+    def touches(rng: str) -> bool:
+        if bounds is None:
+            return True
+        c1, r1, c2, r2 = range_boundaries(rng)
+        return any(c1 <= b[2] and b[0] <= c2 and r1 <= b[3] and b[1] <= r2 for b in bounds)
+
+    rules = [(rule, cf.sqref) for cf in ws_f.conditional_formatting
+             if any(touches(rng) for rng in str(cf.sqref).split()) for rule in cf.rules]
+    fills: dict[tuple[int, int], str] = {}
+    # Lowest priority number wins where rules overlap, so apply it last.
+    for rule, sqref in sorted(rules, key=lambda x: x[0].priority or 0, reverse=True):
+        if rule.type != "colorScale":
+            fail(f"{sheet}!{sqref}: {rule.type} conditional formatting cannot be reproduced by the preview")
+        fills.update(color_scale_fills(sheet, ws_v, rule, sqref))
     if getattr(ws_f, "_charts", None) or getattr(ws_f, "_images", None):
         note(f"{sheet} has charts or images; they are not part of the grid")
+    return fills
 
 
 def export_sheet(sheet, ws_f, ws_v, shown, styles: Styles, cfg) -> dict:
     """A whole sheet as one tab."""
-    check_sheet(sheet, ws_f)
+    cf_fills = check_sheet(sheet, ws_f, ws_v)
     last_r = last_c = 0
     for row in ws_f.iter_rows():
         for c in row:
@@ -364,7 +477,7 @@ def export_sheet(sheet, ws_f, ws_v, shown, styles: Styles, cfg) -> dict:
     cells = []
     for r in range(1, rows + 1):
         for c in range(1, cols + 1):
-            entry = cell_entry(sheet, ws_f, ws_v, shown, r, c, (r - 1, c - 1), styles, cfg)
+            entry = cell_entry(sheet, ws_f, ws_v, shown, r, c, (r - 1, c - 1), styles, cfg, cf_fills)
             if entry:
                 cells.append(entry)
 
@@ -388,8 +501,8 @@ def export_view(view, ws_f, ws_v, shown, styles: Styles, cfg) -> dict:
     them. Cells are stored by their position in the view; rowIndex and colIndex give
     the real (zero-based) sheet row and column for each position, null for a spacer."""
     sheet = view["sheet"]
-    check_sheet(sheet, ws_f)
     bounds = [range_boundaries(r) for r in view["ranges"]]  # (min_col, min_row, max_col, max_row), 1-based
+    cf_fills = check_sheet(sheet, ws_f, ws_v, bounds)
     first_col, last_col = min(b[0] for b in bounds), max(b[2] for b in bounds)
     columns = list(range(first_col, last_col + 1))
 
@@ -414,14 +527,19 @@ def export_view(view, ws_f, ws_v, shown, styles: Styles, cfg) -> dict:
         if hidden:
             hidden_rows.append(p)
 
-    # Merged ranges that touch a view range, clipped to it, in view positions.
+    # Merged ranges inside a view range, in view positions. One that a range cuts
+    # through cannot be shown as the workbook shows it, so the export stops.
     merges = []
     for m in ws_f.merged_cells.ranges:
         for b in bounds:
-            r1, r2 = max(m.min_row, b[1]), min(m.max_row, b[3])
-            c1, c2 = max(m.min_col, b[0]), min(m.max_col, b[2])
-            if r1 <= r2 and c1 <= c2 and (r1, c1) != (r2, c2):
-                merges.append([row_index.index(r1), c1 - first_col, row_index.index(r2), c2 - first_col])
+            inside = b[0] <= m.min_col and m.max_col <= b[2] and b[1] <= m.min_row and m.max_row <= b[3]
+            overlaps = m.min_col <= b[2] and b[0] <= m.max_col and m.min_row <= b[3] and b[1] <= m.max_row
+            if inside:
+                merges.append([row_index.index(m.min_row), m.min_col - first_col,
+                               row_index.index(m.max_row), m.max_col - first_col])
+            elif overlaps:
+                fail(f"{sheet}!{m.coord}: merged range is partly outside the view range "
+                     f"{view['ranges'][bounds.index(b)]}; adjust the range to include or exclude it")
 
     cells = []
     for p, r in enumerate(row_index):
@@ -431,7 +549,7 @@ def export_view(view, ws_f, ws_v, shown, styles: Styles, cfg) -> dict:
         for c in columns:
             if not b[0] <= c <= b[2]:
                 continue  # inside the view's columns but outside this range: left blank
-            entry = cell_entry(sheet, ws_f, ws_v, shown, r, c, (p, c - first_col), styles, cfg)
+            entry = cell_entry(sheet, ws_f, ws_v, shown, r, c, (p, c - first_col), styles, cfg, cf_fills)
             if entry:
                 cells.append(entry)
 
