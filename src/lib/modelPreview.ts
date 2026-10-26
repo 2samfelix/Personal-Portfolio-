@@ -135,6 +135,35 @@ export function rowPx(points: number): number {
   return Math.round((points * 4) / 3);
 }
 
+// --- Grid sizing ------------------------------------------------------------
+// Shared by the grid and by the pages, which size the desktop panel to each
+// view at build time, so the panel's height is known before the data loads.
+
+const COL_HEADER_PX = 24;
+/** Room left under a view for a horizontal scrollbar, should the grid need one. */
+const SCROLLBAR_RESERVE_PX = 16;
+
+/** Height of the column-letter header row at a zoom. */
+export function colHeaderPx(zoom: number): number {
+  return Math.max(18, Math.round(COL_HEADER_PX * zoom));
+}
+
+/** Each row's rendered height at a zoom (0 when hidden), never below minPx. */
+export function rowHeightsPx(sheet: PreviewSheet, zoom: number, minPx = 0): number[] {
+  const hidden = new Set(sheet.hiddenRows);
+  return sheet.rowHeights.map((h, r) => (hidden.has(r) ? 0 : Math.max(Math.round(rowPx(h) * zoom), minPx)));
+}
+
+/**
+ * For each tab, the grid height that shows the whole view at this zoom (plus room
+ * for a horizontal scrollbar), capped at maxPx; a taller view scrolls inside it.
+ */
+export function viewGridHeights(doc: ModelPreviewDoc, zoom: number, maxPx: number): number[] {
+  return doc.sheets.map((sheet) =>
+    Math.min(maxPx, colHeaderPx(zoom) + rowHeightsPx(sheet, zoom).reduce((a, b) => a + b, 0) + SCROLLBAR_RESERVE_PX),
+  );
+}
+
 /** The text the spreadsheet shows for a cell. */
 export function displayText(cell: SheetCell | undefined): string {
   if (!cell) return "";

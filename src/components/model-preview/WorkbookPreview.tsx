@@ -15,6 +15,7 @@ import {
 import {
   DEFAULT_FONT_PT,
   addressAt,
+  colHeaderPx,
   colLetter,
   crossSheetRefs,
   fontFamily,
@@ -26,7 +27,7 @@ import {
   indexCells,
   rawText,
   readableColor,
-  rowPx,
+  rowHeightsPx,
   spillPx,
   type CellStyle,
   type ModelPreviewDoc,
@@ -36,7 +37,6 @@ import {
 
 type Selection = { r: number; c: number };
 
-const COL_HEADER_PX = 24;
 const ROW_HEADER_PX = 44;
 const ROW_HEADER_COMPACT_PX = 34;
 /** On small screens the frozen label column is capped at this width, with ellipsis. */
@@ -87,11 +87,18 @@ export type PreviewLayout = {
   formulaBarPx?: number;
   /** Desktop grid viewport height (CSS length). */
   gridHeight?: string;
+  /** Desktop grid height per tab, in px, sized to each view (see viewGridHeights);
+   *  takes precedence over gridHeight. Computed at build time, so it is known
+   *  before the data loads. */
+  gridHeights?: number[];
   /** Show each tab's caption above the grid (curated views). */
   captions?: boolean;
+  /** Lines the desktop caption row holds (default 1). */
+  captionLines?: number;
 };
 
 const CAPTION_PX = 34;
+const CAPTION_LINE_PX = 20;
 
 function borderCss(spec: string | undefined, fallback: string): string {
   if (!spec) return fallback;
@@ -129,7 +136,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
   );
   const hiddenCols = useMemo(() => new Set(sheet.hiddenCols), [sheet]);
   const rowHeader = Math.round((compact ? ROW_HEADER_COMPACT_PX : ROW_HEADER_PX) * zoom);
-  const colHeader = Math.max(18, Math.round(COL_HEADER_PX * zoom));
+  const colHeader = colHeaderPx(zoom);
   const headerFontPx = compact ? 11 : Math.max(9, Math.round(11 * zoom));
   const padPx = Math.max(2, Math.round(4 * zoom));
 
@@ -155,13 +162,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
     }
     return { widths: ws, frozenNarrowed: narrowed };
   }, [sheet, compact, hiddenCols, zoom, viewportWidth]);
-  const heights = useMemo(
-    () =>
-      sheet.rowHeights.map((h, r) =>
-        hiddenRows.has(r) ? 0 : Math.max(Math.round(rowPx(h) * zoom), compact ? MIN_COMPACT_ROW_PX : 0),
-      ),
-    [sheet, hiddenRows, zoom, compact],
-  );
+  const heights = useMemo(() => rowHeightsPx(sheet, zoom, compact ? MIN_COMPACT_ROW_PX : 0), [sheet, zoom, compact]);
 
   // Sticky offsets for frozen columns (left) and frozen rows (top).
   const leftOf = useMemo(() => {
@@ -583,6 +584,10 @@ function FormulaBar({
   const raw = rawText(cell);
   const links = crossSheetRefs(cell?.f);
   const linkText = links.map((l) => `${l.sheet}!${l.ref}`).join(", ");
+  // Grouped by source sheet, so a formula that reads several cells of one sheet
+  // names it once: "sheet Sources & Uses, cells B15, B17".
+  const bySheet = new Map<string, string[]>();
+  for (const l of links) bySheet.set(l.sheet, [...(bySheet.get(l.sheet) ?? []), l.ref]);
   const announce = `${sheet.name}, ${address}: ${shown || "empty"}${cell?.f ? `. Formula ${cell.f}` : ""}${
     links.length ? `. Links to ${linkText}` : ""
   }`;
@@ -623,11 +628,13 @@ function FormulaBar({
           {links.length > 0 && (
             <>
               <dt>Links to</dt>
-              <dd className="min-w-0 truncate text-charcoal" title={linkText}>
-                {links.map((l, i) => (
-                  <span key={`${l.sheet}!${l.ref}`}>
-                    {i > 0 && ", "}
-                    sheet <span className="font-semibold">{l.sheet}</span>, cell <span className="font-mono">{l.ref}</span>
+              {/* Wraps rather than truncating, so every source stays named; the formula above scrolls if squeezed. */}
+              <dd className="min-w-0 text-charcoal" title={linkText}>
+                {[...bySheet].map(([name, refs], i) => (
+                  <span key={name}>
+                    {i > 0 && "; "}
+                    sheet <span className="font-semibold">{name}</span>, {refs.length > 1 ? "cells" : "cell"}{" "}
+                    <span className="font-mono">{refs.join(", ")}</span>
                   </span>
                 ))}
               </dd>
@@ -667,8 +674,8 @@ export default function WorkbookPreview({
 }) {
   const startZoom = layout.zoom ?? DESKTOP_ZOOM;
   const formulaBarPx = layout.formulaBarPx ?? FORMULA_BAR_PX;
-  const gridHeight = layout.gridHeight ?? GRID_HEIGHT;
-  const captionPx = layout.captions ? CAPTION_PX : 0;
+  const captionLines = layout.captionLines ?? 1;
+  const captionPx = layout.captions ? CAPTION_PX + (captionLines - 1) * CAPTION_LINE_PX : 0;
   const uid = useId().replace(/:/g, "");
   const rootRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -676,6 +683,9 @@ export default function WorkbookPreview({
   const [doc, setDoc] = useState<ModelPreviewDoc | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [active, setActive] = useState(0);
+  const gridHeight = layout.gridHeights
+    ? `${layout.gridHeights[active] ?? layout.gridHeights[0]}px`
+    : (layout.gridHeight ?? GRID_HEIGHT);
   const [selections, setSelections] = useState<Record<number, Selection>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   // Zoom is remembered while the page is open (no storage).
@@ -782,7 +792,12 @@ export default function WorkbookPreview({
             }`}
             style={compact ? undefined : { height: captionPx }}
           >
-            <span className={compact ? "" : "truncate"}>{sheet.caption}</span>
+            <span
+              className={compact ? "" : captionLines > 1 ? "max-w-[45rem] overflow-hidden" : "truncate"}
+              style={!compact && captionLines > 1 ? { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: captionLines } : undefined}
+            >
+              {sheet.caption}
+            </span>
             {!compact && sheet.sheet && (
               <span className="shrink-0 font-mono text-[11px] text-charcoal-soft">
                 {sheet.sheet}!{sheet.ranges?.join(", ")}
