@@ -8,6 +8,7 @@
 // additive EPS waterfall, a synergy heatmap with a crossing line) neither
 // of the other two pages used.
 
+import { BridgeList } from "@/components/project/BridgeList";
 import { ChartScroll } from "@/components/project/ChartScroll";
 
 const CHART_WIDTH = 640;
@@ -62,6 +63,10 @@ type BridgeStep = {
  * anchor/add/subtract waterfall pattern from Nike's margin bridge applies
  * directly.
  */
+/** A bridge step's value as both layouts label it: anchors as totals, drivers signed. */
+const bridgeValueLabel = (step: BridgeStep) =>
+  step.kind === "anchor" ? formatUsdM(step.value) : `${step.value > 0 ? "+" : ""}${formatUsdM(step.value)}`;
+
 export function EpsBridgeWaterfall({ steps }: { steps: BridgeStep[] }) {
   const levels = steps.reduce<number[]>((acc, step) => {
     const prev = acc.length === 0 ? 0 : acc[acc.length - 1];
@@ -95,31 +100,38 @@ export function EpsBridgeWaterfall({ steps }: { steps: BridgeStep[] }) {
 
   return (
     <div className="mt-2">
-      <ChartScroll minWidth={BRIDGE_WIDTH}>
-        <svg viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`} className="w-full" role="img" aria-label="EPS bridge: Microsoft standalone net income $72,361M, plus Activision net income $1,513M, minus foregone after-tax interest $2,002.85M, minus after-tax PPA amortization $2,488.67M, equals pro forma net income $69,382.48M">
-          {positioned.map((step, i) => {
-            const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
-            const yTop = y(step.to);
-            const yBottom = y(step.from);
-            const height = Math.max(1.5, yBottom - yTop);
-            const valueLabel = step.kind === "anchor" ? formatUsdM(step.value) : `${step.value > 0 ? "+" : ""}${formatUsdM(step.value)}`;
-            return (
-              <g key={step.label}>
-                <rect x={x} y={yTop} width={barWidth} height={height} fill={fillFor(step.kind)} rx={2} />
-                <text x={x + barWidth / 2} y={yTop - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="#2a2820">
-                  {valueLabel}
-                </text>
-                <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 16} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
-                  {step.label}
-                </text>
-                <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 28} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
-                  {step.sublabel}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-      </ChartScroll>
+      {/* Phones: the same steps as a list (below md). */}
+      <BridgeList
+        ariaLabel="EPS bridge, Microsoft standalone to pro forma net income (year 1, no synergies)"
+        steps={steps.map((step) => ({ label: step.label, sublabel: step.sublabel, valueLabel: bridgeValueLabel(step), magnitude: step.value, kind: step.kind }))}
+      />
+      <div className="max-md:hidden">
+        <ChartScroll minWidth={BRIDGE_WIDTH}>
+          <svg viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`} className="w-full" role="img" aria-label="EPS bridge: Microsoft standalone net income $72,361M, plus Activision net income $1,513M, minus foregone after-tax interest $2,002.85M, minus after-tax PPA amortization $2,488.67M, equals pro forma net income $69,382.48M">
+            {positioned.map((step, i) => {
+              const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
+              const yTop = y(step.to);
+              const yBottom = y(step.from);
+              const height = Math.max(1.5, yBottom - yTop);
+              const valueLabel = bridgeValueLabel(step);
+              return (
+                <g key={step.label}>
+                  <rect x={x} y={yTop} width={barWidth} height={height} fill={fillFor(step.kind)} rx={2} />
+                  <text x={x + barWidth / 2} y={yTop - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="#2a2820">
+                    {valueLabel}
+                  </text>
+                  <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 16} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
+                    {step.label}
+                  </text>
+                  <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 28} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
+                    {step.sublabel}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </ChartScroll>
+      </div>
       <div className="mt-2 flex flex-wrap gap-4">
         <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
           <span className="h-2.5 w-2.5 rounded-full bg-charcoal" /> Starting / Ending
