@@ -6,6 +6,8 @@
 // around its month-index model output — these operate on plain labeled
 // period arrays instead.
 
+import { ChartScroll } from "@/components/project/ChartScroll";
+
 const CHART_WIDTH = 640;
 const CHART_HEIGHT = 300;
 const PAD_LEFT = 64;
@@ -128,88 +130,90 @@ export function MultiSeriesLineChart({
 
   return (
     <div className="mt-2">
-      <svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} className="w-full" role="img" aria-label={ariaLabel}>
-        {gridValues.map((v, i) => (
-          <line
-            key={i}
-            x1={PAD_LEFT}
-            x2={CHART_WIDTH - PAD_RIGHT}
-            y1={valueY(v, minValue, maxValue)}
-            y2={valueY(v, minValue, maxValue)}
-            stroke="#1e3a2b"
-            strokeOpacity={0.08}
-          />
-        ))}
-        {showZeroLine && (
-          <line
-            x1={PAD_LEFT}
-            x2={CHART_WIDTH - PAD_RIGHT}
-            y1={valueY(0, minValue, maxValue)}
-            y2={valueY(0, minValue, maxValue)}
-            stroke="#2a2820"
-            strokeOpacity={0.35}
-            strokeDasharray="3 3"
-          />
-        )}
-        {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
-          <text
-            key={i}
-            x={PAD_LEFT - 8}
-            y={valueY(v, minValue, maxValue) + 4}
-            textAnchor="end"
-            className="fill-charcoal-soft text-[10px]"
-          >
-            {valueFormatter(v)}
-          </text>
-        ))}
-        {periods.map((label, i) => (
-          <text
-            key={label}
-            x={periodX(i, count)}
-            y={CHART_HEIGHT - PAD_BOTTOM + 18}
-            textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"}
-            className="fill-charcoal-soft text-[10px]"
-          >
-            {label}
-          </text>
-        ))}
-        {tintSeries && (
-          <polygon points={tintAreaPoints} fill={tintSeries.stroke} fillOpacity={0.12} />
-        )}
-        {series.map((s) => (
-          <polyline
-            key={s.key}
-            points={s.values.map((v, i) => `${periodX(i, count)},${valueY(v, minValue, maxValue)}`).join(" ")}
-            fill="none"
-            stroke={s.stroke}
-            strokeWidth={2}
-            strokeDasharray={s.dash}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ))}
-        {series.map((s) =>
-          s.values.map((v, i) => (
-            <circle key={`${s.key}-${i}`} cx={periodX(i, count)} cy={valueY(v, minValue, maxValue)} r={2.5} fill={s.stroke} />
-          ))
-        )}
-        {series.map((s) => (
-          <text
-            key={s.key}
-            x={CHART_WIDTH - PAD_RIGHT - 4}
-            y={endLabelY[s.key] - 6}
-            textAnchor="end"
-            fontSize={10}
-            fontWeight={700}
-            fill={s.stroke}
-            stroke="#f5f1e6"
-            strokeWidth={4}
-            paintOrder="stroke"
-          >
-            {s.label}
-          </text>
-        ))}
-      </svg>
+      <ChartScroll minWidth={CHART_WIDTH}>
+        <svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} className="w-full" role="img" aria-label={ariaLabel}>
+          {gridValues.map((v, i) => (
+            <line
+              key={i}
+              x1={PAD_LEFT}
+              x2={CHART_WIDTH - PAD_RIGHT}
+              y1={valueY(v, minValue, maxValue)}
+              y2={valueY(v, minValue, maxValue)}
+              stroke="#1e3a2b"
+              strokeOpacity={0.08}
+            />
+          ))}
+          {showZeroLine && (
+            <line
+              x1={PAD_LEFT}
+              x2={CHART_WIDTH - PAD_RIGHT}
+              y1={valueY(0, minValue, maxValue)}
+              y2={valueY(0, minValue, maxValue)}
+              stroke="#2a2820"
+              strokeOpacity={0.35}
+              strokeDasharray="3 3"
+            />
+          )}
+          {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
+            <text
+              key={i}
+              x={PAD_LEFT - 8}
+              y={valueY(v, minValue, maxValue) + 4}
+              textAnchor="end"
+              className="fill-charcoal-soft text-[10px]"
+            >
+              {valueFormatter(v)}
+            </text>
+          ))}
+          {periods.map((label, i) => (
+            <text
+              key={label}
+              x={periodX(i, count)}
+              y={CHART_HEIGHT - PAD_BOTTOM + 18}
+              textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"}
+              className="fill-charcoal-soft text-[10px]"
+            >
+              {label}
+            </text>
+          ))}
+          {tintSeries && (
+            <polygon points={tintAreaPoints} fill={tintSeries.stroke} fillOpacity={0.12} />
+          )}
+          {series.map((s) => (
+            <polyline
+              key={s.key}
+              points={s.values.map((v, i) => `${periodX(i, count)},${valueY(v, minValue, maxValue)}`).join(" ")}
+              fill="none"
+              stroke={s.stroke}
+              strokeWidth={2}
+              strokeDasharray={s.dash}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
+          {series.map((s) =>
+            s.values.map((v, i) => (
+              <circle key={`${s.key}-${i}`} cx={periodX(i, count)} cy={valueY(v, minValue, maxValue)} r={2.5} fill={s.stroke} />
+            ))
+          )}
+          {series.map((s) => (
+            <text
+              key={s.key}
+              x={CHART_WIDTH - PAD_RIGHT - 4}
+              y={endLabelY[s.key] - 6}
+              textAnchor="end"
+              fontSize={10}
+              fontWeight={700}
+              fill={s.stroke}
+              stroke="#f5f1e6"
+              strokeWidth={4}
+              paintOrder="stroke"
+            >
+              {s.label}
+            </text>
+          ))}
+        </svg>
+      </ChartScroll>
       <Legend series={series} />
     </div>
   );
@@ -244,85 +248,87 @@ export function SegmentTrajectoryChart({
 
   return (
     <div className="mt-2">
-      <svg
-        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-        className="w-full"
-        role="img"
-        aria-label={`North America vs Greater China revenue, ${periods[0]} through ${periods[periods.length - 1]}; ${markerLabel}`}
-      >
-        {gridValues.map((v, i) => (
-          <line
-            key={i}
-            x1={PAD_LEFT}
-            x2={CHART_WIDTH - PAD_RIGHT}
-            y1={valueY(v, minValue, maxValue)}
-            y2={valueY(v, minValue, maxValue)}
-            stroke="#1e3a2b"
-            strokeOpacity={0.08}
-          />
-        ))}
-        {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
-          <text
-            key={i}
-            x={PAD_LEFT - 8}
-            y={valueY(v, minValue, maxValue) + 4}
-            textAnchor="end"
-            className="fill-charcoal-soft text-[10px]"
-          >
-            {formatNikeBillions(v)}
-          </text>
-        ))}
-        {periods.map((label, i) => (
-          <text
-            key={label}
-            x={periodX(i, count)}
-            y={CHART_HEIGHT - PAD_BOTTOM + 18}
-            textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"}
-            className="fill-charcoal-soft text-[10px]"
-          >
-            {label}
-          </text>
-        ))}
-        <line
-          x1={markerX}
-          x2={markerX}
-          y1={PAD_TOP}
-          y2={CHART_HEIGHT - PAD_BOTTOM}
-          stroke="#96703e"
-          strokeWidth={1.5}
-          strokeDasharray="3 2"
-        />
-        <text
-          x={markerX}
-          y={PAD_TOP + 10}
-          textAnchor="middle"
-          fontSize={10}
-          fontWeight={700}
-          fill="#96703e"
-          stroke="#f5f1e6"
-          strokeWidth={4}
-          paintOrder="stroke"
+      <ChartScroll minWidth={CHART_WIDTH}>
+        <svg
+          viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+          className="w-full"
+          role="img"
+          aria-label={`North America vs Greater China revenue, ${periods[0]} through ${periods[periods.length - 1]}; ${markerLabel}`}
         >
-          {markerLabel}
-        </text>
-        {series.map((s) => (
-          <polyline
-            key={s.key}
-            points={s.values.map((v, i) => `${periodX(i, count)},${valueY(v, minValue, maxValue)}`).join(" ")}
-            fill="none"
-            stroke={s.stroke}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          {gridValues.map((v, i) => (
+            <line
+              key={i}
+              x1={PAD_LEFT}
+              x2={CHART_WIDTH - PAD_RIGHT}
+              y1={valueY(v, minValue, maxValue)}
+              y2={valueY(v, minValue, maxValue)}
+              stroke="#1e3a2b"
+              strokeOpacity={0.08}
+            />
+          ))}
+          {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
+            <text
+              key={i}
+              x={PAD_LEFT - 8}
+              y={valueY(v, minValue, maxValue) + 4}
+              textAnchor="end"
+              className="fill-charcoal-soft text-[10px]"
+            >
+              {formatNikeBillions(v)}
+            </text>
+          ))}
+          {periods.map((label, i) => (
+            <text
+              key={label}
+              x={periodX(i, count)}
+              y={CHART_HEIGHT - PAD_BOTTOM + 18}
+              textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"}
+              className="fill-charcoal-soft text-[10px]"
+            >
+              {label}
+            </text>
+          ))}
+          <line
+            x1={markerX}
+            x2={markerX}
+            y1={PAD_TOP}
+            y2={CHART_HEIGHT - PAD_BOTTOM}
+            stroke="#96703e"
+            strokeWidth={1.5}
+            strokeDasharray="3 2"
           />
-        ))}
-        {series.map((s) =>
-          s.values.map((v, i) => (
-            <circle key={`${s.key}-${i}`} cx={periodX(i, count)} cy={valueY(v, minValue, maxValue)} r={2.5} fill={s.stroke} />
-          ))
-        )}
-        <circle cx={markerX} cy={markerY} r={4.5} fill="none" stroke="#96703e" strokeWidth={2} />
-      </svg>
+          <text
+            x={markerX}
+            y={PAD_TOP + 10}
+            textAnchor="middle"
+            fontSize={10}
+            fontWeight={700}
+            fill="#96703e"
+            stroke="#f5f1e6"
+            strokeWidth={4}
+            paintOrder="stroke"
+          >
+            {markerLabel}
+          </text>
+          {series.map((s) => (
+            <polyline
+              key={s.key}
+              points={s.values.map((v, i) => `${periodX(i, count)},${valueY(v, minValue, maxValue)}`).join(" ")}
+              fill="none"
+              stroke={s.stroke}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
+          {series.map((s) =>
+            s.values.map((v, i) => (
+              <circle key={`${s.key}-${i}`} cx={periodX(i, count)} cy={valueY(v, minValue, maxValue)} r={2.5} fill={s.stroke} />
+            ))
+          )}
+          <circle cx={markerX} cy={markerY} r={4.5} fill="none" stroke="#96703e" strokeWidth={2} />
+        </svg>
+      </ChartScroll>
       <Legend series={series} />
     </div>
   );
@@ -387,31 +393,33 @@ export function MarginBridgeWaterfall({ steps }: { steps: MarginBridgeStep[] }) 
 
   return (
     <div className="mt-2">
-      <svg
-        viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`}
-        className="w-full"
-        role="img"
-        aria-label={`Gross margin bridge: starting 42.9%, tariff and sourcing pressure -40 bps, tariff mitigation +50 bps, inventory normalization +35 bps, mix +30 bps, other -5 bps, ending 43.6%`}
-      >
-        {positioned.map((step, i) => {
-          const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
-          const yTop = y(step.to);
-          const yBottom = y(step.from);
-          const height = Math.max(1.5, yBottom - yTop);
-          const valueLabel = step.bpsLabel;
-          return (
-            <g key={step.label}>
-              <rect x={x} y={yTop} width={barWidth} height={height} fill={fillFor(step.kind)} rx={2} />
-              <text x={x + barWidth / 2} y={yTop - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="#2a2820">
-                {valueLabel}
-              </text>
-              <foreignObject x={x - colWidth / 2 + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 6} width={colWidth} height={34}>
-                <div className="text-center text-[9px] leading-[10px] text-charcoal-soft">{step.label}</div>
-              </foreignObject>
-            </g>
-          );
-        })}
-      </svg>
+      <ChartScroll minWidth={BRIDGE_WIDTH}>
+        <svg
+          viewBox={`0 0 ${BRIDGE_WIDTH} ${BRIDGE_HEIGHT}`}
+          className="w-full"
+          role="img"
+          aria-label={`Gross margin bridge: starting 42.9%, tariff and sourcing pressure -40 bps, tariff mitigation +50 bps, inventory normalization +35 bps, mix +30 bps, other -5 bps, ending 43.6%`}
+        >
+          {positioned.map((step, i) => {
+            const x = BRIDGE_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
+            const yTop = y(step.to);
+            const yBottom = y(step.from);
+            const height = Math.max(1.5, yBottom - yTop);
+            const valueLabel = step.bpsLabel;
+            return (
+              <g key={step.label}>
+                <rect x={x} y={yTop} width={barWidth} height={height} fill={fillFor(step.kind)} rx={2} />
+                <text x={x + barWidth / 2} y={yTop - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="#2a2820">
+                  {valueLabel}
+                </text>
+                <foreignObject x={x - colWidth / 2 + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 6} width={colWidth} height={34}>
+                  <div className="text-center text-[9px] leading-[10px] text-charcoal-soft">{step.label}</div>
+                </foreignObject>
+              </g>
+            );
+          })}
+        </svg>
+      </ChartScroll>
       <div className="mt-2 flex flex-wrap gap-4">
         <span className="flex items-center gap-1.5 text-xs text-charcoal-soft">
           <span className="h-2.5 w-2.5 rounded-full bg-charcoal" /> Starting / Ending
