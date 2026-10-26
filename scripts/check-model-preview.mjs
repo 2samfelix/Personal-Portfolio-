@@ -13,6 +13,7 @@ const PREVIEWS = [
   "public/caterpillar/model-preview.json",
   "public/arm/model-preview.json",
   "public/microsoft-activision/model-preview.json",
+  "public/nike/model-preview.json",
 ];
 
 let failed = false;

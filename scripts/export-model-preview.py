@@ -21,6 +21,12 @@ The output is a read-only snapshot: nothing is recalculated in the browser. The
 workbook's SHA-256 is recorded so `npm run check:model-preview` can detect a
 workbook that changed without the JSON being regenerated.
 
+A workbook saved without cached formula results (project option `recalculate`)
+is recalculated in a temporary copy by LibreOffice: formulas, styles, widths and
+heights still come from the original, values and displayed text from the copy.
+Every exported formula must read the same in both, and every recalculated value
+must exist and must not be an error. The original is never modified.
+
 Colour-scale conditional formats (2- and 3-colour; min, max, number, percent and
 percentile thresholds) are evaluated here, as Excel does, and stored as each
 cell's fill; the preview itself never evaluates rules.
@@ -133,6 +139,43 @@ PROJECTS: dict[str, dict] = {
             },
         ],
     },
+    "nike": {
+        # A copy of the workbook from the Nike repository; the export refuses to run
+        # if the copy no longer matches the source hash recorded here.
+        "workbook": "nike-three-statement-model/model/Sam_Felix_Nike_Three_Statement_Model (4).xlsx",
+        "output": "public/nike/model-preview.json",
+        "source": {
+            "repo": "2samfelix/nike-three-statement-model",
+            "commit": "356bcae65f6be02507865391d0b54b4bf824685d",
+            "path": "Sam_Felix_Nike_Three_Statement_Model (4).xlsx",
+            "sha256": "1568052d25ed0876610b651c8e24e7afe1d9fa7a090e9f1d6280183245795d04",
+        },
+        # Saved without cached formula results: values come from a LibreOffice recalculation.
+        "recalculate": True,
+        "views": [
+            {
+                "name": "Three scenarios, one model",
+                "sheet": "Scenario Dashboard",
+                "ranges": ["A4:D11", "A14:D19"],
+                "caption": "FY2029E diluted EPS is $3.40 in the bull case, $2.39 in the base case and $0.66 in the bear case.",
+                "freeze_cols": 1,
+            },
+            {
+                "name": "Does the model beat the street?",
+                "sheet": "Scenario Dashboard",
+                "ranges": ["A23:D27"],
+                "caption": "The base case is 3.9% above consensus EPS in FY2027E and 9.3% below in FY2029E.",
+                "freeze_cols": 1,
+            },
+            {
+                "name": "Does North America offset Greater China?",
+                "sheet": "Scenario Dashboard",
+                "ranges": ["A33:B42"],
+                "caption": "Greater China loses about $1.34B of revenue between FY2026A and FY2028E. North America needs about 3.2% annual growth to offset it; the base case has 4.25%, a cushion of about $439M.",
+                "freeze_cols": 1,
+            },
+        ],
+    },
 }
 
 # Generous caps for whole-sheet tabs; every included sheet is well inside them. A
@@ -157,6 +200,8 @@ THEME: dict[int, str] = {}  # filled from the workbook by load_theme()
 
 ENTITY = re.compile(r"&(?:[A-Za-z]+|#\d+|#x[0-9A-Fa-f]+);")
 DECODED: list[str] = []  # cells whose literal HTML entities were decoded for display
+# For a recalculated workbook: each sheet's formulas as the recalculated copy holds them.
+RECALC_FORMULAS: dict = {}
 
 
 def fail(message: str) -> None:
@@ -182,11 +227,39 @@ def load_theme(workbook: Path) -> None:
             THEME[i] = f"#{m.group(1).upper()}"
 
 
-def shown_text(workbook: Path) -> dict[str, list[list[str]]]:
-    """Every sheet's cells as LibreOffice displays them, via its CSV export."""
+def soffice_path() -> str:
     soffice = shutil.which("soffice") or shutil.which("libreoffice")
     if not soffice:
-        fail("LibreOffice (soffice) is required for displayed values and was not found on PATH")
+        fail("LibreOffice (soffice) is required and was not found on PATH")
+    return soffice
+
+
+def libreoffice_version() -> str:
+    out = subprocess.run([soffice_path(), "--version"], check=True, capture_output=True, text=True, timeout=60)
+    return out.stdout.strip()
+
+
+def recalculated_copy(workbook: Path, tmp: str) -> Path:
+    """A copy of the workbook with every formula recalculated by LibreOffice, in tmp.
+    The original is only read."""
+    src = Path(tmp, "in", workbook.name)
+    src.parent.mkdir()
+    shutil.copyfile(workbook, src)
+    profile = Path(tmp, "profile").as_uri()
+    subprocess.run(
+        [soffice_path(), "--headless", "--norestore", f"-env:UserInstallation={profile}",
+         "--convert-to", "xlsx", "--outdir", str(Path(tmp, "out")), str(src)],
+        check=True, capture_output=True, timeout=300,
+    )
+    out = Path(tmp, "out", workbook.stem + ".xlsx")
+    if not out.exists():
+        fail(f"LibreOffice did not produce a recalculated copy of {workbook.name}")
+    return out
+
+
+def shown_text(workbook: Path) -> dict[str, list[list[str]]]:
+    """Every sheet's cells as LibreOffice displays them, via its CSV export."""
+    soffice = soffice_path()
     with tempfile.TemporaryDirectory() as tmp:
         profile = Path(tmp, "profile").as_uri()
         # Filter tokens: comma, double quote, UTF-8, from line 1, -, -, quoted text off,
@@ -290,10 +363,12 @@ def widths_and_hidden(ws, columns: list[int]) -> tuple[list[float], set[int]]:
     default_w = ws.sheet_format.defaultColWidth or DEFAULT_COL_WIDTH
     by_col: dict[int, float] = {}
     hidden: set[int] = set()
+    # Where the file's column definitions overlap, the first one wins, as LibreOffice
+    # applies them (definitions are read in file order).
     for dim in ws.column_dimensions.values():
         lo, hi = dim.min or column_index_from_string(dim.index), dim.max or column_index_from_string(dim.index)
         for c in range(lo, hi + 1):
-            if dim.width:
+            if dim.width and c not in by_col:
                 by_col[c] = round(float(dim.width), 2)
             if dim.hidden:
                 hidden.add(c)
@@ -334,6 +409,15 @@ def cell_entry(sheet, ws_f, ws_v, shown, r, c, pos, styles: Styles, cfg, cf_fill
         if not formula.startswith("="):
             formula = "=" + formula
     raw = ws_v.cell(r, c).value if formula else cell.value
+    if formula and RECALC_FORMULAS:
+        again = RECALC_FORMULAS[sheet].cell(r, c).value
+        again = again if isinstance(again, str) else getattr(again, "text", again)
+        if again != formula and f"={again}" != formula:
+            fail(f"{where}: formula differs after recalculation: {formula} vs {again}")
+        if raw is None:
+            fail(f"{where}: formula {formula} has no value after recalculation")
+        if ws_v.cell(r, c).data_type == "e" or (isinstance(raw, str) and raw.startswith("#")):
+            fail(f"{where}: formula {formula} recalculates to the error {raw}")
     if formula and raw is None:
         if (sheet, cell.coordinate) not in cfg.get("known_empty_text_formulas", set()):
             fail(f"{where}: formula {formula} has no cached value; open and recalculate the workbook, then save it")
@@ -588,7 +672,14 @@ def export_project(name: str, cfg: dict) -> None:
 
     load_theme(workbook)
     wb_f = openpyxl.load_workbook(workbook)
-    wb_v = openpyxl.load_workbook(workbook, data_only=True)
+    RECALC_FORMULAS.clear()
+    tmp = tempfile.TemporaryDirectory()
+    values_from = workbook
+    if cfg.get("recalculate"):
+        # Values and displayed text from a recalculated copy; formulas and styles from the original.
+        values_from = recalculated_copy(workbook, tmp.name)
+        RECALC_FORMULAS.update({ws.title: ws for ws in openpyxl.load_workbook(values_from).worksheets})
+    wb_v = openpyxl.load_workbook(values_from, data_only=True)
     wanted = cfg.get("sheets") or [v["sheet"] for v in cfg["views"]]
     missing = sorted({s for s in wanted if s not in wb_f.sheetnames})
     if missing:
@@ -597,7 +688,7 @@ def export_project(name: str, cfg: dict) -> None:
     if hidden:
         fail(f"{name}: requested sheet(s) are hidden in the workbook: {', '.join(hidden)}")
 
-    shown = shown_text(workbook)
+    shown = shown_text(values_from)
     no_csv = sorted({s for s in wanted if s not in shown})
     if no_csv:
         fail(f"{name}: LibreOffice produced no displayed values for: {', '.join(no_csv)}")
@@ -612,10 +703,16 @@ def export_project(name: str, cfg: dict) -> None:
     meta = {"file": cfg["workbook"], "sha256": digest}
     if source:
         meta["source"] = source
+    if cfg.get("recalculate"):
+        meta["values"] = {"from": "LibreOffice recalculation (the workbook stores no cached results)",
+                          "libreoffice": libreoffice_version()}
+    tmp.cleanup()
     doc = {
         "version": FORMAT_VERSION,
         "workbook": meta,
-        "note": "Read-only snapshot. Displayed text is exported from LibreOffice; nothing recalculates.",
+        "note": ("Read-only snapshot of values recalculated by LibreOffice. Displayed text is exported from "
+                 "LibreOffice; nothing recalculates on the page." if cfg.get("recalculate") else
+                 "Read-only snapshot. Displayed text is exported from LibreOffice; nothing recalculates."),
         "styles": styles.table,
         "sheets": tabs,
     }
