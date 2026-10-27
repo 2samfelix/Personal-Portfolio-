@@ -65,6 +65,90 @@ body {
   }
 }
 
+/* Home hero entrance: the headline rises in word by word (13 words: last
+   starts at 12 x 32ms = 384ms, ends by about 664ms), the photo fades in.
+   Opacity and transform only, so nothing shifts. If the animation does not
+   run, the base styles below are fully visible. */
+@keyframes hero-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.3em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hero-photo-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-word {
+  display: inline-block;
+  animation: hero-word-in 280ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 32ms);
+}
+
+.hero-photo {
+  animation: hero-photo-in 600ms ease-out both;
+}
+
+/* Scroll reveal. Only ScrollReveal.tsx sets data-reveal, and only on elements
+   that start below the fold, so nothing is hidden without JavaScript. It sets
+   --reveal-ms / --reveal-y per element and removes everything once revealed. */
+[data-reveal="pending"] {
+  opacity: 0;
+  transform: translateY(var(--reveal-y, 12px));
+}
+
+[data-reveal="shown"] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--reveal-ms, 400ms) ease-out,
+    transform var(--reveal-ms, 400ms) ease-out;
+}
+
+@media print {
+  .hero-word,
+  .hero-photo {
+    animation: none;
+  }
+
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* "How I work" band (HowIWork.tsx): printers drop the forest background, so
+     print it as dark text on white. */
+  #how-i-work,
+  #how-i-work * {
+    background: transparent !important;
+    color: #2a2820 !important;
+    border-color: #2a282033 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-word,
+  .hero-photo {
+    animation: none;
+  }
+
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 .reel-mask {
   -webkit-mask-image: linear-gradient(
     to bottom,

@@ -1,11 +1,13 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
+import ScrollReveal from "@/components/ScrollReveal";
 import WhyAnalyticsStrategy from "@/components/WhyAnalyticsStrategy";
 import WorkGrid from "@/components/WorkGrid";
 import Builds from "@/components/Builds";
 import Philosophy from "@/components/Philosophy";
 import Experience from "@/components/Experience";
 import Expertise from "@/components/Expertise";
+import HowIWork from "@/components/HowIWork";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 
@@ -17,6 +19,7 @@ export default function Home() {
         <Hero />
         <WhyAnalyticsStrategy />
         <Expertise />
+        <HowIWork />
         <WorkGrid />
         <Builds />
         <Philosophy />
@@ -24,6 +27,7 @@ export default function Home() {
         <Contact />
       </main>
       <Footer />
+      <ScrollReveal />
     </div>
   );
 }
