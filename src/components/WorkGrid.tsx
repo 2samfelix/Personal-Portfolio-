@@ -6,6 +6,7 @@ function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       href={`/projects/${project.slug}`}
+      data-reveal-item
       className={`group flex h-full flex-col overflow-hidden text-left ${CARD_LIFT}`}
     >
       <div className="h-48 w-full overflow-hidden border-b border-forest/10 bg-cream">
@@ -55,7 +56,8 @@ export default function WorkGrid() {
           each built around a real business question.
         </p>
 
-        <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Scroll-reveal hook: ScrollReveal.tsx reveals the cards one by one. */}
+        <div data-reveal-group className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {flagshipProjects.map((project) => (
             <ProjectCard key={project.slug} project={project} />
           ))}
