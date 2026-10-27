@@ -115,23 +115,6 @@ body {
     transform var(--reveal-ms, 400ms) ease-out;
 }
 
-/* Proof strip count-up (ProofStrip.tsx). The server HTML shows the final
-   figures. An inline script adds .countup-pending to <html> before the figures
-   are parsed (only with JavaScript, IntersectionObserver and no reduced
-   motion), so they first paint at their starting values; each figure shows
-   its own live value from the moment its count-up starts (data-count-started). */
-.proof-zero {
-  display: none;
-}
-
-.countup-pending [data-count]:not([data-count-started]) .proof-zero {
-  display: block;
-}
-
-.countup-pending [data-count]:not([data-count-started]) .proof-live {
-  visibility: hidden;
-}
-
 @media print {
   .hero-word,
   .hero-photo {
@@ -143,12 +126,13 @@ body {
     transform: none !important;
   }
 
-  .countup-pending [data-count]:not([data-count-started]) .proof-zero {
-    display: none;
-  }
-
-  .countup-pending [data-count]:not([data-count-started]) .proof-live {
-    visibility: visible;
+  /* "How I work" band (HowIWork.tsx): printers drop the forest background, so
+     print it as dark text on white. */
+  #how-i-work,
+  #how-i-work * {
+    background: transparent !important;
+    color: #2a2820 !important;
+    border-color: #2a282033 !important;
   }
 }
 
@@ -162,14 +146,6 @@ body {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
-  }
-
-  .countup-pending [data-count]:not([data-count-started]) .proof-zero {
-    display: none;
-  }
-
-  .countup-pending [data-count]:not([data-count-started]) .proof-live {
-    visibility: visible;
   }
 }
 
