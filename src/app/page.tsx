@@ -18,10 +18,10 @@ export default function Home() {
       <main className="flex flex-1 flex-col">
         <Hero />
         <WhyAnalyticsStrategy />
-        <Expertise />
         <HowIWork />
         <WorkGrid />
         <Builds />
+        <Expertise />
         <Philosophy />
         <Experience />
         <Contact />
