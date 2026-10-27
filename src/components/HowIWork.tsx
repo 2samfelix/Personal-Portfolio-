@@ -27,7 +27,7 @@ const STEPS = [
     project: "Microsoft × Activision",
     proof: "",
     figure: "$3.64B",
-    after: " of annual synergies needed for EPS-neutral",
+    after: " of annual pre-tax synergies needed for EPS-neutral",
     href: "/projects/microsoft-activision#inside-the-deal-model",
   },
   {
