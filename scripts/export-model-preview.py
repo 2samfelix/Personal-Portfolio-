@@ -176,6 +176,48 @@ PROJECTS: dict[str, dict] = {
             },
         ],
     },
+    "monday-operating-plan": {
+        # The locked operating plan (release plan-2026-locked); the export refuses to
+        # run if the copy no longer matches the source hash recorded here.
+        "workbook": "monday-operating-plan/model/monday_plan.xlsx",
+        "output": "public/monday-operating-plan/model-preview.json",
+        "source": {
+            "repo": "2samfelix/monday-operating-plan",
+            "commit": "07a7363a73848a491c870ef22a602378181373d2",
+            "path": "monday_plan.xlsx",
+            "sha256": "125af68742c9d3501cd2f23944899cc4625cf5285e79ba9ea2bee34f24315419",
+        },
+        # Whole sheets, in tab order (Executive_Summary first).
+        "sheets": ["Executive_Summary", "Scenarios", "Revenue_Build", "Cash_FCF", "Recommendation", "Assumptions"],
+        # The workbook's header cells are left-aligned text over right-aligned numbers.
+        # In the preview, a header cell whose column holds a number directly beneath it
+        # is right-aligned over that number (display only; values are untouched).
+        "header_fill_align_right": "#1F3864",
+    },
+    "monday-q3-call": {
+        # The locked Q3 2026 call (release q3-2026-call-locked). Not shown as a preview:
+        # the project page reads its scorecard values and guidance from these views.
+        "workbook": "monday-operating-plan/model/monday_q3_call.xlsx",
+        "output": "public/monday-operating-plan/q3-call.json",
+        "source": {
+            "repo": "2samfelix/monday-operating-plan",
+            "commit": "60e293208ae461a1dd09ace5e80b500c9e334b12",
+            "path": "monday_q3_call.xlsx",
+            "sha256": "49463d1fbb678fd26b59c3c81e70cb52613a4a73906b846bcaaf034be76bb722",
+        },
+        "views": [
+            {"name": "Scorecard", "sheet": "Scorecard", "ranges": ["A4:I12"],
+             "caption": "Locked low, mid and high calls for Q3 2026; actuals blank until results."},
+            {"name": "Revenue guidance", "sheet": "Revenue", "ranges": ["A10:H11", "A46:D46"],
+             "caption": "Q3 2026 revenue guidance of August 10, 2026 and its midpoint."},
+            {"name": "Operating income guidance", "sheet": "OpIncome_Margin", "ranges": ["A10:H11", "A83:D83", "A93:D93"],
+             "caption": "Q3 2026 operating income guidance of August 10, 2026, its midpoint, and the derived margin."},
+            {"name": "cRPO call", "sheet": "cRPO", "ranges": ["A26:H26"],
+             "caption": "Current RPO: no call registered."},
+            {"name": "Adjusted FCF call", "sheet": "Adj_FCF", "ranges": ["A38:H38"],
+             "caption": "Adjusted free cash flow: no call registered."},
+        ],
+    },
 }
 
 # Generous caps for whole-sheet tabs; every included sheet is well inside them. A
@@ -565,6 +607,10 @@ def export_sheet(sheet, ws_f, ws_v, shown, styles: Styles, cfg) -> dict:
             if entry:
                 cells.append(entry)
 
+    header_fill = cfg.get("header_fill_align_right")
+    if header_fill:
+        cells = right_align_headers(cells, styles, header_fill)
+
     return {
         "name": sheet,
         "rows": rows,
@@ -578,6 +624,24 @@ def export_sheet(sheet, ws_f, ws_v, shown, styles: Styles, cfg) -> dict:
         "merges": merges,
         "cells": cells,
     }
+
+
+def right_align_headers(cells: list[dict], styles: Styles, fill: str) -> list[dict]:
+    """Right-aligns a header cell (text on the given fill, no alignment of its own)
+    when the first entry beneath it in its column is a number, so the header sits
+    over its figures. Display only: values, formulas and displayed text are unchanged."""
+    by_pos = {(c["r"], c["c"]): c for c in cells}
+    last_row = max((c["r"] for c in cells), default=0)
+    out = []
+    for c in cells:
+        style = styles.table[c.get("s", 0)]
+        if isinstance(c.get("v"), str) and c["v"] and style.get("fill") == fill and not style.get("align", {}).get("h"):
+            below = next((by_pos[(r, c["c"])] for r in range(c["r"] + 1, last_row + 1) if (r, c["c"]) in by_pos), None)
+            v = below.get("v") if below else None
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                c = {**c, "s": styles.id({**style, "align": {**style.get("align", {}), "h": "right"}})}
+        out.append(c)
+    return out
 
 
 def export_view(view, ws_f, ws_v, shown, styles: Styles, cfg) -> dict:

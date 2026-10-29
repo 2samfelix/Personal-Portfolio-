@@ -14,6 +14,8 @@ const PREVIEWS = [
   "public/arm/model-preview.json",
   "public/microsoft-activision/model-preview.json",
   "public/nike/model-preview.json",
+  "public/monday-operating-plan/model-preview.json",
+  "public/monday-operating-plan/q3-call.json",
 ];
 
 let failed = false;
