@@ -14,8 +14,8 @@ export default function ProjectPage({
   next,
 }: {
   project: Project;
-  prev: Project;
-  next: Project;
+  prev?: Project;
+  next?: Project;
 }) {
   const cs = project.caseStudy;
 
@@ -197,18 +197,24 @@ export default function ProjectPage({
 
         {/* Prev / Next */}
         <nav className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
-          <Link
-            href={`/projects/${prev.slug}`}
+          {prev ? (
+            <Link href={`/projects/${prev.slug}`}
             className="text-sm font-semibold text-charcoal-soft hover:text-charcoal"
           >
-            &larr; Previous Project
-          </Link>
-          <Link
-            href={`/projects/${next.slug}`}
+              &larr; Previous Project
+            </Link>
+          ) : (
+            <span />
+          )}
+          {next ? (
+            <Link href={`/projects/${next.slug}`}
             className="text-sm font-semibold text-charcoal-soft hover:text-charcoal"
           >
-            Next Project &rarr;
-          </Link>
+              Next Project &rarr;
+            </Link>
+          ) : (
+            <span />
+          )}
         </nav>
       </div>
     </main>
