@@ -97,6 +97,13 @@ body {
     transform: none !important;
   }
 
+  /* monday.com project hero (MondayPlanProjectPage.tsx): cream text and a light
+     chart on forest, so the band keeps its background in print. */
+  #monday-hero {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   /* "How I work" band (HowIWork.tsx): printers drop the forest background, so
      print it as dark text on white. */
   #how-i-work,

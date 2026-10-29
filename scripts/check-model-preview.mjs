@@ -16,6 +16,7 @@ const PREVIEWS = [
   "public/nike/model-preview.json",
   "public/monday-operating-plan/model-preview.json",
   "public/monday-operating-plan/q3-call.json",
+  "public/monday-operating-plan/plan-data.json",
 ];
 
 let failed = false;

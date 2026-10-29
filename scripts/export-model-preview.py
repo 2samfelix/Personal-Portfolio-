@@ -194,6 +194,24 @@ PROJECTS: dict[str, dict] = {
         # is right-aligned over that number (display only; values are untouched).
         "header_fill_align_right": "#1F3864",
     },
+    "monday-plan-data": {
+        # The locked operating plan again (same pinned file): views the project page's
+        # charts read but the Model Preview does not show.
+        "workbook": "monday-operating-plan/model/monday_plan.xlsx",
+        "output": "public/monday-operating-plan/plan-data.json",
+        "source": {
+            "repo": "2samfelix/monday-operating-plan",
+            "commit": "07a7363a73848a491c870ef22a602378181373d2",
+            "path": "monday_plan.xlsx",
+            "sha256": "125af68742c9d3501cd2f23944899cc4625cf5285e79ba9ea2bee34f24315419",
+        },
+        "views": [
+            {"name": "Revenue growth history", "sheet": "Trigger_History", "ranges": ["A5:D27"],
+             "caption": "Quarterly revenue and growth, Q1 2021 to Q2 2026."},
+            {"name": "Operating margin by quarter", "sheet": "Opex", "ranges": ["A4:J5", "A17:J17", "A19:J19", "A32:J32"],
+             "caption": "Non-GAAP operating margin by quarter, Base and Downside."},
+        ],
+    },
     "monday-q3-call": {
         # The locked Q3 2026 call (release q3-2026-call-locked). Not shown as a preview:
         # the project page reads its scorecard values and guidance from these views.
