@@ -285,6 +285,21 @@ export const flagshipProjects: Project[] = [
     visual: "/project-visuals/fpa-intelligence-engine.svg",
     githubUrl: "https://github.com/2samfelix/fpa-intelligence-engine",
   },
+  {
+    slug: "monday-operating-plan",
+    title: "monday.com Operating Plan & Rolling Reforecast",
+    category: "Operating Plan, Scenarios & Pre-Registered Forecast",
+    description:
+      "A quarterly operating plan for monday.com with a Base and a Downside case, trigger metrics for management action, and a Q3 2026 forecast locked before the results.",
+    summary:
+      "If growth decelerates faster than guided, how should management adjust hiring and operating spend? A plan and a Q3 forecast, both locked before the November 9, 2026 results.",
+    tools: ["Strategic FP&A", "Scenario analysis", "Cash / FCF"],
+    year: "2026",
+    status: "live",
+    icon: "06",
+    visual: "/project-visuals/monday-operating-plan.webp",
+    githubUrl: "https://github.com/2samfelix/monday-operating-plan",
+  },
 ];
 
 export const builds: Project[] = [

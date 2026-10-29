@@ -8,6 +8,7 @@ import ArmProjectPage from "@/components/ArmProjectPage";
 import MicrosoftActivisionProjectPage from "@/components/MicrosoftActivisionProjectPage";
 import CaterpillarProjectPage from "@/components/CaterpillarProjectPage";
 import EngineProjectPage from "@/components/EngineProjectPage";
+import MondayPlanProjectPage from "@/components/MondayPlanProjectPage";
 import {
   flagshipProjects,
   getAdjacentProjects,
@@ -57,6 +58,8 @@ export default async function Page({
         <CaterpillarProjectPage project={project} prev={prev} next={next} />
       ) : slug === "fpa-intelligence-engine" ? (
         <EngineProjectPage project={project} prev={prev} next={next} />
+      ) : slug === "monday-operating-plan" ? (
+        <MondayPlanProjectPage project={project} prev={prev} next={next} />
       ) : (
         <ProjectPage project={project} prev={prev} next={next} />
       )}
