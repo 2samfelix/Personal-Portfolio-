@@ -162,7 +162,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
           >
             &larr; Back to Projects
           </Link>
-          <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center">
+          <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
             <div>
               <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
                 {TAGS.map((t) => (
@@ -220,9 +220,12 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
         {/* Plan: 60-second summary and the management question */}
         <section id="plan" aria-labelledby="summary-heading" className={`mt-16 ${SECTION}`}>
           <SectionHeading id="summary-heading" eyebrow="Plan">60-second summary</SectionHeading>
-          <ol className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <ol className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
             {summary.map((s, i) => (
-              <li key={i} className="flex flex-col gap-2 rounded-2xl border border-forest/15 bg-white p-5">
+              <li
+                key={i}
+                className={`flex flex-col gap-2 rounded-2xl border border-forest/15 bg-white p-6 ${i < 3 ? "lg:col-span-2" : "lg:col-span-3"} ${i === 4 ? "sm:col-span-2" : ""}`}
+              >
                 <span aria-hidden="true" className={`text-2xl font-black tabular-nums ${LABEL}`}>
                   {i + 1}
                 </span>
@@ -235,15 +238,15 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
           </p>
 
           <figure className="mt-14 border-t border-forest/10 pt-10">
-            <span aria-hidden="true" className={`block text-6xl font-black leading-none ${LABEL}`}>
+            <figcaption className={`text-sm font-semibold uppercase tracking-widest ${LABEL}`}>
+              <h2 id="question-heading" className="inline">Management question</h2>
+            </figcaption>
+            <span aria-hidden="true" className={`mt-4 block text-6xl font-black leading-none ${LABEL}`}>
               &ldquo;
             </span>
             <blockquote className="mt-2 max-w-4xl text-2xl font-semibold leading-10 tracking-tight text-charcoal sm:text-3xl sm:leading-[1.35]">
               {plan.question}
             </blockquote>
-            <figcaption className={`mt-4 text-sm font-semibold uppercase tracking-widest ${LABEL}`}>
-              <h2 id="question-heading" className="inline">Management question</h2>
-            </figcaption>
           </figure>
         </section>
 

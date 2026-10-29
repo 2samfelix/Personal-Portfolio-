@@ -132,7 +132,7 @@ const V = ({ c }: { c: CellValue }) => <span {...num(c)}>{c.d}</span>;
 
 function GrowthSvg({ g, w, h, compact, titleId }: { g: MondayCharts["growth"]; w: number; h: number; compact: boolean; titleId: string }) {
   const n = g.history.length + g.base.length;
-  const pad = { l: compact ? 10 : 14, r: compact ? 78 : 92, t: 34, b: 34 };
+  const pad = { l: compact ? 10 : 14, r: compact ? 80 : 104, t: 34, b: 34 };
   const values = [...g.history.map((p) => p.value.v), ...g.base.map((p) => p.value.v), ...g.downside.map((p) => p.value.v)];
   const y = linear(0, Math.max(...values), h - pad.b, pad.t);
   const x = linear(0, n - 1, pad.l, w - pad.r);
@@ -143,7 +143,7 @@ function GrowthSvg({ g, w, h, compact, titleId }: { g: MondayCharts["growth"]; w
   const basePts = [histPts[last], ...pts(g.base, g.history.length)];
   const downPts = [histPts[last], ...pts(g.downside, g.history.length)];
   const d = (p: readonly (readonly [number, number])[]) => p.map(([a, b], i) => `${i ? "L" : "M"}${r2(a)},${r2(b)}`).join(" ");
-  const fs = compact ? 13 : 13;
+  const fs = compact ? 13 : 14;
   const baseEnd = g.base[g.base.length - 1];
   const downEnd = g.downside[g.downside.length - 1];
   const first = g.history[0];
@@ -215,10 +215,10 @@ export function GrowthChart({ g }: { g: MondayCharts["growth"] }) {
     >
       {/* Wide chart beside the title from lg; a simplified, larger-type version below. */}
       <div className="hidden lg:block">
-        <GrowthSvg g={g} w={520} h={300} compact={false} titleId="growth-title" />
+        <GrowthSvg g={g} w={600} h={360} compact={false} titleId="growth-title" />
       </div>
       <div className="mx-auto max-w-[30rem] lg:hidden">
-        <GrowthSvg g={g} w={340} h={250} compact titleId="growth-title" />
+        <GrowthSvg g={g} w={340} h={270} compact titleId="growth-title" />
       </div>
     </ChartFigure>
   );
@@ -419,10 +419,11 @@ function money(unit: string, c: CellValue) {
 }
 
 function RangeSvg({ ranges, w }: { ranges: MondayCharts["ranges"]; w: number }) {
-  const rowH = 104;
+  const rowH = 126;
   const h = ranges.length * rowH;
   const actualX = w - 30;
   const pad = { l: 8, r: 74 };
+  const CHAR_PX = 7.2; // approximate width of a 13px Arial character, to keep labels inside the chart
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="block h-auto w-full" role="img" aria-labelledby="ranges-title" style={{ fontFamily: FONT }}>
       {ranges.map((m, i) => {
@@ -432,11 +433,29 @@ function RangeSvg({ ranges, w }: { ranges: MondayCharts["ranges"]; w: number }) 
         const span = hi - lo;
         const x = linear(lo - span * 0.12, hi + span * 0.12, pad.l, w - pad.r);
         const axis = `range-${w}-${i}`;
-        const barY = top + 40;
+        const barY = top + 50;
+        // Low and high values sit outside the bar's ends when there is room, so they never meet.
+        const lowText = money(m.unit, m.low);
+        const highText = money(m.unit, m.high);
+        const lowOut = x(m.low.v) - 4 - lowText.length * CHAR_PX >= pad.l;
+        const highOut = x(m.high.v) + 4 + highText.length * CHAR_PX <= actualX - 34; // clear of the centred "Actual:" label
+        const tickTop = barY - 16;
+        const tickBottom = barY + 32;
+        // Faint ticks at the ends of the locked range and of the guidance band: one visible scale per metric.
+        const ticks = [m.low, m.high, ...(m.guidance ? [m.guidance.low, m.guidance.high] : [])];
+        let guide: { x: number; anchor: "start" | "end" } | null = null;
+        if (m.guidance) {
+          const text = `Guide ${money(m.unit, m.guidance.low)} to ${money(m.unit, m.guidance.high)}`;
+          const startX = x(m.guidance.low.v);
+          guide = startX + text.length * CHAR_PX <= w - 4 ? { x: startX, anchor: "start" } : { x: x(m.guidance.high.v), anchor: "end" };
+        }
         return (
           <g key={m.metric}>
             <text x={pad.l} y={top + 18} fontSize={15} fontWeight={700} fill={C.ink} data-label="row label">{m.metric}</text>
-            {m.guidance && (
+            {ticks.map((t, k) => (
+              <line key={k} x1={r2(x(t.v))} x2={r2(x(t.v))} y1={tickTop} y2={tickBottom} stroke={C.grid} strokeWidth={1} {...mark(t, axis, x(t.v))} />
+            ))}
+            {m.guidance && guide && (
               <g>
                 <rect
                   x={r2(x(m.guidance.low.v))}
@@ -447,17 +466,18 @@ function RangeSvg({ ranges, w }: { ranges: MondayCharts["ranges"]; w: number }) 
                   {...mark(m.guidance.low, axis, x(m.guidance.low.v))}
                 />
                 <rect x={r2(x(m.guidance.high.v)) - 1} y={barY - 8} width={1} height={30} fill={C.brassPale} {...mark(m.guidance.high, axis, x(m.guidance.high.v))} />
-                <text x={pad.l} y={barY + 44} fontSize={13} fill={C.brassDark}>
-                  Guidance <tspan {...num(m.guidance.low)}>{money(m.unit, m.guidance.low)}</tspan>–<tspan {...num(m.guidance.high)}>{money(m.unit, m.guidance.high)}</tspan>
+                {/* The band's label, in place: under the band, aligned to it. */}
+                <text x={r2(guide.x)} y={barY + 48} textAnchor={guide.anchor} fontSize={13} fill={C.brassDark}>
+                  Guide <tspan {...num(m.guidance.low)}>{money(m.unit, m.guidance.low)}</tspan> to <tspan {...num(m.guidance.high)}>{money(m.unit, m.guidance.high)}</tspan>
                 </text>
               </g>
             )}
             <rect x={r2(x(m.low.v))} y={barY} width={r2(x(m.high.v) - x(m.low.v))} height={14} rx={7} fill={C.forest} {...mark(m.low, axis, x(m.low.v))} />
             <rect x={r2(x(m.high.v)) - 1} y={barY} width={1} height={14} fill={C.forest} {...mark(m.high, axis, x(m.high.v))} />
             <rect x={r2(x(m.mid.v)) - 1.5} y={barY - 6} width={3} height={26} fill={C.ink} {...mark(m.mid, axis, x(m.mid.v))} />
-            <text x={r2(x(m.low.v))} y={barY + 28} fontSize={13} fill={C.ink} {...num(m.low)}>{money(m.unit, m.low)}</text>
+            <text x={r2(lowOut ? x(m.low.v) - 4 : x(m.low.v))} y={barY + 30} textAnchor={lowOut ? "end" : "start"} fontSize={13} fill={C.ink} {...num(m.low)}>{lowText}</text>
             <text x={r2(x(m.mid.v))} y={barY - 11} textAnchor="middle" fontSize={13} fontWeight={700} fill={C.ink} {...num(m.mid)}>{money(m.unit, m.mid)}</text>
-            <text x={r2(x(m.high.v))} y={barY + 28} textAnchor="end" fontSize={13} fill={C.ink} {...num(m.high)}>{money(m.unit, m.high)}</text>
+            <text x={r2(highOut ? x(m.high.v) + 4 : x(m.high.v))} y={barY + 30} textAnchor={highOut ? "start" : "end"} fontSize={13} fill={C.ink} {...num(m.high)}>{highText}</text>
             {/* Empty marker: the actual is not known until November 9. */}
             <circle cx={actualX} cy={barY + 7} r={9} fill="none" stroke={C.soft} strokeWidth={2} strokeDasharray="3 3" />
             <text x={actualX} y={barY + 34} textAnchor="middle" fontSize={13} fill={C.soft}>Actual:</text>
@@ -474,7 +494,7 @@ export function RangeChart({ ranges }: { ranges: MondayCharts["ranges"] }) {
     <ChartFigure
       id="ranges"
       title="The locked Q3 call is a range for each metric; the actuals are not known yet."
-      caption="Dark bar: locked low to high, with the mid as a tick. Tan band: the company's August 10 guidance, where it gave one. Each metric has its own scale. The empty circle is where the actual will go after November 9."
+      caption="Dark bar: locked low to high, with the mid as a tick. Tan band: the company's August 10 guidance, where it gave one. Faint ticks mark the ends of the bar and the band on each metric's own scale. The empty circle is where the actual will go after November 9."
       table={
         <DataTable
           head={["Metric", "Guidance", "Locked low", "Locked mid", "Locked high", "Actual"]}
@@ -517,7 +537,8 @@ function BreakevenSvg({ rows, w }: { rows: MondayCharts["breakeven"]; w: number 
     y0 += 70 + l.length * 16;
   }
   const h = y0;
-  const pad = { l: 8, r: 70 };
+  // Room on the right for "<value> breakeven loss" beside the longest bar.
+  const pad = { l: 8, r: w < 400 ? 140 : 170 };
   const max = Math.max(...rows.map((r) => r.loss.v));
   const x = linear(0, max, pad.l, w - pad.r);
   const axis = `breakeven-${w}`;
@@ -540,7 +561,7 @@ function BreakevenSvg({ rows, w }: { rows: MondayCharts["breakeven"]; w: number 
             </text>
             <rect x={pad.l} y={top + 48} width={r2(x(r.loss.v) - pad.l)} height={18} rx={3} fill={C.brassDark} {...mark(r.loss, axis, x(r.loss.v))} />
             <text x={r2(x(r.loss.v) + 6)} y={top + 62} fontSize={13} fill={C.brassDark}>
-              <tspan fontWeight={700} {...num(r.loss)}>{r.loss.d}</tspan>
+              <tspan fontWeight={700} {...num(r.loss)}>{r.loss.d}</tspan> breakeven loss
             </text>
           </g>
         );
