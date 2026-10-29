@@ -19,7 +19,8 @@
     "caterpillar:pdf": "node caterpillar-demand-quality/build/render-pdf.mjs",
     "caterpillar:deck": "node caterpillar-demand-quality/build/render-deck.mjs",
     "caterpillar:build": "npm run caterpillar:exhibits && npm run caterpillar:exhibit5 && npm run caterpillar:pdf && npm run caterpillar:deck",
-    "check:engine-trace": "node scripts/check-engine-trace.mjs"
+    "check:engine-trace": "node scripts/check-engine-trace.mjs",
+    "test:monday-charts": "python3 scripts/test-monday-charts.py"
   },
   "dependencies": {
     "next": "16.2.12",

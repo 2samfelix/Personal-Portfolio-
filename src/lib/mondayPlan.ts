@@ -10,12 +10,15 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { displayText, indexCells, type ModelPreviewDoc, type PreviewSheet, type SheetCell } from "@/lib/modelPreview";
+import { colLetter, displayText, indexCells, sheetCol, sheetRow, type ModelPreviewDoc, type PreviewSheet, type SheetCell } from "@/lib/modelPreview";
 import planJson from "../../public/monday-operating-plan/model-preview.json";
 import q3Json from "../../public/monday-operating-plan/q3-call.json";
+import planDataJson from "../../public/monday-operating-plan/plan-data.json";
 
 export const PLAN_DOC = planJson as unknown as ModelPreviewDoc;
 const Q3_DOC = q3Json as unknown as ModelPreviewDoc;
+/** Chart-only views of the same locked plan workbook. */
+const PLAN_DATA_DOC = planDataJson as unknown as ModelPreviewDoc;
 
 const REPO = "2samfelix/monday-operating-plan";
 
@@ -64,6 +67,7 @@ export const REPO_URL = `https://github.com/${REPO}`;
 export const README_URL = `https://github.com/${REPO}/blob/main/README.md`;
 /** As stated in the plan-2026-locked Release. */
 export const RESULTS_DATE = "November 9, 2026, 8:30 a.m. ET";
+export const RESULTS_DATE_SHORT = "Nov 9, 8:30 a.m. ET";
 
 // Limits, from the repository README ("Limits").
 export const LIMITS = [
@@ -91,6 +95,7 @@ export function verifyPins(): void {
   const checks: [string, string, ModelPreviewDoc | null, string][] = [
     ["monday-operating-plan/model/monday_plan.xlsx", PLAN_FILE, PLAN_DOC, PLAN_SHA256],
     ["monday-operating-plan/model/monday_q3_call.xlsx", Q3_CALL_FILE, Q3_DOC, Q3_CALL_SHA256],
+    ["monday-operating-plan/model/monday_plan.xlsx", PLAN_FILE, PLAN_DATA_DOC, PLAN_SHA256],
     [`public${PLAN_DOWNLOAD_PATH}`, DOWNLOAD_FILE, null, PLAN_SHA256],
   ];
   for (const [file, path, doc, pin] of checks) {
@@ -101,8 +106,9 @@ export function verifyPins(): void {
     if (doc && doc.workbook.source?.sha256 !== pin) fail(`${file}: the preview JSON's source hash does not match the pinned ${pin}`);
   }
   for (const r of RELEASES) {
-    const doc = r.file === "monday_plan.xlsx" ? PLAN_DOC : Q3_DOC;
-    if (doc.workbook.source?.commit !== r.commit) fail(`${r.file}: exported from ${doc.workbook.source?.commit}, not the ${r.tag} commit ${r.commit}`);
+    for (const doc of r.file === "monday_plan.xlsx" ? [PLAN_DOC, PLAN_DATA_DOC] : [Q3_DOC]) {
+      if (doc.workbook.source?.commit !== r.commit) fail(`${r.file}: exported from ${doc.workbook.source?.commit}, not the ${r.tag} commit ${r.commit}`);
+    }
   }
 }
 
@@ -290,3 +296,153 @@ export function loadMondayPlan() {
   }
   return cached;
 }
+
+// --- Chart data ------------------------------------------------------------------
+// Each value keeps its raw number (for geometry), the text the workbook shows (for
+// labels) and its cell reference, so every drawn mark can be checked against the
+// workbook (scripts/test-monday-charts.py).
+
+export type Workbook = "plan" | "q3";
+export type CellValue = { v: number; d: string; ref: string; wb: Workbook };
+
+function refOf(t: Tab, r: number, c: number): string {
+  const sheet = t.sheet.sheet ?? t.sheet.name;
+  return `${sheet}!${colLetter(sheetCol(t.sheet, c))}${(sheetRow(t.sheet, r) ?? 0) + 1}`;
+}
+
+function num(t: Tab, r: number, c: number, wb: Workbook = "plan"): CellValue {
+  const x = cell(t, r, c);
+  if (typeof x?.v !== "number") fail(`${refOf(t, r, c)} is not a number`);
+  return { v: x.v, d: displayText(x).trim(), ref: refOf(t, r, c), wb };
+}
+
+/** The first row labelled `label` after the row whose first column starts with `section`. */
+function rowAfter(t: Tab, section: string, label: string): number {
+  const start = row(t, section, true);
+  const hit = t.sheet.cells
+    .filter((c) => c.c === 0 && c.r > start && displayText(c).trim() === label)
+    .sort((a, b) => a.r - b.r)[0];
+  if (!hit) fail(`${t.sheet.name}: no "${label}" row after "${section}"`);
+  return hit.r;
+}
+
+const QUARTER_COLS = [4, 5, 6, 7, 8, 9]; // Q3 2026 ... Q4 2027 (columns E:J)
+
+function readCharts() {
+  const es = tab(PLAN_DOC, "Executive_Summary");
+  const rb = tab(PLAN_DOC, "Revenue_Build");
+  const sc = tab(PLAN_DOC, "Scenarios");
+  const hist = tab(PLAN_DATA_DOC, "Revenue growth history");
+  const om = tab(PLAN_DATA_DOC, "Operating margin by quarter");
+  const q3 = tab(Q3_DOC, "Scorecard");
+  const qRev = tab(Q3_DOC, "Revenue guidance");
+  const qOi = tab(Q3_DOC, "Operating income guidance");
+
+  // Column headers of the quarterly blocks (Q1 2026A ... Q4 2027).
+  const BASE = "BASE";
+  const DOWN = "DOWNSIDE (before management response)";
+  const headRow = rowAfter(rb, BASE, "Line");
+  const quarters = QUARTER_COLS.map((c) => text(rb, headRow, c));
+
+  // 1. Growth history (YoY revenue growth, quarters with a value) and the two plan paths.
+  const history = hist.sheet.cells
+    .filter((c) => c.c === 0 && typeof c.v === "string" && /^Q\d \d{4}$/.test(c.v))
+    .flatMap((c) => (typeof cell(hist, c.r, 3)?.v === "number" ? [{ quarter: displayText(c), value: num(hist, c.r, 3) }] : []));
+  if (history.length < 8) fail("revenue growth history is too short");
+  const path = (section: string) => {
+    const r = rowAfter(rb, section, "Revenue YoY growth");
+    return QUARTER_COLS.map((c, i) => ({ quarter: quarters[i], value: num(rb, r, c) }));
+  };
+  const lastActual = history[history.length - 1];
+  const growth = { history, base: path(BASE), downside: path(DOWN), lastActual };
+
+  // 2. Base vs Downside by quarter: revenue and operating margin.
+  const revenue = (section: string) => {
+    const r = rowAfter(rb, section, "Revenue");
+    return QUARTER_COLS.map((c, i) => ({ quarter: quarters[i], value: num(rb, r, c) }));
+  };
+  const omHead = rowAfter(om, BASE, "Line");
+  QUARTER_COLS.forEach((c, i) => {
+    if (text(om, omHead, c) !== quarters[i]) fail("Opex quarter columns differ from Revenue_Build");
+  });
+  const margin = (section: string) => {
+    const r = rowAfter(om, section, "Operating margin (non-GAAP)");
+    return QUARTER_COLS.map((c, i) => ({ quarter: quarters[i], value: num(om, r, c) }));
+  };
+  const downMargin = margin(DOWN);
+  const lowest = downMargin.reduce((a, b) => (b.value.v < a.value.v ? b : a));
+  const gapPct = num(es, row(es, "Base-Downside FY27 revenue gap, % of Base"), 1);
+  const gapX = num(es, row(es, "Gap / average 4-quarter-ahead backtest miss"), 1);
+  const quarterly = {
+    quarters,
+    revenue: { base: revenue(BASE), downside: revenue(DOWN) },
+    margin: { base: margin(BASE), downside: downMargin },
+    lowest,
+    gapPct,
+    gapX,
+  };
+
+  // 3. Bridge: FY27 Base operating income to Downside.
+  const bridgeRow = (label: string) => {
+    const r = row(sc, label);
+    return { label, value: num(sc, r, 1) };
+  };
+  const bridge = {
+    title: text(sc, row(sc, "Bridge: Base -> Downside FY2027 non-GAAP operating income"), 0),
+    start: bridgeRow("Base FY2027 operating income"),
+    steps: [
+      bridgeRow("Revenue volume effect (lower revenue x Base gross margin)"),
+      bridgeRow("Gross margin rate effect"),
+      bridgeRow("Operating expense effect (dollars held at Base)"),
+    ],
+    end: bridgeRow("Downside FY2027 operating income"),
+  };
+
+  // 4. Scorecard ranges (locked low / mid / high) and guidance bands.
+  const locked = (label: string) => {
+    const r = row(q3, label);
+    return { unit: text(q3, r, 1), low: num(q3, r, 2, "q3"), mid: num(q3, r, 3, "q3"), high: num(q3, r, 4, "q3") };
+  };
+  const band = (t: Tab, low: string, high: string) => ({ low: num(t, row(t, low), 2, "q3"), high: num(t, row(t, high), 2, "q3") });
+  const ranges = [
+    { metric: "Revenue", ...locked("Revenue (USD m)"), guidance: band(qRev, "Q3 2026 revenue guidance - low (USD m)", "Q3 2026 revenue guidance - high (USD m)") },
+    {
+      metric: "Non-GAAP operating income",
+      ...locked("Non-GAAP operating income (USD m)"),
+      guidance: band(qOi, "Q3 2026 non-GAAP op. income guidance - low (USD m)", "Q3 2026 non-GAAP op. income guidance - high (USD m)"),
+    },
+    { metric: "Derived operating margin", ...locked("Non-GAAP operating margin (derived from calls)"), guidance: null },
+    { metric: "Net dollar retention", ...locked("All-customer net dollar retention"), guidance: null },
+    { metric: "Customers above $50K ARR", ...locked("Paid customers >$50k ARR"), guidance: null },
+  ];
+
+  // 5. Breakeven bars.
+  const beHead = row(es, "Management response (from start quarter)");
+  if (text(es, beHead, 2) !== "FY27 saving" || text(es, beHead, 3) !== "Breakeven loss") fail("breakeven columns moved");
+  const breakeven = ["Lever 1: R&D+G&A 5% below plan", "Lever 2: S&M 10% below plan (conditional on T3)", "Both levers"].map((label) => {
+    const r = row(es, label);
+    return { label, saving: num(es, r, 2), loss: num(es, r, 3) };
+  });
+
+  // Number strip.
+  const marginRow = row(es, "Non-GAAP operating margin");
+  const revRow = row(es, "Revenue");
+  const strip = { baseMargin: num(es, marginRow, 2), downMargin: num(es, marginRow, 4), baseRevenue: num(es, revRow, 2), downRevenue: num(es, revRow, 4), gapPct, gapX };
+
+  return { growth, quarterly, bridge, ranges, breakeven, strip };
+}
+
+export type MondayCharts = ReturnType<typeof readCharts>;
+let chartsCached: MondayCharts | null = null;
+
+/** Verifies the pins, then reads the chart data. Called at build time. */
+export function loadMondayCharts(): MondayCharts {
+  if (!chartsCached) {
+    verifyPins();
+    chartsCached = readCharts();
+  }
+  return chartsCached;
+}
+
+/** Results release time: November 9, 2026, 8:30 a.m. ET (EST, UTC-5), as stated in the plan-2026-locked Release. */
+export const RESULTS_AT_UTC = "2026-11-09T13:30:00Z";
