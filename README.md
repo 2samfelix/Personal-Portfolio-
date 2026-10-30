@@ -49,6 +49,8 @@ npm start
 | `npm run check:model-preview` | Every Model Preview JSON in `public/*/model-preview.json` still matches the SHA-256 of the workbook it was exported from (see below). |
 | `npm run test:monday-charts` | Run after `npm run build`. Reads the prerendered monday.com page and checks every number and drawn mark tied to a workbook cell against the pinned workbooks, read with openpyxl. Needs Python 3 with `openpyxl`. |
 | `npm run check:engine-trace` | The FP&A Intelligence Engine page's trace data (`public/engine/trace.json`) still matches the accepted run and the engine files it was built from. By default it fetches the engine at the pinned commit from GitHub, so it needs network access (or `--engine <path>` to a local clone at that commit). |
+| `npm run check:validation-lab` | The engine page's validation lab data (`public/engine/validation-lab.json`) is the file pinned in `src/lib/validationLab.ts` (the build checks that too), and the engine files it was exported from still match at the pinned commit. Like `check:engine-trace`, it fetches the engine from GitHub unless given `--engine <path>`. Regenerate the data with `scripts/export-validation-lab.py` (offline; no API key or model call). |
+| `npm run test:engine-lab` | Run after `npm run build`. Reads the prerendered engine page and checks the stat tiles, every mark and count on the detection map, and every results-table row against the validation lab JSON. |
 | `npm run verify:caterpillar-exhibits` | The Caterpillar page's mobile exhibit titles and subtitles match the ones baked into each exhibit's SVG. |
 
 There is no unit-test runner in this repository; the checks above are the tests.
