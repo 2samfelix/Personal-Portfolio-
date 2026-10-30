@@ -20,7 +20,9 @@
     "caterpillar:deck": "node caterpillar-demand-quality/build/render-deck.mjs",
     "caterpillar:build": "npm run caterpillar:exhibits && npm run caterpillar:exhibit5 && npm run caterpillar:pdf && npm run caterpillar:deck",
     "check:engine-trace": "node scripts/check-engine-trace.mjs",
-    "test:monday-charts": "python3 scripts/test-monday-charts.py"
+    "check:validation-lab": "node scripts/check-validation-lab.mjs",
+    "test:monday-charts": "python3 scripts/test-monday-charts.py",
+    "test:engine-lab": "python3 scripts/test-engine-lab.py"
   },
   "dependencies": {
     "next": "16.2.12",
