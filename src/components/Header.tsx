@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { siteConfig } from "@/lib/site-config";
 
 const links = [
@@ -14,6 +15,11 @@ const links = [
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  // The section anchors exist only on the home page. There, keep bare
+  // fragments so the browser scrolls in place (smoothly, per globals.css);
+  // on every other route, point them at the home page's sections.
+  const onHome = usePathname() === "/";
+  const to = (hash: string) => (onHome ? hash : `/${hash}`);
 
   // Keyboard accessibility: Escape closes the mobile menu from anywhere,
   // matching the expected behavior of any open menu/dialog.
@@ -29,7 +35,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-forest/10 bg-cream/95 backdrop-blur">
       <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-        <a href="#home" className="text-lg font-bold tracking-tight text-charcoal">
+        <a href={to("#home")} className="text-lg font-bold tracking-tight text-charcoal">
           SAM <span className="text-brass">FELIX</span>
         </a>
         {/* Desktop nav — unchanged, sm and up only. */}
@@ -37,7 +43,7 @@ export default function Header() {
           {links.map((link) => (
             <a
               key={link.href}
-              href={link.href}
+              href={to(link.href)}
               className="transition-colors hover:text-charcoal"
             >
               {link.label}
@@ -88,7 +94,7 @@ export default function Header() {
               {links.map((link) => (
                 <li key={link.href}>
                   <a
-                    href={link.href}
+                    href={to(link.href)}
                     onClick={() => setMenuOpen(false)}
                     className="block py-3 text-base font-medium text-charcoal-soft transition-colors hover:text-charcoal"
                   >
