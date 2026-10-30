@@ -115,7 +115,7 @@ function ReleaseCard({ release }: { release: LockRelease }) {
   );
 }
 
-export default function MondayPlanProjectPage({ prev, next }: { project: Project; prev: Project; next: Project }) {
+export default function MondayPlanProjectPage({ prev, next }: { project: Project; prev?: Project; next?: Project }) {
   const { plan, scorecard } = loadMondayPlan();
   const charts = loadMondayCharts();
   const { cases, caseHead } = plan;
@@ -628,12 +628,20 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
 
         {/* Prev / Next */}
         <nav aria-label="Projects" className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
-          <Link href={`/projects/${prev.slug}`} className="text-base font-semibold text-charcoal-soft hover:text-charcoal">
-            &larr; Previous Project
-          </Link>
-          <Link href={`/projects/${next.slug}`} className="text-base font-semibold text-charcoal-soft hover:text-charcoal">
-            Next Project &rarr;
-          </Link>
+          {prev ? (
+            <Link href={`/projects/${prev.slug}`} className="text-base font-semibold text-charcoal-soft hover:text-charcoal">
+              &larr; Previous Project
+            </Link>
+          ) : (
+            <span />
+          )}
+          {next ? (
+            <Link href={`/projects/${next.slug}`} className="text-base font-semibold text-charcoal-soft hover:text-charcoal">
+              Next Project &rarr;
+            </Link>
+          ) : (
+            <span />
+          )}
         </nav>
       </div>
     </main>

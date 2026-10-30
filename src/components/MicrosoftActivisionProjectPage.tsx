@@ -122,7 +122,7 @@ function ChartSection({ label, children, first = false }: { label: string; child
   );
 }
 
-export default function MicrosoftActivisionProjectPage({ project, prev, next }: { project: Project; prev: Project; next: Project }) {
+export default function MicrosoftActivisionProjectPage({ project, prev, next }: { project: Project; prev?: Project; next?: Project }) {
   const cs = project.caseStudy!;
   const maModelDeliverable = cs.deliverables.find((d) => d.label === "M&A Model");
   const fullReportDeliverable = cs.deliverables.find((d) => d.label === "Full Report");
@@ -417,12 +417,20 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
 
         {/* Prev / Next */}
         <nav className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
-          <Link href={`/projects/${prev.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
-            &larr; Previous Project
-          </Link>
-          <Link href={`/projects/${next.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
-            Next Project &rarr;
-          </Link>
+          {prev ? (
+            <Link href={`/projects/${prev.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+              &larr; Previous Project
+            </Link>
+          ) : (
+            <span />
+          )}
+          {next ? (
+            <Link href={`/projects/${next.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+              Next Project &rarr;
+            </Link>
+          ) : (
+            <span />
+          )}
         </nav>
       </div>
     </main>

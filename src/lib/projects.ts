@@ -1,4 +1,11 @@
+import thumbAlts from "./projectVisualAlts.generated.json";
+
 export type ProjectStatus = "live" | "in-development";
+
+/** The card thumbnails written by scripts/render-project-thumbnails.mjs: 1280 x 800 WebP. */
+function thumb(slug: keyof typeof thumbAlts) {
+  return { visualSize: { width: 1280, height: 800 }, visualAlt: thumbAlts[slug] };
+}
 
 export type Deliverable = {
   label: string;
@@ -28,6 +35,10 @@ export type Project = {
   status: ProjectStatus;
   icon: string;
   visual?: string;
+  /** The visual's intrinsic size in pixels (for next/image). */
+  visualSize?: { width: number; height: number };
+  /** Alt text for the visual, stating its figure. */
+  visualAlt?: string;
   link?: string;
   ctaLabel?: string;
   headlineStat?: string;
@@ -48,7 +59,8 @@ export const flagshipProjects: Project[] = [
     year: "2026",
     status: "live",
     icon: "01",
-    visual: "/project-visuals/nike.png",
+    visual: "/project-visuals/nike.webp",
+    ...thumb("nike"),
     headlineStat: "$439M cushion",
     githubUrl: "https://github.com/2samfelix/nike-three-statement-model",
     caseStudy: {
@@ -104,7 +116,8 @@ export const flagshipProjects: Project[] = [
     year: "2026",
     status: "live",
     icon: "02",
-    visual: "/project-visuals/arm.png",
+    visual: "/project-visuals/arm.webp",
+    ...thumb("arm"),
     headlineStat: "5.34× total return",
     githubUrl: "https://github.com/2samfelix/arm-ipo-valuation-strategy-analysis",
     caseStudy: {
@@ -165,7 +178,8 @@ export const flagshipProjects: Project[] = [
     year: "2026",
     status: "live",
     icon: "03",
-    visual: "/project-visuals/msft.png",
+    visual: "/project-visuals/msft.webp",
+    ...thumb("msft"),
     headlineStat: "-4.07% EPS dilution",
     githubUrl: "https://github.com/2samfelix/microsoft-activision-ma-analysis",
     caseStudy: {
@@ -227,7 +241,8 @@ export const flagshipProjects: Project[] = [
     year: "2026",
     status: "live",
     icon: "04",
-    visual: "/project-visuals/caterpillar.png",
+    visual: "/project-visuals/caterpillar.webp",
+    ...thumb("caterpillar"),
     githubUrl: "https://github.com/2samfelix/Personal-Portfolio-/tree/main/caterpillar-demand-quality",
     headlineStat: "$1.5B → $0.4B dealer build",
     caseStudy: {
@@ -282,7 +297,8 @@ export const flagshipProjects: Project[] = [
     year: "2026",
     status: "live",
     icon: "05",
-    visual: "/project-visuals/fpa-intelligence-engine.svg",
+    visual: "/project-visuals/fpa-intelligence-engine.webp",
+    ...thumb("fpa-intelligence-engine"),
     githubUrl: "https://github.com/2samfelix/fpa-intelligence-engine",
   },
   {
@@ -298,6 +314,7 @@ export const flagshipProjects: Project[] = [
     status: "live",
     icon: "06",
     visual: "/project-visuals/monday-operating-plan.webp",
+    visualSize: { width: 680, height: 400 },
     githubUrl: "https://github.com/2samfelix/monday-operating-plan",
   },
 ];
@@ -349,10 +366,20 @@ export function getProjectBySlug(slug: string): Project | undefined {
   return flagshipProjects.find((p) => p.slug === slug);
 }
 
-export function getAdjacentProjects(slug: string) {
-  const index = flagshipProjects.findIndex((p) => p.slug === slug);
-  const prev =
-    flagshipProjects[(index - 1 + flagshipProjects.length) % flagshipProjects.length];
-  const next = flagshipProjects[(index + 1) % flagshipProjects.length];
-  return { prev, next };
+/** Home-grid order, also the project pages' Previous/Next order. */
+export const PROJECT_ORDER = [
+  "caterpillar-demand-quality",
+  "arm",
+  "microsoft-activision",
+  "nike",
+  "fpa-intelligence-engine",
+  "monday-operating-plan",
+];
+
+/** Previous and next project in PROJECT_ORDER; the first has no previous and the last no next. */
+export function getAdjacentProjects(slug: string): { prev?: Project; next?: Project } {
+  const index = PROJECT_ORDER.indexOf(slug);
+  if (index < 0) return {};
+  const at = (i: number) => (i >= 0 && i < PROJECT_ORDER.length ? getProjectBySlug(PROJECT_ORDER[i]) : undefined);
+  return { prev: at(index - 1), next: at(index + 1) };
 }

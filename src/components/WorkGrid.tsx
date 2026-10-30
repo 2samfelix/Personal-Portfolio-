@@ -1,7 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CARD_CTA, CARD_LIFT } from "@/components/project/cardLift";
-import { flagshipProjects, type Project } from "@/lib/projects";
-import { loadMondayPlan } from "@/lib/mondayPlan";
+import { PROJECT_ORDER, flagshipProjects, type Project } from "@/lib/projects";
+import { loadMondayCharts, loadMondayPlan } from "@/lib/mondayPlan";
 
 /** A run of answer text; `figure` parts are set in bold. */
 type Part = string | { figure: string };
@@ -65,22 +66,36 @@ const CARDS: Record<string, CardCopy> = {
   },
 };
 
-const ORDER = ["caterpillar-demand-quality", "arm", "microsoft-activision", "nike", "fpa-intelligence-engine", "monday-operating-plan"];
-
-const projects = ORDER.map((slug) => flagshipProjects.find((p) => p.slug === slug)).filter(
+const projects = PROJECT_ORDER.map((slug) => flagshipProjects.find((p) => p.slug === slug)).filter(
   (p): p is Project => !!p,
 );
 
-/** One project card, fully clickable: the image over the text. */
-function ProjectCard({ project }: { project: Project }) {
+// The monday card's alt text states its thumbnail's figures, read from the locked workbook.
+const MONDAY_STRIP = loadMondayCharts().strip;
+const MONDAY_ALT = `monday.com operating plan: FY27 revenue ${MONDAY_STRIP.baseRevenue.d} (Base) vs ${MONDAY_STRIP.downRevenue.d} (Downside), USD millions; the gap is ${MONDAY_STRIP.gapX.d} the average 4-quarter backtest miss. Q3 2026 results pending.`;
+
+// Card image width: one column below 640px, two to 1023px, three from 1024px
+// (the grid's container is max-w-6xl, 1152px less 48px padding and 64px of gaps).
+const SIZES = "(min-width: 1024px) 347px, (min-width: 640px) calc((100vw - 80px) / 2), calc(100vw - 48px)";
+
+/** One project card, fully clickable: the image over the text. The first card's image loads eagerly. */
+function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
   const copy = CARDS[project.slug];
   const tags = copy ? project.tools.filter((t) => copy.tags.includes(t)) : project.tools.slice(0, 3);
   return (
     <Link href={`/projects/${project.slug}`} data-reveal-item className={`group flex h-full flex-col overflow-hidden text-left ${CARD_LIFT}`}>
       <div className="flex h-48 w-full shrink-0 items-center justify-center overflow-hidden border-b border-forest/10 bg-cream">
-        {project.visual && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={project.visual} alt={`${project.title} preview`} className="h-full w-full object-contain" />
+        {project.visual && project.visualSize && (
+          <Image
+            src={project.visual}
+            alt={project.slug === "monday-operating-plan" ? MONDAY_ALT : (project.visualAlt ?? `${project.title} preview`)}
+            width={project.visualSize.width}
+            height={project.visualSize.height}
+            sizes={SIZES}
+            loading={eager ? "eager" : "lazy"}
+            fetchPriority={eager ? "high" : undefined}
+            className="h-full w-full object-contain"
+          />
         )}
       </div>
       <div className="flex flex-1 flex-col gap-3 p-6">
@@ -134,9 +149,9 @@ export default function WorkGrid() {
         {/* Scroll-reveal hook: ScrollReveal.tsx reveals the cards one by one.
             Six cards: three columns from 1024px (3 + 3), two from 640px, one below. */}
         <div data-reveal-group className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
+          {projects.map((project, i) => (
             <div key={project.slug} className="min-w-0">
-              <ProjectCard project={project} />
+              <ProjectCard project={project} eager={i === 0} />
             </div>
           ))}
         </div>
