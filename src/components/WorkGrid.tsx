@@ -24,8 +24,9 @@ type CardCopy = {
 // - Microsoft × Activision: Synergy Breakeven!B10, 3,636.67 $mm of required
 //   annual pre-tax synergies ("Solves to EPS-neutral").
 // - Nike: Scenario Dashboard!B42, 439.45 $mm cushion, base case, FY2028E.
-// - FP&A Intelligence Engine: 735 tests passing at the engine's main; the
-//   engine page states all five briefs were accepted on the first attempt.
+// - FP&A Intelligence Engine: 739 automated test cases (pytest's count, parametrized
+//   cases included) passing at the engine's main (c91e254); run 1, the run recorded on
+//   this site, was accepted on the first attempt.
 // - monday.com: figure read at build time from the locked plan workbook's
 //   Executive_Summary (src/lib/mondayPlan.ts), not typed here. The question is a
 //   shortened card version; the project page shows the workbook's full question.
@@ -53,7 +54,7 @@ const CARDS: Record<string, CardCopy> = {
   },
   "fpa-intelligence-engine": {
     question: "AI writes the brief; code does the math and decides whether it's accepted.",
-    answer: [{ figure: "735" }, " tests; all five benchmark runs accepted on the first attempt."],
+    answer: [{ figure: "739" }, " automated test cases; the recorded run was accepted on the first attempt."],
     tags: ["Python", "AI", "Validation"],
   },
   "monday-operating-plan": {

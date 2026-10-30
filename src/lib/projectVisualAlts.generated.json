@@ -3,5 +3,5 @@
   "arm": "Arm: my DCF implies $51.54 a share against a $272.21 market price on Aug 10, 2026.",
   "msft": "Microsoft and Activision: about $3.64B a year of pre-tax synergies needed for EPS-neutral.",
   "nike": "Nike: in the base case North America's growth covers Greater China's decline with a $439M cushion by FY2028E.",
-  "fpa-intelligence-engine": "FP&A Intelligence Engine: 735 tests pass; all five benchmark runs were accepted on the first attempt."
+  "fpa-intelligence-engine": "FP&A Intelligence Engine: 739 automated test cases pass; code, not the AI, decides whether a brief is accepted."
 }
