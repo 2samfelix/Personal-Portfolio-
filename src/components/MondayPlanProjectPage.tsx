@@ -6,6 +6,8 @@ import { formulaBarHeights, viewGridHeights } from "@/lib/modelPreview";
 import {
   LIMITS,
   PLAN_DOC,
+  MEMO_DOWNLOAD_PATH,
+  MEMO_SHA256,
   PLAN_DOWNLOAD_PATH,
   PLAN_SHA256,
   README_URL,
@@ -564,7 +566,16 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                 description: `monday_plan.xlsx, 18 sheets, live formulas: a copy of the locked file hosted on this site. SHA-256 ${PLAN_SHA256.slice(0, 12)}…`,
                 href: PLAN_DOWNLOAD_PATH,
                 cta: "Download workbook ↓",
-                download: true,
+                download: "monday_plan.xlsx",
+              },
+              {
+                title: "Management memo (PDF)",
+                format: "PDF",
+                description: "One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.",
+                sha256: MEMO_SHA256,
+                href: MEMO_DOWNLOAD_PATH,
+                cta: "Download memo ↓",
+                download: "monday-operating-plan-memo.pdf",
               },
               {
                 title: `GitHub Release ${planRelease.tag}`,
@@ -598,7 +609,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
               <a
                 key={item.title}
                 href={item.href}
-                {...(item.download ? { download: "monday_plan.xlsx" } : { target: "_blank", rel: "noopener noreferrer" })}
+                {...(item.download ? { download: item.download } : { target: "_blank", rel: "noopener noreferrer" })}
                 className={`group flex flex-col p-6 ${CARD_LIFT}`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -608,6 +619,9 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                   </span>
                 </div>
                 <p className="mt-2 text-base leading-7 text-charcoal-soft">{item.description}</p>
+                {item.sha256 && (
+                  <p className="mt-2 break-all font-mono text-xs leading-5 text-charcoal-soft">SHA-256 {item.sha256}</p>
+                )}
                 <span className={`mt-auto pt-4 ${CARD_CTA}`}>{item.cta}</span>
               </a>
             ))}

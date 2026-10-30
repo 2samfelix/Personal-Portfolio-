@@ -30,6 +30,11 @@ export const Q3_CALL_SHA256 = "49463d1fbb678fd26b59c3c81e70cb52613a4a73906b846bc
 /** Site path of the hosted copy of the locked plan workbook (public/). */
 export const PLAN_DOWNLOAD_PATH = "/monday-operating-plan/monday_plan.xlsx";
 
+/** The one-page management memo (PDF), derived from the locked plan workbook. Not a
+ * locked file: the pin only makes the build fail if the hosted copy changes. */
+export const MEMO_SHA256 = "de6a60312749fac4f96365cfa2767e4451faf8701bee846a7adc6e8bc6ab8363";
+export const MEMO_DOWNLOAD_PATH = "/downloads/monday-operating-plan-memo.pdf";
+
 export type LockRelease = {
   tag: string;
   title: string;
@@ -89,6 +94,7 @@ function sha256(path: string): string {
 const PLAN_FILE = join(process.cwd(), "monday-operating-plan", "model", "monday_plan.xlsx");
 const Q3_CALL_FILE = join(process.cwd(), "monday-operating-plan", "model", "monday_q3_call.xlsx");
 const DOWNLOAD_FILE = join(process.cwd(), "public", "monday-operating-plan", "monday_plan.xlsx");
+const MEMO_FILE = join(process.cwd(), "public", "downloads", "monday-operating-plan-memo.pdf");
 
 /** Checks every locked file against its pin; throws (failing the build) on any mismatch. */
 export function verifyPins(): void {
@@ -97,10 +103,12 @@ export function verifyPins(): void {
     ["monday-operating-plan/model/monday_q3_call.xlsx", Q3_CALL_FILE, Q3_DOC, Q3_CALL_SHA256],
     ["monday-operating-plan/model/monday_plan.xlsx", PLAN_FILE, PLAN_DATA_DOC, PLAN_SHA256],
     [`public${PLAN_DOWNLOAD_PATH}`, DOWNLOAD_FILE, null, PLAN_SHA256],
+    [`public${MEMO_DOWNLOAD_PATH}`, MEMO_FILE, null, MEMO_SHA256],
   ];
   for (const [file, path, doc, pin] of checks) {
     const actual = sha256(path);
-    if (actual !== pin) fail(`${file} has SHA-256 ${actual}, but the locked release pins ${pin}`);
+    const pinnedBy = pin === MEMO_SHA256 ? "the build pins" : "the locked release pins";
+    if (actual !== pin) fail(`${file} has SHA-256 ${actual}, but ${pinnedBy} ${pin}`);
     if (doc && doc.workbook.file !== file) fail(`the preview JSON was exported from ${doc.workbook.file}, not ${file}`);
     if (doc && doc.workbook.sha256 !== pin) fail(`${file}: the preview JSON records ${doc.workbook.sha256}, not the pinned ${pin}`);
     if (doc && doc.workbook.source?.sha256 !== pin) fail(`${file}: the preview JSON's source hash does not match the pinned ${pin}`);

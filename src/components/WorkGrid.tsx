@@ -26,8 +26,9 @@ type CardCopy = {
 // - Nike: Scenario Dashboard!B42, 439.45 $mm cushion, base case, FY2028E.
 // - FP&A Intelligence Engine: 735 tests passing at the engine's main; the
 //   engine page states all five briefs were accepted on the first attempt.
-// - monday.com: question and figure read at build time from the locked plan
-//   workbook's Executive_Summary (src/lib/mondayPlan.ts), not typed here.
+// - monday.com: figure read at build time from the locked plan workbook's
+//   Executive_Summary (src/lib/mondayPlan.ts), not typed here. The question is a
+//   shortened card version; the project page shows the workbook's full question.
 const MONDAY = loadMondayPlan().plan;
 const CARDS: Record<string, CardCopy> = {
   "caterpillar-demand-quality": {
@@ -56,7 +57,7 @@ const CARDS: Record<string, CardCopy> = {
     tags: ["Python", "AI", "Validation"],
   },
   "monday-operating-plan": {
-    question: MONDAY.question,
+    question: "How should management adjust spend if growth slows faster than guided?",
     answer: [
       "The FY27 Base–Downside revenue gap is ",
       { figure: MONDAY.gapX.values[0] },
@@ -99,7 +100,8 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
         )}
       </div>
       <div className="flex flex-1 flex-col gap-3 p-6">
-        <ul className="flex flex-wrap gap-1.5">
+        {/* Two tag lines' height reserved on every card, so titles line up across a row. */}
+        <ul className="flex min-h-[47px] flex-wrap content-start items-start gap-1.5">
           {tags.map((tool) => (
             <li
               key={tool}
