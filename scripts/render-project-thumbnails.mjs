@@ -63,8 +63,6 @@ const page = (body) => `<!doctype html><html><head><meta charset="utf-8"><style>
   .fill { height: 64px; flex: none; border-radius: 6px; display: flex; align-items: center; padding: 0 14px; font-size: 34px; font-weight: 700; color: ${C.cream}; white-space: nowrap; overflow: hidden }
   .end { justify-content: flex-end }
   .foot { margin-top: auto; font-size: 30px; font-weight: 700; color: ${C.soft} }
-  .ticks { display: flex; gap: 12px; margin-top: 4px }
-  .tick { width: 54px; height: 54px; border-radius: 8px; background: ${C.forest}; color: ${C.cream}; font-size: 36px; font-weight: 900; display: flex; align-items: center; justify-content: center }
 </style></head><body>${body}</body></html>`;
 
 // --- Figures --------------------------------------------------------------------
@@ -87,10 +85,10 @@ if (msftLabel !== "Required annual pre-tax synergies") throw new Error(`MSFT A10
 const msft = onCard(usdM(num(cell("public/microsoft-activision/model-preview.json", "Synergy Breakeven", "B10")), 2));
 // Nike: Scenario Dashboard!B42, base-case cushion, FY2028E ($mm).
 const nike = onCard(usdM(num(cell("public/nike/model-preview.json", "Scenario Dashboard", "B42"))));
-// Engine: no workbook. 735 tests (card copy, from the engine's main) and the engine
-// page's "All five briefs were accepted on the first attempt".
-const engineTests = onCard("735");
-if (!enginePage.includes("All five briefs were accepted on the first attempt")) throw new Error("engine page no longer states all five briefs were accepted");
+// Engine: no workbook. 739 automated test cases (card copy, from the engine's main) and
+// the engine page's statement that code decides whether a brief is accepted.
+const engineTests = onCard("739");
+if (!enginePage.includes("decides whether a brief is accepted")) throw new Error("engine page no longer states that code decides acceptance");
 
 const max = Math.max(catQ1, catQ2);
 /** One bar, drawn to scale (value / max of its chart). A short bar carries its label outside. */
@@ -142,11 +140,10 @@ export const THUMBS = [
   },
   {
     slug: "fpa-intelligence-engine",
-    alt: `FP&A Intelligence Engine: ${engineTests} tests pass; all five benchmark runs were accepted on the first attempt.`,
+    alt: `FP&A Intelligence Engine: ${engineTests} automated test cases pass; code, not the AI, decides whether a brief is accepted.`,
     html: page(`
-      <p class="big">${engineTests} <span style="font-size:44px">tests</span></p>
-      <p class="sub">All five runs accepted on the first attempt</p>
-      <div class="ticks">${Array.from({ length: 5 }, () => '<span class="tick">✓</span>').join("")}</div>
+      <p class="big">${engineTests} <span style="font-size:44px">test cases</span></p>
+      <p class="sub">The AI writes the brief; code decides whether it is accepted</p>
       <p class="foot">FP&amp;A Intelligence Engine</p>`),
   },
 ];

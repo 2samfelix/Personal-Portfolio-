@@ -14,9 +14,10 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from
 //   Q1 2026 and $400M in Q2 2026), quoted from the 10-Qs on Dealer Inventory.
 // - 1,205 formula cells across the four preview workbooks (Caterpillar 234,
 //   Arm 307, Microsoft x Activision 363, Nike 301), counted in the workbook XML;
-//   735 tests in fpa-intelligence-engine, all passing at the engine's main.
-// - Run 1 of 5 of the engine evaluation; the engine page states all five were
-//   accepted on the first attempt.
+//   739 automated test cases in fpa-intelligence-engine (pytest's count), all passing
+//   at the engine's main (c91e254).
+// - Run 1 of 5 of the engine evaluation, the only run recorded on the site; it was
+//   accepted on the first attempt, before the Oct 30, 2026 benchmark corrections.
 // Images are Playwright captures of the built site (public/expertise).
 const SKILLS = [
   {
@@ -58,7 +59,7 @@ const SKILLS = [
   {
     id: "excel-python",
     name: "Excel and Python",
-    proof: "About 1,200 live formulas across four workbooks, and the FP&A Intelligence Engine with 735 tests passing.",
+    proof: "About 1,200 live formulas across four workbooks, and the FP&A Intelligence Engine with 739 automated test cases passing.",
     image: "/expertise/engine-trace.webp",
     alt: "FP&A Intelligence Engine trace: statement B1 of the accepted brief with the four sourced facts and the reconciliation it cites.",
     caption: "FP&A Intelligence Engine: trace a statement",
@@ -67,7 +68,7 @@ const SKILLS = [
   {
     id: "ai",
     name: "AI / LLM tools",
-    proof: "Accepted run 1 of 5 on a Caterpillar Q2 2026 benchmark. All five were accepted on the first attempt.",
+    proof: "An AI-written brief on a Caterpillar Q2 2026 benchmark, accepted by deterministic checks on the first attempt (run 1, the run recorded on the site).",
     image: "/expertise/ai-accepted-brief.webp",
     alt: "The start of the engine's accepted Caterpillar Q2 2026 brief: statement B1, a fact linked to four facts and one reconciliation.",
     caption: "FP&A Intelligence Engine: accepted brief, run 1 of 5",

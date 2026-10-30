@@ -8,6 +8,8 @@ import { MEASURE, STACK_BODY, STACK_HEAD, STACK_LABEL, STACK_ROW, STACK_TABLE, S
 
 const ENGINE_REPO = "https://github.com/2samfelix/fpa-intelligence-engine";
 const STATUS_DOC = `${ENGINE_REPO}/blob/main/docs/project_status.md`;
+const README_GAPS = `${ENGINE_REPO}#what-the-validator-does-not-check`;
+const CORRECTIONS_PR = `${ENGINE_REPO}/pull/5`;
 const CATERPILLAR_PAGE = "/projects/caterpillar-demand-quality";
 const TRACE_HEADERS: TraceHeaders = {
   statements: traceJson.statements.map(({ id, kind, severity, text }) => ({ id, kind, severity, text })),
@@ -20,7 +22,7 @@ const STEPS: { title: string; owner: string; body: string }[] = [
   {
     title: "Load and validate",
     owner: "Code",
-    body: "A deterministic loader reads sourced facts and checks them against their evidence.",
+    body: "A deterministic loader reads the hand-curated benchmark files and checks that every fact, source and reference lines up, and that each quote appears in the source excerpt stored with it. Nothing is read from the filings themselves.",
   },
   {
     title: "Calculate and reconcile",
@@ -30,7 +32,7 @@ const STEPS: { title: string; owner: string; body: string }[] = [
   {
     title: "Package",
     owner: "Code",
-    body: "The verified facts go into a fixed, hashed input packet, so every run can be traced to exactly what the model saw.",
+    body: "The facts that pass those checks go into a fixed, hashed input packet, so every run can be traced to exactly what the model saw.",
   },
   {
     title: "Write, then check",
@@ -41,16 +43,28 @@ const STEPS: { title: string; owner: string; body: string }[] = [
 
 const LIMITATIONS = [
   "It is one company and one quarter, with a hand-curated benchmark.",
-  "Five runs show consistency on one input, not general reliability.",
+  "Five runs show consistency on one input, not general reliability, and only run 1 is recorded on this site.",
   "The \"28 / 32\" bridge figure on my Caterpillar page comes from the workbook. The engine independently confirms two bridges (R01 and R02). The three profit bridges (R03 to R05) are left unresolved on purpose, because the data does not support a tie-out.",
   "Assumption disclosure was verified only by offline tests, because all five live runs used a path with no assumptions.",
-  "Some benchmark entries are known to need correction. They are documented in the repo.",
+  "Some benchmark entries are still flagged for review (for example, figures matched by phrase only). They are documented in the repo.",
   "The model chose the severity labels itself, and they varied across runs.",
+];
+
+// From an audit of the engine's validator (Oct 30, 2026); the engine README lists the same gaps.
+const NOT_CHECKED = [
+  "Fiscal periods: a correct figure given the wrong quarter or year passes.",
+  "Direction and sign: \"fell\" written for \"rose\" passes.",
+  "Segment: a correct figure attached to the wrong segment passes.",
+  "Relevance: a cited ID must exist and be the right kind of evidence, not support the sentence.",
+  "Numbers and arithmetic in words: \"about nine billion\" or \"roughly half\" is not checked.",
+  "Paraphrase: attributed wording without quotation marks is not compared with the source.",
+  "Causal claims: \"because of\" or \"driven by\" is not checked against the evidence.",
+  "The filings: quotations are checked against excerpts curated in the benchmark, not against the documents.",
 ];
 
 type StatementType = "FACT" | "INTERPRETIVE" | "LIMITATION";
 
-// Run 1 of the five-run evaluation, quoted unedited. "Linked to" counts come
+// Run 1 of the five-run evaluation (the one recorded on this site), quoted unedited. "Linked to" counts come
 // from the brief's own citations; do not reword or recount.
 const BRIEF_STATEMENTS: { id: string; type: StatementType; linkedTo: string; text: string }[] = [
   {
@@ -204,10 +218,16 @@ export default function EngineProjectPage({
             The AI writes the brief. Code does the math and decides whether the writing is accepted.
           </p>
           <p className="mt-4 max-w-2xl text-base leading-7 text-charcoal-soft">
-            The model only sees verified figures and can only write structured statements that point to them. Every
-            number is checked against the computed values and every quote against its source, and a statement that
-            fails is rejected. That doesn&apos;t mean the briefs are right in judgment. The checks confirm that
-            figures and quotes match the evidence, not that the interpretation is the right one.
+            The model only sees the benchmark&apos;s curated facts and evidence, and can only write structured
+            statements that cite them by ID. Code checks each statement: every ID it cites must exist, every figure
+            must match a fact, reconciliation or validated evidence it cites at the precision written, and text in
+            quotation marks must match the curated source excerpt word for word. Any failure rejects the brief. The checks do not cover fiscal periods,
+            direction, segment, causal claims or whether a citation is relevant, and nothing is compared with the
+            filings themselves (see{" "}
+            <a href="#what-the-validator-does-not-check" className="font-semibold text-forest underline-offset-2 hover:underline">
+              What the validator does not check
+            </a>
+            ). A brief that passes is consistent with its evidence, not necessarily right in judgment.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <a
@@ -239,8 +259,9 @@ export default function EngineProjectPage({
           <SectionHeading>The problem</SectionHeading>
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             AI can write a convincing finance summary, but it can also invent a number or misattribute a quote. In
-            FP&amp;A, one bad figure undermines the whole brief. I built the engine so that code, not the model, is
-            responsible for the math and for accepting or rejecting what the model writes.
+            FP&amp;A, one bad figure undermines the whole brief. I built the engine so that code, not the model, does
+            the math and decides whether a brief is accepted. The code rejects an invented figure and an altered
+            quotation; a misattributed paraphrase written without quotation marks can still pass.
           </p>
         </section>
 
@@ -248,7 +269,9 @@ export default function EngineProjectPage({
           <SectionHeading>What it produces</SectionHeading>
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             This is part of a real brief the engine produced and accepted. It is shown unedited. Each statement carries
-            a type and the evidence it points to, which the validator checks.
+            a type, chosen by the model, and the IDs of the evidence it cites. The validator checks that those IDs
+            exist and that the type fits the kind of evidence cited, not that the evidence supports the sentence beyond
+            its numbers and quotations.
           </p>
           <ul aria-label="Four statements from an accepted brief" className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {BRIEF_STATEMENTS.map((statement) => (
@@ -256,8 +279,13 @@ export default function EngineProjectPage({
             ))}
           </ul>
           <p className={`mt-3 text-xs leading-5 text-charcoal-soft ${MEASURE}`}>
-            Run 1 of 5. Accepted on the first attempt. The full brief has 8 statements; four are shown. This brief was
-            checked against the evidence for the numbers it contains, not for whether its reading of them is right.
+            Run 1 of the five-run evaluation, the only run recorded on this site. Accepted on the first attempt,
+            against the benchmark as it stood before the Oct 30, 2026 corrections (see{" "}
+            <a href="#corrections" className="font-semibold text-forest underline-offset-2 hover:underline">
+              Corrections
+            </a>
+            ). The full brief has 8 statements; four are shown. Its numbers were checked against the facts it cites,
+            not whether its reading of them is right.
           </p>
         </section>
 
@@ -277,7 +305,9 @@ export default function EngineProjectPage({
           <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs leading-5 text-charcoal-soft">
             <span>
               Run {TRACE_RUN.run} of {TRACE_RUN.of_runs}, prompt {TRACE_RUN.prompt_version}, model {TRACE_RUN.served_model},
-              packet {TRACE_RUN.packet_hash.slice(0, 12)}, engine commit {TRACE_HEADERS.commit.slice(0, 7)}.
+              packet {TRACE_RUN.packet_hash.slice(0, 12)}, engine commit {TRACE_HEADERS.commit.slice(0, 7)}. Recorded
+              before the Oct 30, 2026 corrections: the current engine (c91e254) builds a different packet (5eeb00d3…),
+              and no live run has been made against it.
             </span>
             <a href={ENGINE_REPO} target="_blank" rel="noopener noreferrer" className="font-semibold text-forest hover:text-forest-dark">
               Engine on GitHub ↗
@@ -360,11 +390,40 @@ export default function EngineProjectPage({
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             I ran the engine five times on the same pinned input. All five briefs were accepted on the first attempt,
             with no retries, no rejections, no provider errors and no number problems flagged. Each brief had 8 to 10
-            statements.
+            statements. Those figures come from the evaluation summary recorded in the engine&apos;s project status; the
+            run records themselves are not stored in either repository, and this site holds one of them (run 1).
           </p>
           <p className={`mt-3 text-xs leading-5 text-charcoal-soft ${MEASURE}`}>
-            Pinned configuration: prompt synthesis_v3, packet version 2, model claude-opus-5-5. Evaluated at commit
-            f33a569, with one small error-message wording fix (72d5299) added afterward.
+            Pinned configuration: prompt synthesis_v3, packet version 2 (hash d726abc6…), model claude-opus-5-5.
+            Evaluated at commit f33a569, with one small error-message wording fix (72d5299) added afterward. The
+            offline suite now has 739 automated test cases (pytest counts each parametrized case separately).
+          </p>
+        </section>
+
+        <section id="what-the-validator-does-not-check" className="mt-12 scroll-mt-8 border-t border-forest/10 pt-12">
+          <SectionHeading>What the validator does not check</SectionHeading>
+          <ul className={`mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-charcoal-soft marker:text-brass ${MEASURE}`}>
+            {NOT_CHECKED.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+          <p className="mt-4 text-sm leading-6 text-charcoal-soft">
+            <a href={README_GAPS} target="_blank" rel="noopener noreferrer" className={linkClass}>
+              The same list in the engine README ↗
+            </a>
+          </p>
+        </section>
+
+        <section id="corrections" className="mt-12 scroll-mt-8 border-t border-forest/10 pt-12">
+          <SectionHeading>Corrections</SectionHeading>
+          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
+            An audit on Oct 30, 2026 found two benchmark entries that did not match the source: a misquoted
+            dealer-inventory sentence and an incomplete tariff entry. Both were corrected against Caterpillar&apos;s own
+            call transcript, and the validator now ignores figures from evidence that has not been reviewed. The
+            corrections changed the input packet from d726abc6… to 5eeb00d3…, so the recorded run above predates them.{" "}
+            <a href={CORRECTIONS_PR} target="_blank" rel="noopener noreferrer" className={linkClass}>
+              The change on GitHub ↗
+            </a>
           </p>
         </section>
 
@@ -380,8 +439,8 @@ export default function EngineProjectPage({
         <section className="mt-12 border-t border-forest/10 pt-12">
           <SectionHeading>What I&apos;d do next</SectionHeading>
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
-            Extract evidence from raw filings with its own validator, correct the known benchmark entries under a new
-            evaluation, and add automated testing on every change.
+            Re-run the live evaluation against the corrected benchmark, review the entries still flagged, extract
+            evidence from raw filings with its own validator, and add automated testing on every change.
           </p>
         </section>
 
