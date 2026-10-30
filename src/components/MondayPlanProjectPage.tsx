@@ -50,11 +50,11 @@ const TAGS = ["Strategic FP&A", "Scenario analysis", "Cash / FCF"];
 const LABEL = "text-[#7a5a30]";
 
 const MENU = [
-  { href: "#plan", label: "Plan" },
+  { href: "#plan", label: "The plan" },
   { href: "#scenarios", label: "Scenarios" },
   { href: "#triggers", label: "Triggers" },
   { href: "#q3-test", label: "Locked test" },
-  { href: "#inside-the-model", label: "Model" },
+  { href: "#inside-the-model", label: "Inside the model" },
   { href: "#downloads", label: "Downloads" },
 ];
 
