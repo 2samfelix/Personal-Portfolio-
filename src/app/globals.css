@@ -97,9 +97,10 @@ body {
     transform: none !important;
   }
 
-  /* monday.com project hero (MondayPlanProjectPage.tsx): cream text and a light
-     chart on forest, so the band keeps its background in print. */
-  #monday-hero {
+  /* monday.com and FP&A Intelligence Engine project heroes (MondayPlanProjectPage.tsx,
+     EngineProjectPage.tsx): cream text on forest, so the band keeps its background in print. */
+  #monday-hero,
+  #engine-hero {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

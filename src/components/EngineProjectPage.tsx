@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Project } from "@/lib/projects";
 import EngineTrace, { type TraceHeaders } from "@/components/engine/EngineTrace";
+import { DetectionMap, LabProvenance, LabResultsTable, LabStatTiles, PipelineDiagram } from "@/components/engine/ValidationLab";
+import { loadValidationLab } from "@/lib/validationLab";
 // Written by scripts/export-engine-trace.py. Imported here only for the lists and the provenance
 // line, which render before the data loads; the trace itself is fetched lazily.
 import traceJson from "../../public/engine/trace.json";
@@ -151,51 +153,6 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   return <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{children}</h2>;
 }
 
-/**
- * Four-step flow: stacked with down arrows on mobile, one row with right
- * arrows from sm: up. Step titles only; the full step text follows below.
- */
-function StepFlow() {
-  return (
-    <ol
-      aria-label="How it works, in four steps"
-      className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-0"
-    >
-      {STEPS.flatMap((step, index) => {
-        const isAiStep = index === STEPS.length - 1;
-        const box = (
-          <li
-            key={step.title}
-            className={`flex flex-col rounded-xl border p-4 sm:flex-1 sm:basis-0 ${
-              isAiStep ? "border-forest/30 bg-forest/5" : "border-forest/15 bg-white"
-            }`}
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-forest text-xs font-bold text-cream">
-              {index + 1}
-            </span>
-            <span className="mt-3 text-sm font-semibold leading-5 text-charcoal">{step.title}</span>
-            <span className="mt-auto pt-3 text-[11px] font-medium uppercase tracking-wide text-brass">
-              {step.owner}
-            </span>
-          </li>
-        );
-        if (index === STEPS.length - 1) return [box];
-        return [
-          box,
-          <li
-            key={`${step.title}-arrow`}
-            aria-hidden="true"
-            className="self-center py-1 text-lg leading-none text-forest/50 sm:px-2 sm:py-0"
-          >
-            <span className="sm:hidden">&darr;</span>
-            <span className="hidden sm:inline">&rarr;</span>
-          </li>,
-        ];
-      })}
-    </ol>
-  );
-}
-
 export default function EngineProjectPage({
   project,
   prev,
@@ -205,55 +162,78 @@ export default function EngineProjectPage({
   prev?: Project;
   next?: Project;
 }) {
+  const lab = loadValidationLab();
   return (
     <main className="bg-cream">
-      <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
-        <Link href="/#work" className="text-sm font-semibold text-forest hover:text-forest-dark">
-          &larr; Back to Projects
-        </Link>
-
-        <div className="mt-8">
-          <h1 className="text-4xl font-black tracking-tight text-charcoal sm:text-5xl">{project.title}</h1>
-          <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">
-            The AI writes the brief. Code does the math and decides whether the writing is accepted.
-          </p>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-charcoal-soft">
-            The model only sees the benchmark&apos;s curated facts and evidence, and can only write structured
-            statements that cite them by ID. Code checks each statement: every ID it cites must exist, every figure
-            must match a fact, reconciliation or validated evidence it cites at the precision written, and text in
-            quotation marks must match the curated source excerpt word for word. Any failure rejects the brief. The checks do not cover fiscal periods,
-            direction, segment, causal claims or whether a citation is relevant, and nothing is compared with the
-            filings themselves (see{" "}
-            <a href="#what-the-validator-does-not-check" className="font-semibold text-forest underline-offset-2 hover:underline">
-              What the validator does not check
-            </a>
-            ). A brief that passes is consistent with its evidence, not necessarily right in judgment.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <a
-              href={ENGINE_REPO}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
-            >
-              View on GitHub ↗
-            </a>
-            <a
-              href={STATUS_DOC}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
-            >
-              Project status ↗
-            </a>
-            <a
-              href="#trace-a-statement"
-              className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
-            >
-              Trace a statement ↓
-            </a>
+      {/* Hero: full-width forest band (prints in colour; see globals.css). */}
+      <section id="engine-hero" aria-labelledby="engine-title" className="bg-forest text-cream">
+        <div className="mx-auto w-full max-w-6xl px-6 pb-12 pt-10 sm:pb-16">
+          <Link
+            href="/#work"
+            className="rounded-sm text-base font-semibold text-cream/90 underline-offset-4 hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+          >
+            &larr; Back to Projects
+          </Link>
+          <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+            <div>
+              <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
+                {project.tools.map((t) => (
+                  <li key={t} className="rounded-full bg-cream/10 px-2.5 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-cream">
+                    {t}
+                  </li>
+                ))}
+              </ul>
+              <h1 id="engine-title" className="mt-5 text-4xl font-black leading-[1.05] tracking-tight text-cream sm:text-5xl lg:text-6xl">
+                {project.title}
+              </h1>
+              <p className="mt-5 max-w-xl text-lg leading-8 text-cream/90">
+                The AI writes the brief. Code does the math and decides whether the writing is accepted.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <a
+                  href={ENGINE_REPO}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-cream px-5 py-2.5 text-sm font-semibold text-forest transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+                >
+                  View on GitHub ↗
+                </a>
+                <a
+                  href="#validation-lab"
+                  className="rounded-full border border-brass-light/70 px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-cream/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+                >
+                  Validation lab ↓
+                </a>
+                <a
+                  href="#trace-a-statement"
+                  className="rounded-full border border-brass-light/70 px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-cream/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+                >
+                  Trace a statement ↓
+                </a>
+              </div>
+            </div>
+            <LabStatTiles lab={lab} />
           </div>
         </div>
+      </section>
+
+      <div className="mx-auto w-full max-w-6xl px-6 pb-16 sm:pb-24">
+        <p className={`mt-10 text-base leading-7 text-charcoal ${MEASURE}`}>
+          The model only sees the benchmark&apos;s curated facts and evidence, and writes structured statements that cite
+          them by ID. Code checks that every cited ID exists, that every figure matches what the statement cites at the
+          precision written, and that quoted text matches the curated excerpt word for word; any failure rejects the
+          brief. It does not check fiscal periods, direction, segment, causal claims or whether a citation is relevant,
+          and nothing is compared with the filings (see{" "}
+          <a href="#what-the-validator-does-not-check" className="font-semibold text-forest underline-offset-2 hover:underline">
+            What the validator does not check
+          </a>
+          ).
+        </p>
+        <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <a href={STATUS_DOC} target="_blank" rel="noopener noreferrer" className={linkClass}>
+            Project status ↗
+          </a>
+        </p>
 
         <section className="mt-16 border-t border-forest/10 pt-12">
           <SectionHeading>The problem</SectionHeading>
@@ -316,9 +296,35 @@ export default function EngineProjectPage({
           <EngineTrace headers={TRACE_HEADERS} src="/engine/trace.json" />
         </section>
 
+        <section id="validation-lab" aria-labelledby="validation-lab-heading" className="mt-12 scroll-mt-24 border-t border-forest/10 pt-12">
+          <h2 id="validation-lab-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+            Validation lab
+          </h2>
+          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
+            Each case takes the accepted brief, changes one statement, and sends it through the engine&apos;s own
+            acceptance path with a scripted stand-in for the model: the same parsing, citation checks, evidence packet and
+            validator a live brief goes through. {lab.stats.asPredicted} of {lab.stats.cases} cases behaved as predicted
+            before the run.
+          </p>
+          <div className="mt-8">
+            <DetectionMap lab={lab} />
+          </div>
+          <p className={`mt-10 text-base font-semibold leading-7 text-charcoal ${MEASURE}`}>
+            A miss is a limitation of the engine, shown on purpose.
+          </p>
+          <div className="mt-4">
+            <LabResultsTable lab={lab} />
+          </div>
+          <div className="mt-4">
+            <LabProvenance lab={lab} />
+          </div>
+        </section>
+
         <section className="mt-12 border-t border-forest/10 pt-12">
           <SectionHeading>How it works</SectionHeading>
-          <StepFlow />
+          <div className="mt-6">
+            <PipelineDiagram packetHash={lab.doc.validator.packet_hash} />
+          </div>
           <ol className={`mt-8 space-y-4 ${MEASURE}`}>
             {STEPS.map((step, index) => (
               <li key={step.title} className="flex gap-4">

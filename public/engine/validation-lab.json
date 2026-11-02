@@ -1,0 +1,2507 @@
+{
+ "version": 1,
+ "engine": {
+  "repo": "2samfelix/fpa-intelligence-engine",
+  "commit": "c91e254dbb4a99c01d894bd51a4b73528f0e8911",
+  "files": {
+   "fpa_engine/__init__.py": "53979465973e43bd1fafc21041b64d747aa606b73be98cc2e6f9488facc9437c",
+   "fpa_engine/brief.py": "ada8a104b17e23815dd1e71fbda96431380a5c44d3e852dc5c7356a8c38c5562",
+   "fpa_engine/brief_demo.py": "f3135bda0723408b1fcc677e013d4dc2c6a2c875688c015d37c9d209d9c9da38",
+   "fpa_engine/brief_validator.py": "d65452e3e2a887f7c336a9efbbfcde7670915b509e20f5d3764ac54f388fa343",
+   "fpa_engine/calculator.py": "395eb83ccac2e35121a1aaf7a611a570233798ebf66ee18d7d8f24e50060ca31",
+   "fpa_engine/gate_c2.py": "8e49837b2100819330a355b1bfac69bdab0eca1aab06e05af91d95f951f11f05",
+   "fpa_engine/llm.py": "918fc0d4f140b50324e6ed650898d12da78513a2e2aed2b1e6f351364e359777",
+   "fpa_engine/loader.py": "be05adc4e98a7ae48f31b2c5acfc72c74ba8d5ba03a8713a6cb4f53bf1d9c23b",
+   "fpa_engine/pipeline.py": "8a452e1e447a664077ce222f2596b0a10e18d966750f59f64bb1f9bbbb87994f",
+   "fpa_engine/reconciliation.py": "f1b5bc13bff343e81c99255f81b2012dd12eff264c9cc73a90fc3cd9110e8ba6",
+   "fpa_engine/schemas.py": "ecdac65fafb29193a68003ec86e7abc8eec50aacd59df4d99a5bae0aed315579",
+   "fpa_engine/synthesizer.py": "2555ef5f222c4cfeec35cc6b8dec0860c2897bb1b14f21ed51d5b6778b8abdb2",
+   "fpa_engine/tolerance.py": "ce3ea503dd88934df1a222ac17e5cb2b2661ef2750d1313867f4147921d8ef9a",
+   "fpa_engine/validator.py": "5bea95db59e88863b48aeb720f467c835e228d2efa699277f9116ede48295e42",
+   "fpa_engine/benchmark/cat_q2_2026/assertions.json": "ec5d7e6639f676335a842a7be52c4df2451579748f14fab9d3a6c6f54c3b6dad",
+   "fpa_engine/benchmark/cat_q2_2026/assumptions.json": "98a04696981e87f4b9514ad9bd62ed9ef1f601166a590558e056562c62d6d5ad",
+   "fpa_engine/benchmark/cat_q2_2026/bridges.json": "aca8dd3d21fbb2091a4a8a74c4d79071a84d3e6d727be5258669fb0a37ff2574",
+   "fpa_engine/benchmark/cat_q2_2026/brief_policy.json": "f1a8f4dd21e9d24cf882e2cb19198cd8f7a8e9f8c3885bfa881ca822846b369d",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_01_unknown_fact_id.json": "2760054deeb81669882eb34d78d785929198a8dfacf403b5becc23acab511e13",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_02_unknown_evidence_id.json": "c93ad312a46259e62f5d2d52c8c1cf8ef969112b22536e212eb6ec97d7250ead",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_03_unsupported_number.json": "c1328f998658ab6da6c9ea5b66c9ca8eb97f80d2f12fbabec96426788a170ab5",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_04_arithmetic_in_prose.json": "0d0a1d1f20048127e0f3b61fe204b510d2cd9a23d89ae6fee54bb8f014e4eb06",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_05_interpretive_as_explicit.json": "2b3ff9a17a33e4b4225901089dea9a207facf16aa74505198e4ac031da85568d",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_06_unresolved_as_reconciled.json": "e7d81820cfa13a89572e5c28d37c298fa88241b0a208e73a2e952407dc15a25a",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_07_na_relationship_additive.json": "18d52b14113e451c321b5fb163c5bb70de8e0c7819a30c2fd95d23073e5e346c",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_08_stale_343_bps.json": "e1171cefd360dff9aa04bbe80103aaa40bb93069426c38dd3fbe42c745a8683b",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_09_stale_570_bps.json": "17a4f716edb4a511e15b78e8a1e8941141100a7bd6fdac6fe81874f644c00223",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_10_missing_r04_limitation.json": "27c8314a4954f8d33b940bab1d7ab399a5b7608cac5d401dd1e5129c50e26ee0",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_11_omitted_disclosure_gap.json": "2798fe0a824c4efcbd43f95c89214455e9fd5bf58143a4bb0797e8f3ad803ab5",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_12_missing_premises.json": "d55b78427b042d002359aa5109160123d81410bb339224aef7eeba8ce68e51ee",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_13_derived_as_disclosed.json": "a042ee246e1b66eddf2bc37a26e08946c749ea2eb29518c2a8596c9ed1e9e06c",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/invalid_14_unsupported_range_estimate.json": "1dac451df1d459f05fd305b3893879f14b53a74f91f26b97d4e35028f4876d05",
+   "fpa_engine/benchmark/cat_q2_2026/briefs/valid_brief.json": "cf3b4a57233631f177308ad4ff2ff5d6f32cd29dc478bc644fdd054b6c346421",
+   "fpa_engine/benchmark/cat_q2_2026/expected.json": "3909f0c1c03e41eabd0963c8c7131f1dfdc24f2c22bd3123b8d8d27a2a2efbe7",
+   "fpa_engine/benchmark/cat_q2_2026/facts.json": "2ed106a07fffea3c8bd7c0e701140701302622d8d3eaf3a81a4d446de98641cd",
+   "fpa_engine/benchmark/cat_q2_2026/narratives.json": "7775fde6727ed058aef2570a1f87ba170aa88af48c399884c88e2f92107d43ca",
+   "fpa_engine/benchmark/cat_q2_2026/sources.json": "08ad5d3184311a91fa750dd8a3176cdf7d4a7aa56bc0940dd749971e2dc4f235"
+  }
+ },
+ "validator": {
+  "prompt_version": "synthesis_v3",
+  "packet_hash": "5eeb00d3342b281452f30eb9cef8f8026d4fa96b1b73a385e9d82c01e574291d",
+  "packet_version": 2,
+  "files": {
+   "fpa_engine/brief_validator.py": "d65452e3e2a887f7c336a9efbbfcde7670915b509e20f5d3764ac54f388fa343",
+   "fpa_engine/brief.py": "ada8a104b17e23815dd1e71fbda96431380a5c44d3e852dc5c7356a8c38c5562",
+   "fpa_engine/synthesizer.py": "2555ef5f222c4cfeec35cc6b8dec0860c2897bb1b14f21ed51d5b6778b8abdb2",
+   "fpa_engine/llm.py": "918fc0d4f140b50324e6ed650898d12da78513a2e2aed2b1e6f351364e359777",
+   "fpa_engine/schemas.py": "ecdac65fafb29193a68003ec86e7abc8eec50aacd59df4d99a5bae0aed315579"
+  },
+  "python": "3.13.17",
+  "pydantic": "2.14.2",
+  "entry_point": "fpa_engine.synthesizer.synthesize(packet, MockLLMClient([payload]), max_attempts=1)"
+ },
+ "base": {
+  "file": "fpa-intelligence-engine/accepted-run/c4-run-1.json",
+  "sha256": "b29c8f3fe44616c561766f943e3c561f356c460b0b1feb23d3b191695320309e",
+  "note": "The recorded run's accepted brief, with validation_metadata.packet_hash set to the current packet. Each case changes one statement."
+ },
+ "topics": [
+  {
+   "id": "numbers",
+   "label": "Wrong or invented numbers"
+  },
+  {
+   "id": "rounding",
+   "label": "Rounding and precision"
+  },
+  {
+   "id": "units",
+   "label": "Units"
+  },
+  {
+   "id": "arithmetic",
+   "label": "Arithmetic"
+  },
+  {
+   "id": "references",
+   "label": "Evidence references"
+  },
+  {
+   "id": "quotes",
+   "label": "Quotations and attribution"
+  },
+  {
+   "id": "classification",
+   "label": "Statement kind and wording"
+  },
+  {
+   "id": "limitations",
+   "label": "Required limitations and forbidden values"
+  },
+  {
+   "id": "context",
+   "label": "Period, direction and segment"
+  },
+  {
+   "id": "causal",
+   "label": "Causal claims"
+  }
+ ],
+ "groups": [
+  {
+   "id": "control",
+   "label": "Valid control: must be accepted"
+  },
+  {
+   "id": "reliable",
+   "label": "Reliably caught"
+  },
+  {
+   "id": "conditional",
+   "label": "Caught only under conditions"
+  },
+  {
+   "id": "not_established",
+   "label": "Cannot be established by the engine"
+  }
+ ],
+ "cases": [
+  {
+   "id": "C01",
+   "topic": "numbers",
+   "group": "control",
+   "faulty": false,
+   "description": "The accepted brief, unchanged",
+   "statement": null,
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "C02",
+   "topic": "numbers",
+   "group": "control",
+   "faulty": false,
+   "description": "B1 reworded, same figures and citations",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "In Q2 2026, Construction Industries sales were $8,346M, up from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "C03",
+   "topic": "numbers",
+   "group": "control",
+   "faulty": false,
+   "description": "B2 figures written as $1.5 billion and $400 million",
+   "statement": {
+    "id": "B2",
+    "kind": "fact",
+    "severity": "info",
+    "text": "The disclosed CI dealer-inventory build fell from $1.5 billion in Q1 2026 to $400 million in Q2 2026. Over the same quarters, price-neutral CI retail sales growth rose from 7% to 22%.",
+    "refs": {
+     "fact_ids": [
+      "S23",
+      "S25",
+      "S21",
+      "S22"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "C05",
+   "topic": "arithmetic",
+   "group": "control",
+   "faulty": false,
+   "description": "The $2,156M sales change, held by the cited sales bridge (R01)",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose $2,156M to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "C04",
+   "topic": "classification",
+   "group": "control",
+   "faulty": false,
+   "description": "B5 with a different inference marker ('indicates')",
+   "statement": {
+    "id": "B5",
+    "kind": "interpretive",
+    "severity": "info",
+    "text": "Taken together, a smaller disclosed dealer build alongside faster price-neutral retail growth indicates that Q2 2026 CI growth leaned less on dealer restocking and more on end-user demand than in Q1 2026.",
+    "refs": {
+     "premise_ids": [
+      "S23",
+      "S25",
+      "S21",
+      "S22"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "N01",
+   "topic": "numbers",
+   "group": "reliable",
+   "faulty": true,
+   "description": "Transposed digits: $8,436M for $8,346M",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,436M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "N02",
+   "topic": "numbers",
+   "group": "reliable",
+   "faulty": true,
+   "description": "A real but uncited figure: Q1 sales ($7,161M) given as Q2 sales",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $7,161M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNCITED_FACT_VALUE"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNCITED_FACT_VALUE"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "N03",
+   "topic": "numbers",
+   "group": "reliable",
+   "faulty": true,
+   "description": "An invented volume contribution ($1,800M)",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,800M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "E01",
+   "topic": "references",
+   "group": "reliable",
+   "faulty": true,
+   "description": "A fabricated evidence ID (N99) on the explicit claim",
+   "statement": {
+    "id": "B3",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "The Q2 2026 release said higher sales volume was mainly driven by higher sales of equipment to end users and by the impact from changes in dealer inventories.",
+    "refs": {
+     "evidence_ids": [
+      "N99"
+     ],
+     "assertion_ids": [
+      "N02-A02"
+     ]
+    },
+    "changed": [
+     "evidence_ids"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNKNOWN_EVIDENCE_ID"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNKNOWN_EVIDENCE_ID"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_references"
+   ]
+  },
+  {
+   "id": "E02",
+   "topic": "references",
+   "group": "reliable",
+   "faulty": true,
+   "description": "A fabricated fact ID (S99) added to B1",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S99"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "fact_ids"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNKNOWN_FACT_ID"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNKNOWN_FACT_ID"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_references"
+   ]
+  },
+  {
+   "id": "E03",
+   "topic": "references",
+   "group": "reliable",
+   "faulty": true,
+   "description": "A fabricated assertion ID (N02-A99) on the explicit claim",
+   "statement": {
+    "id": "B3",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "The Q2 2026 release said higher sales volume was mainly driven by higher sales of equipment to end users and by the impact from changes in dealer inventories.",
+    "refs": {
+     "evidence_ids": [
+      "N02"
+     ],
+     "assertion_ids": [
+      "N02-A99"
+     ]
+    },
+    "changed": [
+     "assertion_ids"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNKNOWN_ASSERTION_ID"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNKNOWN_ASSERTION_ID"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_references"
+   ]
+  },
+  {
+   "id": "A01",
+   "topic": "arithmetic",
+   "group": "reliable",
+   "faulty": true,
+   "description": "A wrong difference ($2,100M) worked out from the cited figures",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose $2,100M to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "Q01",
+   "topic": "quotes",
+   "group": "reliable",
+   "faulty": true,
+   "description": "Quoted management words altered ('dealers' for 'end users')",
+   "statement": {
+    "id": "B3",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "The Q2 2026 release said \"Higher sales volume was mainly driven by higher sales of equipment to dealers\".",
+    "refs": {
+     "evidence_ids": [
+      "N02"
+     ],
+     "assertion_ids": [
+      "N02-A02"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "QUOTE_NOT_VERBATIM"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "QUOTE_NOT_VERBATIM"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_voice"
+   ]
+  },
+  {
+   "id": "Q02",
+   "topic": "quotes",
+   "group": "reliable",
+   "faulty": true,
+   "description": "Source wording quoted without saying who said it",
+   "statement": {
+    "id": "B3",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "Higher sales volume was \"mainly driven by higher sales of equipment to end users\".",
+    "refs": {
+     "evidence_ids": [
+      "N02"
+     ],
+     "assertion_ids": [
+      "N02-A02"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "QUOTE_NOT_ATTRIBUTED",
+     "SOURCE_VOICE_NOT_ATTRIBUTED"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "QUOTE_NOT_ATTRIBUTED",
+     "SOURCE_VOICE_NOT_ATTRIBUTED"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_voice"
+   ]
+  },
+  {
+   "id": "U01",
+   "topic": "units",
+   "group": "reliable",
+   "faulty": true,
+   "description": "Wrong scale suffix: $8,346B for $8,346M",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346B in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "U02",
+   "topic": "units",
+   "group": "reliable",
+   "faulty": true,
+   "description": "Wrong unit suffix: a 23.3% margin written as 23.3 bps",
+   "statement": {
+    "id": "B4",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "CI segment profit rose to $1,947M in Q2 2026 from $1,244M a year earlier, and segment margin rose to 23.3 bps from 20.1%. The Q2 2026 release said the increase was primarily due to the profit impact of higher sales volume.",
+    "refs": {
+     "fact_ids": [
+      "S13",
+      "S14",
+      "S17",
+      "S18"
+     ],
+     "evidence_ids": [
+      "N10"
+     ],
+     "assertion_ids": [
+      "N10-A02"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "F01",
+   "topic": "limitations",
+   "group": "reliable",
+   "faulty": true,
+   "description": "A forbidden value: the stale 343 bps tariff figure",
+   "statement": {
+    "id": "B7",
+    "kind": "limitation",
+    "severity": "warning",
+    "text": "Prior-year CI segment profit and margin come from the original release versions and have not been tested for later restatement. The tariff margin impact was 343 bps.",
+    "refs": {
+     "fact_ids": [
+      "S14",
+      "S18"
+     ],
+     "flag_ids": [
+      "G07"
+     ],
+     "comparability_note_ids": [
+      "CN06",
+      "CN07"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "FORBIDDEN_VALUE"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "FORBIDDEN_VALUE"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "P01",
+   "topic": "rounding",
+   "group": "reliable",
+   "faulty": true,
+   "description": "False precision: $8,346.0M (finer than the $1M display step)",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346.0M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "FALSE_PRECISION"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "FALSE_PRECISION"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "P02",
+   "topic": "rounding",
+   "group": "reliable",
+   "faulty": true,
+   "description": "False precision: 23.30% (finer than the 0.1-point step)",
+   "statement": {
+    "id": "B4",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "CI segment profit rose to $1,947M in Q2 2026 from $1,244M a year earlier, and segment margin rose to 23.30% from 20.1%. The Q2 2026 release said the increase was primarily due to the profit impact of higher sales volume.",
+    "refs": {
+     "fact_ids": [
+      "S13",
+      "S14",
+      "S17",
+      "S18"
+     ],
+     "evidence_ids": [
+      "N10"
+     ],
+     "assertion_ids": [
+      "N10-A02"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "FALSE_PRECISION"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "FALSE_PRECISION"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "K01",
+   "topic": "classification",
+   "group": "reliable",
+   "faulty": true,
+   "description": "A derived figure called disclosed ($703M is computed)",
+   "statement": {
+    "id": "B6",
+    "kind": "limitation",
+    "severity": "warning",
+    "text": "Caterpillar disclosed a $703M increase in Q2 2026 CI segment profit, and its drivers remain unresolved.",
+    "refs": {
+     "fact_ids": [
+      "D11"
+     ],
+     "reconciliation_ids": [
+      "R04",
+      "R03",
+      "R05"
+     ],
+     "flag_ids": [
+      "G04",
+      "G05",
+      "G06"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "DERIVED_PRESENTED_AS_DISCLOSED"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "DERIVED_PRESENTED_AS_DISCLOSED"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "K02",
+   "topic": "classification",
+   "group": "reliable",
+   "faulty": true,
+   "description": "Interpretive evidence (N15) cited by a fact statement",
+   "statement": {
+    "id": "B2",
+    "kind": "fact",
+    "severity": "info",
+    "text": "The disclosed CI dealer-inventory build fell from $1,500M in Q1 2026 to $400M in Q2 2026. Over the same quarters, price-neutral CI retail sales growth rose from 7% to 22%.",
+    "refs": {
+     "fact_ids": [
+      "S23",
+      "S25",
+      "S21",
+      "S22"
+     ],
+     "evidence_ids": [
+      "N15"
+     ]
+    },
+    "changed": [
+     "evidence_ids"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "ASSUMPTION_AS_FACT",
+     "HIDDEN_ASSUMPTION",
+     "INTERPRETIVE_AS_FACT",
+     "MISSING_ASSUMPTION_LIMITATION",
+     "MISSING_REVIEW_LIMITATION"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "ASSUMPTION_AS_FACT",
+     "HIDDEN_ASSUMPTION",
+     "INTERPRETIVE_AS_FACT",
+     "MISSING_ASSUMPTION_LIMITATION",
+     "MISSING_REVIEW_LIMITATION"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_assumptions",
+    "_check_coverage",
+    "_check_kind"
+   ]
+  },
+  {
+   "id": "K03",
+   "topic": "classification",
+   "group": "reliable",
+   "faulty": true,
+   "description": "An inference written as fact (no inference marker)",
+   "statement": {
+    "id": "B5",
+    "kind": "interpretive",
+    "severity": "info",
+    "text": "Taken together, a smaller disclosed dealer build alongside faster price-neutral retail growth shows that Q2 2026 CI growth leaned less on dealer restocking and more on end-user demand than in Q1 2026.",
+    "refs": {
+     "premise_ids": [
+      "S23",
+      "S25",
+      "S21",
+      "S22"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "INTERPRETIVE_MARKER_MISSING"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "INTERPRETIVE_MARKER_MISSING"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_kind"
+   ]
+  },
+  {
+   "id": "K04",
+   "topic": "classification",
+   "group": "reliable",
+   "faulty": true,
+   "description": "An unresolved bridge described as fully reconciled",
+   "statement": {
+    "id": "B4",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "CI segment profit rose to $1,947M in Q2 2026 from $1,244M a year earlier, and the $703M increase fully reconciles. The Q2 2026 release said the increase was primarily due to the profit impact of higher sales volume.",
+    "refs": {
+     "fact_ids": [
+      "S13",
+      "S14",
+      "S17",
+      "S18",
+      "D11"
+     ],
+     "evidence_ids": [
+      "N10"
+     ],
+     "assertion_ids": [
+      "N10-A02"
+     ]
+    },
+    "changed": [
+     "fact_ids",
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNRESOLVED_PRESENTED_AS_RECONCILED"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNRESOLVED_PRESENTED_AS_RECONCILED"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_semantics"
+   ]
+  },
+  {
+   "id": "K05",
+   "topic": "classification",
+   "group": "reliable",
+   "faulty": true,
+   "description": "A listed judgement word without support ('strong')",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales were strong, rising to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_CHARACTERIZATION"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_CHARACTERIZATION"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_voice"
+   ]
+  },
+  {
+   "id": "L01",
+   "topic": "limitations",
+   "group": "reliable",
+   "faulty": true,
+   "description": "The unresolved profit bridge (R04) dropped from the limitation",
+   "statement": {
+    "id": "B6",
+    "kind": "limitation",
+    "severity": "warning",
+    "text": "The drivers of the $703M increase in Q2 2026 CI segment profit remain unresolved. The volume and price-realization contributions were not captured, and no manufacturing-cost driver was disclosed, which should not be read as zero. The Q1 2026 and Q4 2025 CI profit bridges also leave residuals for drivers Caterpillar did not itemize.",
+    "refs": {
+     "fact_ids": [
+      "D11"
+     ],
+     "reconciliation_ids": [
+      "R03",
+      "R05"
+     ],
+     "flag_ids": [
+      "G04",
+      "G05",
+      "G06"
+     ]
+    },
+    "changed": [
+     "reconciliation_ids (removed R04)"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "MISSING_MANDATORY_LIMITATION",
+     "MISSING_REQUIRED_COVERAGE"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "MISSING_MANDATORY_LIMITATION",
+     "MISSING_REQUIRED_COVERAGE"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_brief_policy",
+    "_coverage_issue"
+   ]
+  },
+  {
+   "id": "L02",
+   "topic": "limitations",
+   "group": "reliable",
+   "faulty": true,
+   "description": "A mandatory disclosure gap (G04) dropped from the limitation",
+   "statement": {
+    "id": "B6",
+    "kind": "limitation",
+    "severity": "warning",
+    "text": "The drivers of the $703M increase in Q2 2026 CI segment profit remain unresolved. The volume and price-realization contributions were not captured, and no manufacturing-cost driver was disclosed, which should not be read as zero. The Q1 2026 and Q4 2025 CI profit bridges also leave residuals for drivers Caterpillar did not itemize.",
+    "refs": {
+     "fact_ids": [
+      "D11"
+     ],
+     "reconciliation_ids": [
+      "R04",
+      "R03",
+      "R05"
+     ],
+     "flag_ids": [
+      "G05",
+      "G06"
+     ]
+    },
+    "changed": [
+     "flag_ids (removed G04)"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "MISSING_MANDATORY_LIMITATION"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "MISSING_MANDATORY_LIMITATION"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_brief_policy"
+   ]
+  },
+  {
+   "id": "T01",
+   "topic": "rounding",
+   "group": "conditional",
+   "faulty": false,
+   "description": "Rounded within half a written unit: $8.3 billion for $8,346M",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8.3 billion in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "T02",
+   "topic": "rounding",
+   "group": "conditional",
+   "faulty": true,
+   "description": "Mis-rounded by more than half a unit: $8.4 billion",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8.4 billion in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "T03",
+   "topic": "rounding",
+   "group": "conditional",
+   "faulty": false,
+   "description": "Coarse rounding with a marker: about $8 billion",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to about $8 billion in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "T04",
+   "topic": "rounding",
+   "group": "conditional",
+   "faulty": true,
+   "description": "Off by $4M at $1M precision: $8,350M",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,350M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "T05",
+   "topic": "rounding",
+   "group": "conditional",
+   "faulty": false,
+   "description": "A margin rounded to the whole point: 23% for 23.3%",
+   "statement": {
+    "id": "B4",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "CI segment profit rose to $1,947M in Q2 2026 from $1,244M a year earlier, and segment margin rose to 23% from 20.1%. The Q2 2026 release said the increase was primarily due to the profit impact of higher sales volume.",
+    "refs": {
+     "fact_ids": [
+      "S13",
+      "S14",
+      "S17",
+      "S18"
+     ],
+     "evidence_ids": [
+      "N10"
+     ],
+     "assertion_ids": [
+      "N10-A02"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "Q03",
+   "topic": "quotes",
+   "group": "conditional",
+   "faulty": true,
+   "description": "The Q01 alteration without quotation marks",
+   "statement": {
+    "id": "B3",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "The Q2 2026 release said higher sales volume was mainly driven by higher sales of equipment to dealers.",
+    "refs": {
+     "evidence_ids": [
+      "N02"
+     ],
+     "assertion_ids": [
+      "N02-A02"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "Q04",
+   "topic": "quotes",
+   "group": "conditional",
+   "faulty": true,
+   "description": "An ellipsis quote that drops the end-user driver",
+   "statement": {
+    "id": "B3",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "The Q2 2026 release said \"Higher sales volume was mainly driven by ... the impact from changes in dealer inventories\".",
+    "refs": {
+     "evidence_ids": [
+      "N02"
+     ],
+     "assertion_ids": [
+      "N02-A02"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "A02",
+   "topic": "arithmetic",
+   "group": "conditional",
+   "faulty": true,
+   "description": "A correct pairwise difference worked out in prose ($703M)",
+   "statement": {
+    "id": "B4",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "CI segment profit rose $703M to $1,947M in Q2 2026 from $1,244M a year earlier, and segment margin rose to 23.3% from 20.1%. The Q2 2026 release said the increase was primarily due to the profit impact of higher sales volume.",
+    "refs": {
+     "fact_ids": [
+      "S13",
+      "S14",
+      "S17",
+      "S18"
+     ],
+     "evidence_ids": [
+      "N10"
+     ],
+     "assertion_ids": [
+      "N10-A02"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "ARITHMETIC_IN_PROSE"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "ARITHMETIC_IN_PROSE"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "A03",
+   "topic": "arithmetic",
+   "group": "conditional",
+   "faulty": true,
+   "description": "A correct pairwise growth rate worked out in prose (35%)",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose 35% to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "ARITHMETIC_IN_PROSE"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "ARITHMETIC_IN_PROSE"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "A04",
+   "topic": "arithmetic",
+   "group": "conditional",
+   "faulty": true,
+   "description": "A correct three-term sum ($2,138M): rejected, but not as arithmetic",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346M in Q2 2026 from $6,190M a year earlier. Sales volume, price realization and currency together contributed $2,138M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "U03",
+   "topic": "units",
+   "group": "conditional",
+   "faulty": false,
+   "description": "A registered conversion: 340 bps written as 3.4 percentage points",
+   "statement": {
+    "id": "B4",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "CI segment profit rose to $1,947M in Q2 2026 from $1,244M a year earlier. Management put the tariff impact on CI segment margin at 3.4 percentage points. The Q2 2026 release said the increase was primarily due to the profit impact of higher sales volume.",
+    "refs": {
+     "fact_ids": [
+      "S13",
+      "S14",
+      "S17",
+      "S18",
+      "S29"
+     ],
+     "evidence_ids": [
+      "N10"
+     ],
+     "assertion_ids": [
+      "N10-A02"
+     ]
+    },
+    "changed": [
+     "fact_ids",
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "U04",
+   "topic": "units",
+   "group": "conditional",
+   "faulty": true,
+   "description": "340 bps written as 3.4% (recognized suffix, wrong unit)",
+   "statement": {
+    "id": "B4",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "CI segment profit rose to $1,947M in Q2 2026 from $1,244M a year earlier. The tariff impact on CI segment margin was 3.4%. The Q2 2026 release said the increase was primarily due to the profit impact of higher sales volume.",
+    "refs": {
+     "fact_ids": [
+      "S13",
+      "S14",
+      "S17",
+      "S18",
+      "S29"
+     ],
+     "evidence_ids": [
+      "N10"
+     ],
+     "assertion_ids": [
+      "N10-A02"
+     ]
+    },
+    "changed": [
+     "fact_ids",
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ]
+   },
+   "actual": {
+    "outcome": "REJECT",
+    "codes": [
+     "UNSUPPORTED_NUMBER"
+    ],
+    "status": "SYNTHESIS_REJECTED"
+   },
+   "matches_expectation": true,
+   "missed": false,
+   "stages": [
+    "_check_numbers"
+   ]
+  },
+  {
+   "id": "U05",
+   "topic": "units",
+   "group": "conditional",
+   "faulty": true,
+   "description": "A figure with no unit at all (8,346)",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to 8,346 in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X01",
+   "topic": "context",
+   "group": "not_established",
+   "faulty": true,
+   "description": "Wrong fiscal period: the Q2 2026 figure labelled Q1 2026",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346M in Q1 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X02",
+   "topic": "context",
+   "group": "not_established",
+   "faulty": true,
+   "description": "Wrong comparison year: 'in Q2 2024'",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346M in Q2 2026 from $6,190M in Q2 2024. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X03",
+   "topic": "context",
+   "group": "not_established",
+   "faulty": true,
+   "description": "Wrong direction: 'fell' for 'rose'",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales fell to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X04",
+   "topic": "context",
+   "group": "not_established",
+   "faulty": true,
+   "description": "Wrong sign: the $703M increase written as -$703M",
+   "statement": {
+    "id": "B6",
+    "kind": "limitation",
+    "severity": "warning",
+    "text": "The drivers of the -$703M change in Q2 2026 CI segment profit remain unresolved.",
+    "refs": {
+     "fact_ids": [
+      "D11"
+     ],
+     "reconciliation_ids": [
+      "R04",
+      "R03",
+      "R05"
+     ],
+     "flag_ids": [
+      "G04",
+      "G05",
+      "G06"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X05",
+   "topic": "context",
+   "group": "not_established",
+   "faulty": true,
+   "description": "Wrong segment: Resource Industries for Construction Industries",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Resource Industries sales rose to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X06",
+   "topic": "references",
+   "group": "not_established",
+   "faulty": true,
+   "description": "A real but irrelevant citation (S30, IEEPA recoveries) on B1",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346M in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S30"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "fact_ids"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X07",
+   "topic": "numbers",
+   "group": "not_established",
+   "faulty": true,
+   "description": "A wrong figure spelled out: 'about nine billion dollars'",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to about nine billion dollars in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X08",
+   "topic": "arithmetic",
+   "group": "not_established",
+   "faulty": true,
+   "description": "Arithmetic in words: Q2 build 'roughly half' of Q1 (true: ~27%)",
+   "statement": {
+    "id": "B2",
+    "kind": "fact",
+    "severity": "info",
+    "text": "The disclosed CI dealer-inventory build of $400M in Q2 2026 was roughly half of the $1,500M Q1 2026 build. Over the same quarters, price-neutral CI retail sales growth rose from 7% to 22%.",
+    "refs": {
+     "fact_ids": [
+      "S23",
+      "S25",
+      "S21",
+      "S22"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X09",
+   "topic": "quotes",
+   "group": "not_established",
+   "faulty": true,
+   "description": "A misattributed paraphrase: N02 cited for a tariff claim",
+   "statement": {
+    "id": "B3",
+    "kind": "explicit_claim",
+    "severity": "info",
+    "text": "The Q2 2026 release said tariffs were the main drag on Construction Industries.",
+    "refs": {
+     "evidence_ids": [
+      "N02"
+     ],
+     "assertion_ids": [
+      "N02-A02"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X10",
+   "topic": "causal",
+   "group": "not_established",
+   "faulty": true,
+   "description": "An unsupported cause: 'because of higher prices'",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346M in Q2 2026 from $6,190M a year earlier, because of higher prices. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X11",
+   "topic": "causal",
+   "group": "not_established",
+   "faulty": true,
+   "description": "A false causal ranking: price ($309M) as the main driver",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346M in Q2 2026 from $6,190M a year earlier. The increase was driven mainly by price realization of $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X12",
+   "topic": "causal",
+   "group": "not_established",
+   "faulty": true,
+   "description": "A cause given for the unresolved profit increase",
+   "statement": {
+    "id": "B6",
+    "kind": "limitation",
+    "severity": "warning",
+    "text": "The $703M increase in Q2 2026 CI segment profit was caused by lower manufacturing costs, and the profit bridge remains unresolved.",
+    "refs": {
+     "fact_ids": [
+      "D11"
+     ],
+     "reconciliation_ids": [
+      "R04",
+      "R03",
+      "R05"
+     ],
+     "flag_ids": [
+      "G04",
+      "G05",
+      "G06"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X13",
+   "topic": "classification",
+   "group": "not_established",
+   "faulty": true,
+   "description": "Opinion stated as fact, without a listed judgement word",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries demand is clearly accelerating, with sales of $8,346M in Q2 2026 against $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X14",
+   "topic": "classification",
+   "group": "not_established",
+   "faulty": true,
+   "description": "An unlisted judgement word ('exceptionally')",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales were exceptionally high at $8,346M in Q2 2026, against $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X15",
+   "topic": "units",
+   "group": "not_established",
+   "faulty": true,
+   "description": "An unrecognized unit: '$8,346 thousand'",
+   "statement": {
+    "id": "B1",
+    "kind": "fact",
+    "severity": "info",
+    "text": "Construction Industries sales rose to $8,346 thousand in Q2 2026 from $6,190M a year earlier. The company's sales bridge reconciles, with sales volume contributing $1,755M and price realization $309M.",
+    "refs": {
+     "fact_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04"
+     ],
+     "reconciliation_ids": [
+      "R01"
+     ]
+    },
+    "changed": [
+     "text"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  },
+  {
+   "id": "X16",
+   "topic": "limitations",
+   "group": "not_established",
+   "faulty": true,
+   "description": "A mandatory limitation marked severity 'info'",
+   "statement": {
+    "id": "B6",
+    "kind": "limitation",
+    "severity": "info",
+    "text": "The drivers of the $703M increase in Q2 2026 CI segment profit remain unresolved. The volume and price-realization contributions were not captured, and no manufacturing-cost driver was disclosed, which should not be read as zero. The Q1 2026 and Q4 2025 CI profit bridges also leave residuals for drivers Caterpillar did not itemize.",
+    "refs": {
+     "fact_ids": [
+      "D11"
+     ],
+     "reconciliation_ids": [
+      "R04",
+      "R03",
+      "R05"
+     ],
+     "flag_ids": [
+      "G04",
+      "G05",
+      "G06"
+     ]
+    },
+    "changed": [
+     "severity"
+    ]
+   },
+   "expected": {
+    "outcome": "ACCEPT",
+    "codes": []
+   },
+   "actual": {
+    "outcome": "ACCEPT",
+    "codes": [],
+    "status": "ACCEPTED"
+   },
+   "matches_expectation": true,
+   "missed": true,
+   "stages": [
+    "no rule fired"
+   ]
+  }
+ ]
+}
