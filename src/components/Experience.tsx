@@ -141,7 +141,7 @@ export default function Experience() {
             </div>
 
             <p className="mt-3 text-xs italic leading-5 text-charcoal-soft">
-              Started as a summer intern in 2025 and returned full-time after graduating in 2026.
+              Started as a summer intern in 2025 and returned full-time in 2026 while finishing my B.S.
             </p>
 
             <ul className="mt-6 flex flex-col gap-3">
@@ -201,7 +201,7 @@ export default function Experience() {
               </h4>
               <p className="mt-1 text-sm text-charcoal-soft">B.S. in Finance &amp; Management — Dual Major</p>
             </div>
-            <p className="text-xs text-charcoal-soft">Syracuse, NY · May 2026</p>
+            <p className="text-xs text-charcoal-soft">Syracuse, NY · Degree expected Winter 2026</p>
           </div>
         </div>
       </div>
