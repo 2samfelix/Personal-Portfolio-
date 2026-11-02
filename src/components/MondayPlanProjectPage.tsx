@@ -34,6 +34,7 @@ import {
 import { BreakevenChart, BridgeChart, GrowthChart, QuarterlyCharts, RangeChart, WorkbookNumber as N } from "@/components/monday/MondayCharts";
 import InPageMenu from "@/components/monday/InPageMenu";
 import ResultsCountdown from "@/components/monday/ResultsCountdown";
+import ResultsSection from "@/components/monday/ResultsSection";
 
 // Whole sheets at 100% zoom; the desktop grid is sized to each tab at build time.
 const PREVIEW_ZOOM = 1;
@@ -54,6 +55,7 @@ const MENU = [
   { href: "#scenarios", label: "Scenarios" },
   { href: "#triggers", label: "Triggers" },
   { href: "#q3-test", label: "Locked test" },
+  { href: "#results", label: "Results" },
   { href: "#inside-the-model", label: "Inside the model" },
   { href: "#downloads", label: "Downloads" },
 ];
@@ -530,6 +532,9 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
             </table>
           </div>
         </section>
+
+        {/* Q3 results: pending until the results file exists (src/lib/mondayResults.ts) */}
+        <ResultsSection className={`mt-20 ${SECTION}`} />
 
         {/* Model Preview */}
         <section id="inside-the-model" aria-labelledby="inside-model-heading" className={`mt-20 ${SECTION}`}>

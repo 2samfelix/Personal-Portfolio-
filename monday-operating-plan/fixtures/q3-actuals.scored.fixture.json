@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "status": "scored",
+  "source": {
+    "document": "TEST FIXTURE: invented numbers, not a monday.com filing",
+    "url": "https://example.com/test-fixture-not-a-filing",
+    "retrieved_at": "2026-11-09T14:00:00Z"
+  },
+  "actuals": {
+    "revenue_usd_m": 380.6,
+    "non_gaap_operating_income_usd_m": 74.1,
+    "non_gaap_operating_margin": 0.195,
+    "net_dollar_retention": 1.06,
+    "customers_over_50k_arr": 5090
+  },
+  "triggers": {
+    "t2_revenue_beat_vs_guidance_mid": 0.0314,
+    "t3_net_adds_customers_over_50k": 175
+  },
+  "notes": [
+    "TEST FIXTURE: an example note. On November 9 this list holds what the call got wrong, in plain words.",
+    "TEST FIXTURE: a second example note, to check that a list of notes lays out."
+  ]
+}

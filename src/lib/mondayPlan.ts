@@ -454,3 +454,48 @@ export function loadMondayCharts(): MondayCharts {
 
 /** Results release time: November 9, 2026, 8:30 a.m. ET (EST, UTC-5), as stated in the plan-2026-locked Release. */
 export const RESULTS_AT_UTC = "2026-11-09T13:30:00Z";
+
+// --- Results inputs ---------------------------------------------------------------
+// The locked figures the Q3 results are compared with, read from the workbooks like
+// everything above (src/lib/mondayResults.ts uses them; nothing is retyped there).
+
+function readResultsInputs() {
+  const qRev = tab(Q3_DOC, "Revenue guidance");
+  const qOi = tab(Q3_DOC, "Operating income guidance");
+  const rec = tab(PLAN_DOC, "Recommendation");
+  const sc = tab(Q3_DOC, "Scorecard");
+  const trigger = (prefix: string) => {
+    const r = row(rec, prefix, true);
+    return { label: text(rec, r, 0), threshold: num(rec, r, 2), rule: text(rec, r, 7) };
+  };
+  // The Scorecard's own scoring rule for each locked metric (column H).
+  const rule = (metric: string) => text(sc, row(sc, metric), 7);
+  return {
+    rules: {
+      revenue: rule("Revenue (USD m)"),
+      oi: rule("Non-GAAP operating income (USD m)"),
+      margin: rule("Non-GAAP operating margin (derived from calls)"),
+      ndr: rule("All-customer net dollar retention"),
+      customers: rule("Paid customers >$50k ARR"),
+    },
+    guidanceMid: {
+      revenue: num(qRev, row(qRev, "Q3 2026 guidance midpoint (USD m)"), 3, "q3"),
+      oi: num(qOi, row(qOi, "Q3 2026 guidance midpoint (USD m)"), 3, "q3"),
+      margin: num(qOi, row(qOi, "TAIL derived margin: op. income guidance midpoint / revenue guidance midpoint"), 3, "q3"),
+    },
+    t2: trigger("T2 threshold"),
+    t3: trigger("T3 threshold"),
+  };
+}
+
+export type ResultsInputs = ReturnType<typeof readResultsInputs>;
+let resultsInputsCached: ResultsInputs | null = null;
+
+/** Verifies the pins, then reads the locked figures the results are compared with. */
+export function loadResultsInputs(): ResultsInputs {
+  if (!resultsInputsCached) {
+    verifyPins();
+    resultsInputsCached = readResultsInputs();
+  }
+  return resultsInputsCached;
+}

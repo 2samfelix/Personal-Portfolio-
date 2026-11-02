@@ -22,7 +22,11 @@
     "check:engine-trace": "node scripts/check-engine-trace.mjs",
     "check:validation-lab": "node scripts/check-validation-lab.mjs",
     "test:monday-charts": "python3 scripts/test-monday-charts.py",
-    "test:engine-lab": "python3 scripts/test-engine-lab.py"
+    "test:engine-lab": "python3 scripts/test-engine-lab.py",
+    "test:monday-results": "python3 scripts/test-monday-results.py",
+    "build:monday-results-fixture": "MONDAY_RESULTS_FIXTURE=1 next build",
+    "start:monday-results-fixture": "MONDAY_RESULTS_FIXTURE=1 next start -p 3200",
+    "test:monday-results-fixture": "python3 scripts/test-monday-results.py --dist .next-fixture"
   },
   "dependencies": {
     "next": "16.2.12",
