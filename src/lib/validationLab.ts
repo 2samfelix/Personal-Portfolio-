@@ -80,6 +80,8 @@ export type ValidationLab = {
     controls: number;
     controlsAccepted: number;
     faulty: number;
+    /** Correct roundings or conversions (not faulty, not controls) that the validator should accept. */
+    tolerated: number;
     caughtAsExpected: number;
     knownLimitations: number;
     asPredicted: number;
@@ -111,10 +113,12 @@ export function loadValidationLab(): ValidationLab {
     controls: cases.filter((c) => c.group === "control").length,
     controlsAccepted: cases.filter((c) => c.group === "control" && c.actual.outcome === "ACCEPT").length,
     faulty: faulty.length,
+    tolerated: cases.filter((c) => !c.faulty && c.group !== "control").length,
     caughtAsExpected: faulty.filter((c) => c.expected.outcome === "REJECT" && c.actual.outcome === "REJECT").length,
     knownLimitations: faulty.filter((c) => c.actual.outcome === "ACCEPT").length,
     asPredicted: cases.filter((c) => c.matches_expectation).length,
   };
+  if (stats.faulty + stats.controls + stats.tolerated !== stats.cases) fail("faulty, control and tolerated cases do not add up to the case count");
   const map = doc.topics.map((t) => {
     const inTopic = cases.filter((c) => c.topic === t.id && c.detection);
     const counts = { caught: 0, conditional: 0, missed: 0 } as Record<Detection, number>;

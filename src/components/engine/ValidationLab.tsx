@@ -47,7 +47,7 @@ export function GlyphIcon({ d }: { d: Detection }) {
 export function LabStatTiles({ lab }: { lab: ValidationLab }) {
   const s = lab.stats;
   const tiles = [
-    { key: "cases", value: s.cases, label: "Cases tested", note: `${s.faulty} faulty statements and ${s.controls} valid controls` },
+    { key: "cases", value: s.cases, label: "Cases tested", note: `${s.faulty} faulty statements, ${s.controls} valid controls, ${s.tolerated} correct roundings or conversions` },
     { key: "caught", value: s.caughtAsExpected, label: "Caught as expected", note: "faulty statements the validator rejected" },
     { key: "limitations", value: s.knownLimitations, label: "Known limitations", note: "faulty statements it accepted, all shown below" },
   ];
