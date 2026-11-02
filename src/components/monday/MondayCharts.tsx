@@ -9,6 +9,7 @@
 // viewBox (no layout shift), have no animation, and each has a data table.
 import type { ReactNode } from "react";
 import type { CellValue, MondayCharts } from "@/lib/mondayPlan";
+import type { ScoredRow } from "@/lib/mondayResults";
 
 // Palette (site tokens). Text colours pass WCAG AA on cream/white; on the forest
 // hero, cream, brass-light and a light rust pass on forest.
@@ -418,7 +419,10 @@ export function money(unit: string, c: CellValue) {
   return unit === "USD millions" ? `$${c.d}M` : c.d;
 }
 
-function RangeSvg({ ranges, w }: { ranges: MondayCharts["ranges"]; w: number }) {
+/** An actual printed beside the range chart (scored only), tagged with its results-file key and value. */
+type ShownActual = Pick<ScoredRow, "key" | "actual" | "actualText">;
+
+function RangeSvg({ ranges, w, actuals }: { ranges: MondayCharts["ranges"]; w: number; actuals: Map<string, ShownActual> | null }) {
   const rowH = 126;
   const h = ranges.length * rowH;
   const actualX = w - 30;
@@ -478,10 +482,24 @@ function RangeSvg({ ranges, w }: { ranges: MondayCharts["ranges"]; w: number }) 
             <text x={r2(lowOut ? x(m.low.v) - 4 : x(m.low.v))} y={barY + 30} textAnchor={lowOut ? "end" : "start"} fontSize={13} fill={C.ink} {...num(m.low)}>{lowText}</text>
             <text x={r2(x(m.mid.v))} y={barY - 11} textAnchor="middle" fontSize={13} fontWeight={700} fill={C.ink} {...num(m.mid)}>{money(m.unit, m.mid)}</text>
             <text x={r2(highOut ? x(m.high.v) + 4 : x(m.high.v))} y={barY + 30} textAnchor={highOut ? "start" : "end"} fontSize={13} fill={C.ink} {...num(m.high)}>{highText}</text>
-            {/* Empty marker: the actual is not known until November 9. */}
-            <circle cx={actualX} cy={barY + 7} r={9} fill="none" stroke={C.soft} strokeWidth={2} strokeDasharray="3 3" />
-            <text x={actualX} y={barY + 34} textAnchor="middle" fontSize={13} fill={C.soft}>Actual:</text>
-            <text x={actualX} y={barY + 50} textAnchor="middle" fontSize={13} fill={C.soft}>Nov. 9</text>
+            {actuals?.get(m.metric) ? (
+              // Scored: the actual is printed here; the results chart places it on the range.
+              <>
+                <text x={actualX} y={barY + 34} textAnchor="middle" fontSize={13} fill={C.soft}>Actual:</text>
+                <text x={actualX} y={barY + 50} textAnchor="middle" fontSize={13} fontWeight={700} fill={C.rust}>
+                  <tspan data-actual={actuals.get(m.metric)!.key} data-v={actuals.get(m.metric)!.actual} data-d={actuals.get(m.metric)!.actualText}>
+                    {actuals.get(m.metric)!.actualText}
+                  </tspan>
+                </text>
+              </>
+            ) : (
+              // Empty marker: the actual is not known until November 9.
+              <>
+                <circle cx={actualX} cy={barY + 7} r={9} fill="none" stroke={C.soft} strokeWidth={2} strokeDasharray="3 3" />
+                <text x={actualX} y={barY + 34} textAnchor="middle" fontSize={13} fill={C.soft}>Actual:</text>
+                <text x={actualX} y={barY + 50} textAnchor="middle" fontSize={13} fill={C.soft}>Nov. 9</text>
+              </>
+            )}
           </g>
         );
       })}
@@ -489,12 +507,20 @@ function RangeSvg({ ranges, w }: { ranges: MondayCharts["ranges"]; w: number }) 
   );
 }
 
-export function RangeChart({ ranges }: { ranges: MondayCharts["ranges"] }) {
+/** The locked ranges; with `results` (scored), each metric's actual is printed beside its range. */
+export function RangeChart({ ranges, results = null }: { ranges: MondayCharts["ranges"]; results?: ScoredRow[] | null }) {
+  const actuals = results ? new Map(results.map((r) => [r.metric, r])) : null;
   return (
     <ChartFigure
       id="ranges"
-      title="The locked Q3 call is a range for each metric; the actuals are not known yet."
-      caption="Dark bar: locked low to high, with the mid as a tick. Tan band: the company's August 10 guidance, where it gave one. Faint ticks mark the ends of the bar and the band on each metric's own scale. The empty circle is where the actual will go after November 9."
+      title={
+        actuals
+          ? "The locked Q3 call is a range for each metric; each actual is printed at right and scored below in Results."
+          : "The locked Q3 call is a range for each metric; the actuals are not known yet."
+      }
+      caption={`Dark bar: locked low to high, with the mid as a tick. Tan band: the company's August 10 guidance, where it gave one. Faint ticks mark the ends of the bar and the band on each metric's own scale. ${
+        actuals ? "The actual is printed at right; the Results chart places it on the range." : "The empty circle is where the actual will go after November 9."
+      }`}
       table={
         <DataTable
           head={["Metric", "Guidance", "Locked low", "Locked mid", "Locked high", "Actual"]}
@@ -510,16 +536,22 @@ export function RangeChart({ ranges }: { ranges: MondayCharts["ranges"] }) {
             <span key="l" {...num(m.low)}>{money(m.unit, m.low)}</span>,
             <span key="m" {...num(m.mid)}>{money(m.unit, m.mid)}</span>,
             <span key="h" {...num(m.high)}>{money(m.unit, m.high)}</span>,
-            "Pending: Nov. 9",
+            actuals?.get(m.metric) ? (
+              <span key="a" data-actual={actuals.get(m.metric)!.key} data-v={actuals.get(m.metric)!.actual} data-d={actuals.get(m.metric)!.actualText}>
+                {actuals.get(m.metric)!.actualText}
+              </span>
+            ) : (
+              "Pending: Nov. 9"
+            ),
           ])}
         />
       }
     >
       <div className="mx-auto max-w-[30rem] md:hidden">
-        <RangeSvg ranges={ranges} w={300} />
+        <RangeSvg ranges={ranges} w={300} actuals={actuals} />
       </div>
       <div className="hidden max-w-4xl md:block">
-        <RangeSvg ranges={ranges} w={680} />
+        <RangeSvg ranges={ranges} w={680} actuals={actuals} />
       </div>
     </ChartFigure>
   );

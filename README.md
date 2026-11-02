@@ -48,7 +48,7 @@ npm start
 | `npm run build` | Type-checks and prerenders every page. It also fails if a locked monday.com workbook, its hosted download copy or the hosted memo PDF no longer matches its SHA-256 pin (`verifyPins` in `src/lib/mondayPlan.ts`). |
 | `npm run check:model-preview` | Every Model Preview JSON in `public/*/model-preview.json` still matches the SHA-256 of the workbook it was exported from (see below). |
 | `npm run test:monday-charts` | Run after `npm run build`. Reads the prerendered monday.com page and checks every number and drawn mark tied to a workbook cell against the pinned workbooks, read with openpyxl. Needs Python 3 with `openpyxl`. |
-| `npm run test:monday-results` | Run after `npm run build`. Checks the monday.com page's Q3 results section: while there is no `public/monday-operating-plan/monday_q3_actuals.json`, that it shows the pending state and no actual; once there is, that every actual shown matches the file and every result matches the locked call (`src/lib/mondayResults.ts` has the publishing steps). |
+| `npm run test:monday-results` | Run after `npm run build`. Checks the monday.com page's Q3 results section: while there is no `public/monday-operating-plan/monday_q3_actuals.json`, that it shows the pending state and no actual; once there is, that every actual shown matches the file and every result matches the locked call. In both states, that the page and the home-page card show only that state's wording (no "pending" text or live countdown once scored). |
 | `npm run build:monday-results-fixture`, `npm run test:monday-results-fixture`, `npm run start:monday-results-fixture` | Build, test and serve (port 3200) the page with the scored test fixture (`monday-operating-plan/fixtures/`, invented numbers) in `.next-fixture`, to check the scored layout. Production builds never read it. |
 | `npm run check:engine-trace` | The FP&A Intelligence Engine page's trace data (`public/engine/trace.json`) still matches the accepted run and the engine files it was built from. By default it fetches the engine at the pinned commit from GitHub, so it needs network access (or `--engine <path>` to a local clone at that commit). |
 | `npm run check:validation-lab` | The engine page's validation lab data (`public/engine/validation-lab.json`) is the file pinned in `src/lib/validationLab.ts` (the build checks that too), and the engine files it was exported from still match at the pinned commit. Like `check:engine-trace`, it fetches the engine from GitHub unless given `--engine <path>`. Regenerate the data with `scripts/export-validation-lab.py` (offline; no API key or model call). |
@@ -56,6 +56,15 @@ npm start
 | `npm run verify:caterpillar-exhibits` | The Caterpillar page's mobile exhibit titles and subtitles match the ones baked into each exhibit's SVG. |
 
 There is no unit-test runner in this repository; the checks above are the tests.
+
+## Publishing the Q3 2026 results (November 9, 2026)
+
+Every status line on the monday.com page and its home-page card follows the results file, as do the card's thumbnail and the page's link-preview image (their "Q3: SCORED" variants are already in `public/`), so publishing is:
+
+1. **Add the actuals file:** `public/monday-operating-plan/monday_q3_actuals.json`, from monday.com's own Q3 2026 results release, in the schema in `src/lib/mondayResults.ts` (`"status": "scored"`).
+2. **Set the pin:** run `npm run build`; it stops and prints the file's SHA-256. Set `ACTUALS_SHA256` in `src/lib/mondayResults.ts` to it.
+3. **Run the checks:** `npm run build && npm run lint && npm run test:monday-results && npm run test:monday-charts`.
+4. **Commit** the file and the pin together.
 
 ## How the Model Preview pins work
 

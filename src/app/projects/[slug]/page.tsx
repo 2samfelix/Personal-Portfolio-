@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
+import { SCORED_OG_IMAGE, loadMondayResults } from "@/lib/mondayResults";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -33,7 +34,8 @@ export async function generateMetadata({
     title: `${project.title} — ${project.category} | Sam Felix`,
     description: project.description ?? project.summary,
     path: `/projects/${project.slug}`,
-    image: `/og/${project.slug}.png`,
+    // The monday.com card shows its Q3 status, so its preview follows the results file.
+    image: project.slug === "monday-operating-plan" && loadMondayResults().state === "scored" ? SCORED_OG_IMAGE : `/og/${project.slug}.png`,
     imageAlt: `${project.title}: ${project.category}`,
   });
 }

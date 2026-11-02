@@ -6,7 +6,10 @@
 //   src/lib/projects.ts beside its existing thumbnail (public/project-visuals);
 // - one shared card (home, the other tools, the 404): the headshot, the site name and the
 //   site description (SITE_DESCRIPTION in src/lib/seo.ts, also the home page's description).
+// - the monday.com card's scored variant (og/monday-operating-plan-scored.png), from the
+//   "Q3: SCORED" thumbnail; the project page uses it once the Q3 results are scored.
 // Output: public/og/<slug>.png and public/og/site.png, 1200 x 630.
+// Pass output names to render only those, e.g. `node scripts/render-og-images.mjs monday-operating-plan-scored`.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -61,6 +64,16 @@ const cards = projects
         <p class="foot">SAM <span>FELIX</span> · Finance &amp; Analytics Portfolio</p></div>
       <div class="art"><img src="${dataUrl(p.visual)}" alt=""></div>`),
   }));
+const monday = projects.find((p) => p.slug === "monday-operating-plan");
+if (monday) {
+  cards.push({
+    out: "og/monday-operating-plan-scored.png",
+    html: page(`<div class="band"></div>
+      <div class="text"><p class="label">${esc(monday.category)}</p><p class="title">${esc(monday.title)}</p>
+        <p class="foot">SAM <span>FELIX</span> · Finance &amp; Analytics Portfolio</p></div>
+      <div class="art"><img src="${dataUrl("project-visuals/monday-operating-plan-scored.webp")}" alt=""></div>`),
+  });
+}
 cards.push({
   out: "og/site.png",
   html: page(`<div class="band"></div>
@@ -73,7 +86,8 @@ cards.push({
 mkdirSync(join(root, "public/og"), { recursive: true });
 const browser = await chromium.launch();
 const tab = await browser.newPage({ viewport: { width: W, height: H } });
-for (const c of cards) {
+const only = process.argv.slice(2);
+for (const c of cards.filter((c) => !only.length || only.includes(c.out.replace(/^og\/|\.png$/g, "")))) {
   await tab.setContent(c.html, { waitUntil: "load" });
   const overflow = await tab.evaluate(() => [...document.querySelectorAll(".text > *")].some((e) => e.getBoundingClientRect().bottom > innerHeight - 20) || document.documentElement.scrollWidth > innerWidth);
   if (overflow) throw new Error(`${c.out}: text overflows the card`);
