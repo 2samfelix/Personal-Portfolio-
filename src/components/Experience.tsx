@@ -5,7 +5,7 @@ type EmploymentPeriod = {
 
 const MARKETSTAFF_PERIODS: EmploymentPeriod[] = [
   { label: "Summer Intern", dates: "May 2025 – August 2025" },
-  { label: "Full-Time", dates: "May 2026 – Present" },
+  { label: "Full-Time", dates: "June 2026 – Present" },
 ];
 
 const MARKETSTAFF_BULLETS: string[] = [
