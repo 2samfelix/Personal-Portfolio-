@@ -313,12 +313,12 @@ export function SynergyHeatmap({
       <ChartScroll minWidth={svgW}>
         <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" role="img" aria-label="Synergy breakeven sensitivity grid: EPS accretion/dilution by annual synergies and foregone cash yield, with base case at $0 synergies and 4.0% yield">
           {yieldCols.map((g, c) => (
-            <text key={c} x={cellCenterX(c)} y={16} textAnchor="middle" fontSize={10} fontWeight={700} className={c === baseCol ? "fill-brass" : "fill-charcoal-soft"}>
+            <text key={c} x={cellCenterX(c)} y={16} textAnchor="middle" fontSize={10} fontWeight={700} className={c === baseCol ? "fill-brass-ink" : "fill-charcoal-soft"}>
               {(g * 100).toFixed(0)}%
             </text>
           ))}
           {synergyRows.map((s, r) => (
-            <text key={r} x={labelColW - 8} y={headerH + r * cellH + cellH / 2 + 4} textAnchor="end" fontSize={10} fontWeight={700} className={r === baseRow ? "fill-brass" : "fill-charcoal-soft"}>
+            <text key={r} x={labelColW - 8} y={headerH + r * cellH + cellH / 2 + 4} textAnchor="end" fontSize={10} fontWeight={700} className={r === baseRow ? "fill-brass-ink" : "fill-charcoal-soft"}>
               ${(s / 1000).toFixed(0)}B
             </text>
           ))}

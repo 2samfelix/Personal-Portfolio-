@@ -24,14 +24,14 @@ export default function ProjectPage({
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
         <Link
           href="/#work"
-          className="text-sm font-semibold text-forest hover:text-forest-dark"
+          className="tap text-sm font-semibold text-forest hover:text-forest-dark"
         >
           &larr; Back to Projects
         </Link>
 
         {/* Hero */}
         <div className="mt-8">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             {project.category}
           </p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-charcoal sm:text-5xl">
@@ -74,7 +74,7 @@ export default function ProjectPage({
           <>
             {/* Overview */}
             <section className="mt-14">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 Overview
               </h2>
               <p className="mt-3 text-base leading-7 text-charcoal-soft">
@@ -84,7 +84,7 @@ export default function ProjectPage({
 
             {/* Methodology */}
             <section className="mt-12 border-t border-forest/10 pt-12">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 Business Question &amp; Methodology
               </h2>
               <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -113,7 +113,7 @@ export default function ProjectPage({
                   {cs.assumptions.map((item) => (
                     <li
                       key={item}
-                      className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
+                      className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass-ink before:content-['—']"
                     >
                       {item}
                     </li>
@@ -124,7 +124,7 @@ export default function ProjectPage({
 
             {/* Key findings */}
             <section className="mt-12 border-t border-forest/10 pt-12">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 Key Findings
               </h2>
               <ul className="mt-4 flex flex-col gap-4">
@@ -141,7 +141,7 @@ export default function ProjectPage({
 
             {/* Deliverables */}
             <section className="mt-12 border-t border-forest/10 pt-12">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 Deliverables
               </h2>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -185,7 +185,7 @@ export default function ProjectPage({
 
             {/* Takeaway */}
             <section className="mt-12 border-t border-forest/10 pt-12">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 Final Takeaway
               </h2>
               <p className="mt-3 text-lg font-medium leading-8 text-charcoal">
@@ -199,7 +199,7 @@ export default function ProjectPage({
         <nav className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
           {prev ? (
             <Link href={`/projects/${prev.slug}`}
-            className="text-sm font-semibold text-charcoal-soft hover:text-charcoal"
+            className="tap text-sm font-semibold text-charcoal-soft hover:text-charcoal"
           >
               &larr; Previous Project
             </Link>
@@ -208,7 +208,7 @@ export default function ProjectPage({
           )}
           {next ? (
             <Link href={`/projects/${next.slug}`}
-            className="text-sm font-semibold text-charcoal-soft hover:text-charcoal"
+            className="tap text-sm font-semibold text-charcoal-soft hover:text-charcoal"
           >
               Next Project &rarr;
             </Link>

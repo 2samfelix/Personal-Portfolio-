@@ -637,7 +637,7 @@ export default function FrontOfficeCausalChain({
               >
                 {node.annotation && (
                   <span
-                    className="absolute left-1/2 whitespace-nowrap rounded bg-brass px-1.5 py-0.5 text-[7.5px] font-bold uppercase tracking-wide text-cream"
+                    className="absolute left-1/2 whitespace-nowrap rounded bg-brass-ink px-1.5 py-0.5 text-[7.5px] font-bold uppercase tracking-wide text-cream"
                     style={{ bottom: h + 6, transform: "translateX(-50%)" }}
                   >
                     {node.annotation}
@@ -678,7 +678,8 @@ export default function FrontOfficeCausalChain({
             const to = NODE_BY_ID.get(edge.to)!;
             const key = `${edge.from}->${edge.to}`;
             const point = LABEL_POSITION_OVERRIDE[key] ?? edgeLabelPoint(from, to, LABEL_T[key] ?? 0.5);
-            const color = edge.relation === "inverse" ? "text-[#c07a63]" : "text-brass-light";
+            // Label text: a light rust (7.3:1 on the dark label chip); the edge line keeps #c07a63.
+            const color = edge.relation === "inverse" ? "text-[#f4b9a6]" : "text-brass-light";
             return (
               <div
                 key={`${key}-label`}

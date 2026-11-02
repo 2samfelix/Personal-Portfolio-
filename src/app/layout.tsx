@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { METADATA_BASE, SITE_DESCRIPTION, SITE_NAME, pageMetadata } from "@/lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,9 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sam Felix — Finance & Analytics Portfolio",
-  description:
-    "Finance and analytics portfolio showcasing financial modeling, FP&A projects, and AI-powered finance tools.",
+  metadataBase: METADATA_BASE,
+  ...pageMetadata({ title: SITE_NAME, description: SITE_DESCRIPTION, path: "/" }),
 };
 
 export default function RootLayout({

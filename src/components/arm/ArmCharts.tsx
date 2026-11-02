@@ -124,7 +124,7 @@ export function TwoLineChart({
             s.values.map((v, i) => <circle key={`${s.key}-${i}`} cx={periodX(i, count)} cy={valueY(v, minValue, maxValue)} r={2.5} fill={s.stroke} />)
           )}
           {series.map((s) => (
-            <text key={s.key} x={LINE_CHART_WIDTH - PAD_RIGHT - 4} y={endLabelY[s.key] - 6} textAnchor="end" fontSize={10} fontWeight={700} fill={s.stroke} stroke="#f5f1e6" strokeWidth={4} paintOrder="stroke">
+            <text key={s.key} x={LINE_CHART_WIDTH - PAD_RIGHT - 4} y={endLabelY[s.key] - 6} textAnchor="end" fontSize={10} fontWeight={700} fill={s.stroke === "#96703e" ? "#76572e" : s.stroke} stroke="#f5f1e6" strokeWidth={4} paintOrder="stroke">
               {s.label}
             </text>
           ))}
@@ -444,7 +444,7 @@ export function DCFHeatmap({
           <tr>
             <th className="p-1 text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft">WACC \ g</th>
             {growthCols.map((g, i) => (
-              <th key={g} className={`p-1 text-[10px] font-semibold uppercase tracking-wide ${i === liveCol ? "text-brass" : "text-charcoal-soft"}`}>
+              <th key={g} className={`p-1 text-[10px] font-semibold uppercase tracking-wide ${i === liveCol ? "text-brass-ink" : "text-charcoal-soft"}`}>
                 {(g * 100).toFixed(1)}%
               </th>
             ))}
@@ -453,7 +453,7 @@ export function DCFHeatmap({
         <tbody>
           {waccRows.map((w, r) => (
             <tr key={w}>
-              <td className={`p-1 text-[10px] font-semibold ${r === liveRow ? "text-brass" : "text-charcoal-soft"}`}>{(w * 100).toFixed(2)}%</td>
+              <td className={`p-1 text-[10px] font-semibold ${r === liveRow ? "text-brass-ink" : "text-charcoal-soft"}`}>{(w * 100).toFixed(2)}%</td>
               {grid[r].map((v, c) => {
                 const isLive = r === liveRow && c === liveCol;
                 return (

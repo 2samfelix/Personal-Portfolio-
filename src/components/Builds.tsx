@@ -13,7 +13,7 @@ function BuildCard({ build }: { build: Project }) {
           <h4 className="text-sm font-semibold text-charcoal">
             {build.title}
           </h4>
-          <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass">
+          <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
             Interactive Demo
           </span>
         </div>
@@ -44,7 +44,7 @@ function FeaturedBuildCard({ build }: { build: Project }) {
       </div>
       <div className="flex flex-col gap-3 p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass">
+          <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
             Interactive Demo
           </span>
           <span className="text-xs font-medium uppercase tracking-wide text-charcoal-soft">
@@ -67,7 +67,7 @@ function FeaturedBuildCard({ build }: { build: Project }) {
             </li>
           ))}
         </ul>
-        <span className="mt-1 inline-block text-sm font-semibold text-forest">
+        <span className="tap mt-1 inline-block text-sm font-semibold text-forest">
           {build.ctaLabel ?? "Try it →"}
         </span>
       </div>

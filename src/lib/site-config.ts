@@ -1,5 +1,7 @@
 export const siteConfig = {
   name: "Sam Felix",
+  // Production address (Vercel); link previews and canonical URLs are absolute against it.
+  url: "https://personal-portfolio-sam-felix.vercel.app",
   firstName: "Sam",
   lastName: "Felix",
   role: "Business Analyst & Aspiring Financial Analyst",

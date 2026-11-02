@@ -57,13 +57,13 @@ type BadgeTone = "good" | "neutral" | "bad";
 
 const TONE_CLASS: Record<BadgeTone, string> = {
   good: "bg-forest/10 text-forest",
-  neutral: "bg-brass/15 text-brass",
+  neutral: "bg-brass/15 text-brass-ink",
   bad: "bg-rust-pale text-rust",
 };
 
 const ALERT_STYLE: Record<BadgeTone, string> = {
   good: "bg-forest/5 text-charcoal",
-  neutral: "bg-brass-pale text-brass",
+  neutral: "bg-brass-pale text-brass-ink",
   bad: "bg-rust-pale text-rust",
 };
 
@@ -122,7 +122,7 @@ function ChartSection({
   // Children are a chart and its ChartCaption: stacked on small screens, side by side from lg up.
   return (
     <section className={`rounded-xl border border-forest/15 bg-white p-4 sm:p-6 ${first ? "" : "mt-6"}`}>
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{label}</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">{label}</h2>
       <div className={`lg:mt-4 ${BESIDE}`}>{children}</div>
     </section>
   );
@@ -166,7 +166,7 @@ export default function NikeProjectPage({
   return (
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
-        <Link href="/#work" className="text-sm font-semibold text-forest hover:text-forest-dark">
+        <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
           &larr; Back to Projects
         </Link>
 
@@ -227,7 +227,7 @@ export default function NikeProjectPage({
 
         {/* Inside the model: three curated views of the three-statement model */}
         <section id="inside-the-model" aria-labelledby="inside-model-heading" className="mt-16 scroll-mt-24">
-          <h2 id="inside-model-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 id="inside-model-heading" className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Inside the model
           </h2>
           <p className="mt-4 text-base leading-7 text-charcoal">
@@ -238,7 +238,7 @@ export default function NikeProjectPage({
               href={WORKBOOK_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-forest hover:text-forest-dark"
+              className="tap font-semibold text-forest hover:text-forest-dark"
             >
               Download Workbook ↗
             </a>
@@ -289,13 +289,13 @@ export default function NikeProjectPage({
 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Overview</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">Overview</h2>
           <p className={`mt-3 text-base leading-7 text-charcoal-soft ${MEASURE}`}>{cs.overview}</p>
         </section>
 
         {/* Methodology */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Business Question &amp; Methodology</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">Business Question &amp; Methodology</h2>
           <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <h3 className="text-sm font-semibold text-charcoal">Data Sources</h3>
@@ -310,7 +310,7 @@ export default function NikeProjectPage({
             <h3 className="text-sm font-semibold text-charcoal">Major Assumptions</h3>
             <ul className={`mt-2 flex flex-col gap-1.5 ${MEASURE}`}>
               {cs.assumptions.map((item) => (
-                <li key={item} className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']">
+                <li key={item} className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass-ink before:content-['—']">
                   {item}
                 </li>
               ))}
@@ -320,7 +320,7 @@ export default function NikeProjectPage({
             <h3 className="text-sm font-semibold text-charcoal">Limitations</h3>
             <ul className={`mt-2 flex flex-col gap-1.5 ${MEASURE}`}>
               {MODEL_LIMITATIONS.map((item) => (
-                <li key={item} className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']">
+                <li key={item} className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass-ink before:content-['—']">
                   {item}
                 </li>
               ))}
@@ -330,7 +330,7 @@ export default function NikeProjectPage({
 
         {/* Key findings */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Key Findings</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">Key Findings</h2>
           <ul className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {cs.findings.map((finding) => (
               <li key={finding} className="rounded-xl border border-forest/15 bg-white p-4 text-sm leading-6 text-charcoal-soft">
@@ -342,7 +342,7 @@ export default function NikeProjectPage({
 
         {/* Supporting charts */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Supporting Analysis</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">Supporting Analysis</h2>
 
           <div className="mt-4">
             <ChartSection label="Consolidated Revenue by Scenario, FY2026A–FY2029E" first>
@@ -422,14 +422,14 @@ export default function NikeProjectPage({
         {/* Prev / Next */}
         <nav className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
           {prev ? (
-            <Link href={`/projects/${prev.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+            <Link href={`/projects/${prev.slug}`} className="tap text-sm font-semibold text-charcoal-soft hover:text-charcoal">
               &larr; Previous Project
             </Link>
           ) : (
             <span />
           )}
           {next ? (
-            <Link href={`/projects/${next.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+            <Link href={`/projects/${next.slug}`} className="tap text-sm font-semibold text-charcoal-soft hover:text-charcoal">
               Next Project &rarr;
             </Link>
           ) : (

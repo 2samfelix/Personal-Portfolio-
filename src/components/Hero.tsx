@@ -63,13 +63,13 @@ export default function Hero() {
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <a
               href="#work"
-              className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+              className="tap rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
             >
               Explore the Work &rarr;
             </a>
             <a
               href={`mailto:${siteConfig.email}`}
-              className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
+              className="tap rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
             >
               Email me
             </a>
@@ -77,7 +77,7 @@ export default function Hero() {
               href={siteConfig.resumeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full px-1 py-2.5 text-sm font-semibold text-charcoal-soft underline decoration-forest/30 underline-offset-4 transition-colors hover:text-charcoal hover:decoration-forest"
+              className="tap rounded-full px-1 py-2.5 text-sm font-semibold text-charcoal-soft underline decoration-forest/30 underline-offset-4 transition-colors hover:text-charcoal hover:decoration-forest"
             >
               Download Resume
             </a>
@@ -87,7 +87,7 @@ export default function Hero() {
         <div className="min-h-[300px] w-full overflow-hidden rounded-3xl border border-forest/15 lg:min-h-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/headshot.png"
+            src="/headshot.webp"
             alt="Sam Felix"
             className="hero-photo h-full w-full object-cover"
           />

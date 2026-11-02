@@ -4,7 +4,7 @@
 // `@media (prefers-color-scheme: dark)` color tokens, switched here via
 // Playwright's colorScheme emulation rather than two separate SVG sources.
 import { chromium } from "playwright";
-import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
+import { readFileSync, mkdirSync, readdirSync } from "node:fs";
 import { dirname, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launchChromium } from "./lib/chromium.mjs";

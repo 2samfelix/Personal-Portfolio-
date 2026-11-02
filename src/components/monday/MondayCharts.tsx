@@ -83,7 +83,7 @@ export function ChartFigure({
       <div className="mt-3">{children}</div>
       {caption && <figcaption className={`mt-3 text-base leading-7 ${dark ? "text-cream/90" : "text-charcoal-soft"}`}>{caption}</figcaption>}
       <details className={`mt-3 text-base ${dark ? "text-cream" : "text-charcoal"} print:hidden`}>
-        <summary className={`cursor-pointer rounded-sm font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 ${dark ? "focus-visible:ring-brass-light" : "focus-visible:ring-brass"}`}>
+        <summary className={`tap cursor-pointer rounded-sm font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 ${dark ? "focus-visible:ring-brass-light" : "focus-visible:ring-brass"}`}>
           Data table
         </summary>
         <div className="mt-2 overflow-x-auto">{table}</div>

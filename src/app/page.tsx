@@ -10,6 +10,9 @@ import Expertise from "@/components/Expertise";
 import HowIWork from "@/components/HowIWork";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
+import { SITE_DESCRIPTION, SITE_NAME, pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({ title: SITE_NAME, description: SITE_DESCRIPTION, path: "/" });
 
 export default function Home() {
   return (
