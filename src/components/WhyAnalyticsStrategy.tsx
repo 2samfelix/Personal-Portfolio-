@@ -99,7 +99,7 @@ export default function WhyAnalyticsStrategy() {
                     key={card.label}
                     className="flex w-full shrink-0 snap-center flex-col justify-start rounded-2xl border border-forest/15 bg-white p-5 sm:min-h-[240px] sm:w-[85%] sm:p-7"
                   >
-                    <p className="text-xs font-semibold uppercase tracking-widest text-brass">{card.label}</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-brass-ink">{card.label}</p>
                     <p className="mt-3 text-sm leading-6 text-charcoal-soft">{card.body}</p>
                   </div>
                 ))}
@@ -117,19 +117,19 @@ export default function WhyAnalyticsStrategy() {
                 onClick={() => goTo(index + 1)}
                 disabled={index === CARDS.length - 1}
                 aria-label="Next"
-                className="absolute -right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-forest/25 bg-cream text-charcoal shadow-sm transition-opacity hover:bg-forest/10 disabled:pointer-events-none disabled:opacity-30"
+                className="tap absolute -right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-forest/25 bg-cream text-charcoal shadow-sm transition-opacity hover:bg-forest/10 disabled:pointer-events-none disabled:opacity-30"
               >
                 &rarr;
               </button>
             </div>
 
-            <div className="mt-4 flex justify-center gap-2 lg:justify-start lg:pl-1">
+            <div className="mt-4 flex justify-center gap-2 max-sm:gap-[38px] lg:justify-start lg:pl-1">
               {CARDS.map((card, i) => (
                 <button
                   key={card.label}
                   onClick={() => goTo(i)}
                   aria-label={`Go to card ${i + 1}`}
-                  className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                  className={`tap h-1.5 w-1.5 rounded-full transition-colors ${
                     i === index ? "bg-brass" : "bg-forest/20"
                   }`}
                 />

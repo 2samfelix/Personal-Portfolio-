@@ -166,7 +166,7 @@ function ExhibitFigure({
 
   return (
     <div className="mt-4">
-      <p className="text-xs font-semibold uppercase tracking-widest text-brass">{eyebrow}</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-brass-ink">{eyebrow}</p>
       <div className="mt-3 rounded-xl border border-forest/15 bg-white p-4 sm:p-6">
         {/* Mobile-only title/subtitle: hidden at >=720px, where the SVG carries its own. */}
         <div className="min-[720px]:hidden">
@@ -210,7 +210,7 @@ export default function CaterpillarProjectPage({
   return (
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
-        <Link href="/#work" className="text-sm font-semibold text-forest hover:text-forest-dark">
+        <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
           &larr; Back to Projects
         </Link>
 
@@ -252,7 +252,7 @@ export default function CaterpillarProjectPage({
 
         {/* Model Preview: read-only snapshot of the operating workbook */}
         <section id="model-preview" aria-labelledby="model-preview-heading" className="mt-16 scroll-mt-24">
-          <h2 id="model-preview-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 id="model-preview-heading" className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Model Preview
           </h2>
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
@@ -264,7 +264,7 @@ export default function CaterpillarProjectPage({
                 href={xlsxDeliverable.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-forest hover:text-forest-dark"
+                className="tap font-semibold text-forest hover:text-forest-dark"
               >
                 Download Workbook ↗
               </a>
@@ -325,7 +325,7 @@ export default function CaterpillarProjectPage({
                 <span className="block text-2xl font-black text-charcoal">{stat.value}</span>
                 <span className="mt-1 block text-xs leading-5 text-charcoal-soft">{stat.label}</span>
                 {stat.detail && (
-                  <span className="mt-1 block text-[11px] leading-4 text-charcoal-soft/80">{stat.detail}</span>
+                  <span className="mt-1 block text-[11px] leading-4 text-charcoal-soft">{stat.detail}</span>
                 )}
               </div>
             ))}
@@ -340,7 +340,7 @@ export default function CaterpillarProjectPage({
 
         {/* 3. Hero demand-quality chart */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">Demand Quality</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">Demand Quality</h2>
           {/* The exhibit with its explanation beside it from lg up. */}
           <div className={BESIDE}>
             {/*
@@ -376,7 +376,7 @@ export default function CaterpillarProjectPage({
 
         {/* 4. Q1 2026 vs Q2 2026 evidence table */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Q1 2026 vs. Q2 2026 — What Changed
           </h2>
           <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
@@ -413,7 +413,7 @@ export default function CaterpillarProjectPage({
 
         {/* Pressure test: does the directional proxy hold up? */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Does the Directional Proxy Hold Up?
           </h2>
           <p className={`mt-3 text-sm leading-6 text-charcoal-soft ${MEASURE}`}>
@@ -456,7 +456,7 @@ export default function CaterpillarProjectPage({
 
         {/* 5. Dealer-inventory disclosure record */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Filed Evidence: What Caterpillar Actually Disclosed
           </h2>
           {/* The exhibit with its explanation beside it from lg up. */}
@@ -495,7 +495,7 @@ export default function CaterpillarProjectPage({
 
         {/* 6. Operating drivers */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Operating Drivers: What Produced the Reported Sales Change
           </h2>
           {/* The exhibit with its explanation beside it from lg up. */}
@@ -533,7 +533,7 @@ export default function CaterpillarProjectPage({
 
         {/* 7. Forward judgment */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Forward Judgment: What This Implies, and What Would Break It
           </h2>
           <p className="mt-2 text-xs italic leading-5 text-charcoal-soft">
@@ -572,7 +572,7 @@ export default function CaterpillarProjectPage({
 
         {/* 8. Margin context */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Margin Context, and What the Analysis Cannot Claim
           </h2>
           <p className={`mt-3 text-sm leading-6 text-charcoal-soft ${MEASURE}`}>
@@ -624,7 +624,7 @@ export default function CaterpillarProjectPage({
 
         {/* 9. What I expected to corroborate — and didn't */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             What I Expected to Corroborate — and Didn&apos;t
           </h2>
           <p className={`mt-3 text-sm leading-6 text-charcoal-soft ${MEASURE}`}>
@@ -637,14 +637,14 @@ export default function CaterpillarProjectPage({
 
         {/* 10. Limitations / methodology / sources */}
         <section className="mt-12 border-t border-forest/10 pt-12">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Limitations, Methodology &amp; Sources
           </h2>
           <ul className={`mt-4 flex flex-col gap-1.5 ${MEASURE}`}>
             {LIMITATIONS.map((item) => (
               <li
                 key={item}
-                className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
+                className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass-ink before:content-['—']"
               >
                 {item}
               </li>
@@ -658,13 +658,13 @@ export default function CaterpillarProjectPage({
             estimates or analyst summaries are used as financial inputs.
           </p>
           <div className="mt-4 flex flex-wrap gap-4">
-            <a href={`${DOCS_BASE}/methodology.md`} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-forest hover:text-forest-dark">
+            <a href={`${DOCS_BASE}/methodology.md`} target="_blank" rel="noopener noreferrer" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
               Methodology &rarr;
             </a>
-            <a href={`${DOCS_BASE}/sources.md`} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-forest hover:text-forest-dark">
+            <a href={`${DOCS_BASE}/sources.md`} target="_blank" rel="noopener noreferrer" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
               Sources &rarr;
             </a>
-            <a href={`${DOCS_BASE}/definitions.md`} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-forest hover:text-forest-dark">
+            <a href={`${DOCS_BASE}/definitions.md`} target="_blank" rel="noopener noreferrer" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
               Definitions &rarr;
             </a>
           </div>
@@ -672,14 +672,14 @@ export default function CaterpillarProjectPage({
 
         {/* Compact bottom downloads line */}
         <section className="mt-12 border-t border-forest/10 pt-8">
-          <p className="text-sm text-charcoal-soft">
+          <p className="text-sm text-charcoal-soft max-sm:leading-[44px]">
             Downloads:{" "}
             {pdfDeliverable && (
               <a
                 href={pdfDeliverable.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-forest hover:text-forest-dark"
+                className="tap font-semibold text-forest hover:text-forest-dark"
               >
                 Case Study ↗
               </a>
@@ -690,7 +690,7 @@ export default function CaterpillarProjectPage({
                 href={presentationDeliverable.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-forest hover:text-forest-dark"
+                className="tap font-semibold text-forest hover:text-forest-dark"
               >
                 Presentation ↗
               </a>
@@ -701,7 +701,7 @@ export default function CaterpillarProjectPage({
                 href={xlsxDeliverable.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-forest hover:text-forest-dark"
+                className="tap font-semibold text-forest hover:text-forest-dark"
               >
                 Workbook ↗
               </a>
@@ -712,7 +712,7 @@ export default function CaterpillarProjectPage({
                 href={project.githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-forest hover:text-forest-dark"
+                className="tap font-semibold text-forest hover:text-forest-dark"
               >
                 GitHub ↗
               </a>
@@ -723,14 +723,14 @@ export default function CaterpillarProjectPage({
         {/* Prev / Next */}
         <nav className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
           {prev ? (
-            <Link href={`/projects/${prev.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+            <Link href={`/projects/${prev.slug}`} className="tap text-sm font-semibold text-charcoal-soft hover:text-charcoal">
               &larr; Previous Project
             </Link>
           ) : (
             <span />
           )}
           {next ? (
-            <Link href={`/projects/${next.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+            <Link href={`/projects/${next.slug}`} className="tap text-sm font-semibold text-charcoal-soft hover:text-charcoal">
               Next Project &rarr;
             </Link>
           ) : (

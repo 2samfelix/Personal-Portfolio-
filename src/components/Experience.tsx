@@ -68,7 +68,7 @@ const CREDENTIALS: Credential[] = [
 function CredentialStatusPill({ status }: { status: CredentialStatus }) {
   if (status === "Completed") {
     return (
-      <span className="inline-flex w-fit items-center rounded-full bg-brass px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-cream">
+      <span className="inline-flex w-fit items-center rounded-full bg-brass-ink px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-cream">
         Completed
       </span>
     );
@@ -98,7 +98,7 @@ const COURSEWORK_COLUMN_COUNT = Math.max(...COURSEWORK_GROUPS.map((g) => g.cours
 function SubsectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-widest text-brass">{children}</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-widest text-brass-ink">{children}</h3>
       <span className="mt-2 block h-0.5 w-10 bg-brass" />
     </div>
   );
@@ -110,7 +110,7 @@ export default function Experience() {
       {/* Intro + Professional Experience — base cream */}
       <div className="mx-auto w-full max-w-5xl px-6 pt-28 sm:pt-40">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">Experience</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-brass-ink">Experience</p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
             Where I&apos;ve worked, led, and learned.
           </h2>
@@ -134,7 +134,7 @@ export default function Experience() {
             <div className="mt-4 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-x-10">
               {MARKETSTAFF_PERIODS.map((period) => (
                 <div key={period.label} className="flex items-baseline gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-brass">{period.dates}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-brass-ink">{period.dates}</span>
                   <span className="text-xs text-charcoal-soft">{period.label}</span>
                 </div>
               ))}
@@ -148,7 +148,7 @@ export default function Experience() {
               {MARKETSTAFF_BULLETS.map((bullet) => (
                 <li
                   key={bullet}
-                  className="text-sm leading-7 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']"
+                  className="text-sm leading-7 text-charcoal-soft before:mr-2 before:text-brass-ink before:content-['—']"
                 >
                   {bullet}
                 </li>
@@ -242,7 +242,7 @@ export default function Experience() {
                 } ${rowIndex % 2 === 1 ? "bg-forest/[0.03]" : ""}`}
               >
                 <div className="px-4 py-3 sm:border-r sm:border-forest/10">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-brass">{group.group}</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-brass-ink">{group.group}</p>
                 </div>
                 {Array.from({ length: COURSEWORK_COLUMN_COUNT }).map((_, colIndex) => {
                   const course = group.courses[colIndex];

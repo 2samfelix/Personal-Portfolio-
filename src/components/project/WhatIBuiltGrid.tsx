@@ -23,7 +23,7 @@ export function WhatIBuiltGrid({
 }) {
   return (
     <div className="mt-16">
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{heading}</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">{heading}</h2>
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
           const body = (

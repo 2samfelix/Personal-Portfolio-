@@ -100,7 +100,7 @@ function ReleaseCard({ release }: { release: LockRelease }) {
   return (
     <div className="rounded-2xl border border-forest/15 bg-white p-6">
       <p className={`text-sm font-semibold uppercase tracking-widest ${LABEL}`}>{release.title}</p>
-      <a href={release.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-lg font-bold text-forest hover:text-forest-dark">
+      <a href={release.url} target="_blank" rel="noopener noreferrer" className="tap mt-2 inline-block text-lg font-bold text-forest hover:text-forest-dark">
         {release.tag} ↗
       </a>
       <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-base">
@@ -160,7 +160,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
         <div className="mx-auto w-full max-w-6xl px-6 pb-12 pt-10 sm:pb-16">
           <Link
             href="/#work"
-            className="rounded-sm text-base font-semibold text-cream/90 underline-offset-4 hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+            className="tap rounded-sm text-base font-semibold text-cream/90 underline-offset-4 hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
           >
             &larr; Back to Projects
           </Link>
@@ -447,7 +447,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                   <p className="text-sm font-semibold text-charcoal-soft">{s.when}</p>
                   <p className="text-lg font-bold text-charcoal">{s.what}</p>
                   {s.href ? (
-                    <a href={s.href} target="_blank" rel="noopener noreferrer" className="break-all text-base font-semibold text-forest hover:text-forest-dark">
+                    <a href={s.href} target="_blank" rel="noopener noreferrer" className="tap break-all text-base font-semibold text-forest hover:text-forest-dark">
                       {s.detail} ↗
                     </a>
                   ) : (
@@ -643,7 +643,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
         {/* Prev / Next */}
         <nav aria-label="Projects" className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
           {prev ? (
-            <Link href={`/projects/${prev.slug}`} className="text-base font-semibold text-charcoal-soft hover:text-charcoal">
+            <Link href={`/projects/${prev.slug}`} className="tap text-base font-semibold text-charcoal-soft hover:text-charcoal">
               &larr; Previous Project
             </Link>
           ) : (

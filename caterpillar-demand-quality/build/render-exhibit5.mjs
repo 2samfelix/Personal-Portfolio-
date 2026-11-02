@@ -5,7 +5,7 @@
 // fixed title / table / caption / source-line structure of that one file,
 // not general markdown.
 import { chromium } from "playwright";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launchChromium } from "./lib/chromium.mjs";

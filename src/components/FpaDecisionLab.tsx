@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -163,6 +163,39 @@ function loadSavedScenarios(): SavedScenario[] {
   }
 }
 
+// Saved scenarios are an external store: localStorage, mirrored in memory so a save still
+// applies for the session when storage is unavailable (private browsing, quota). Components
+// read it with useSyncExternalStore: [] on the server and during hydration, the stored list
+// right after, the same timing as loading it in a mount effect.
+const NO_SAVED_SCENARIOS: SavedScenario[] = [];
+let savedScenariosCache: SavedScenario[] | null = null;
+const savedScenarioListeners = new Set<() => void>();
+
+function getSavedScenarios(): SavedScenario[] {
+  if (savedScenariosCache === null) savedScenariosCache = loadSavedScenarios();
+  return savedScenariosCache;
+}
+
+function subscribeSavedScenarios(onChange: () => void): () => void {
+  savedScenarioListeners.add(onChange);
+  return () => savedScenarioListeners.delete(onChange);
+}
+
+function writeSavedScenarios(list: SavedScenario[]): void {
+  savedScenariosCache = list;
+  try {
+    window.localStorage.setItem(SAVED_SCENARIOS_KEY, JSON.stringify(list));
+  } catch {
+    // localStorage unavailable — the list still applies for this session, it just won't persist.
+  }
+  savedScenarioListeners.forEach((listener) => listener());
+}
+
+// The page's query string, read the same way ("" on the server and during hydration).
+const subscribeNever = () => () => {};
+const getLocationSearch = () => window.location.search;
+const getServerSearch = () => "";
+
 const SENSITIVITY_TABS: { key: SensitivityMetric; label: string }[] = [
   { key: "ebitda", label: "EBITDA" },
   { key: "revenue", label: "Revenue" },
@@ -216,7 +249,7 @@ function SliderField({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest sm:h-1.5"
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest sm:h-1.5 max-sm:relative max-sm:box-content max-sm:-my-[18px] max-sm:bg-clip-content max-sm:py-[18px]"
       />
     </label>
   );
@@ -255,7 +288,7 @@ function AccordionSection({
             toggle();
           }
         }}
-        className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+        className="tap flex w-full cursor-pointer items-center justify-between max-sm:min-h-11 gap-2 text-left"
       >
         <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-charcoal-soft">
           {title}
@@ -301,7 +334,7 @@ function InfoTip({ text, label }: { text: string; label: string }) {
         }}
         aria-expanded={open}
         aria-label={label}
-        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-forest/30 text-[10px] font-bold leading-none text-forest/70 transition-colors hover:bg-forest/10"
+        className="tap max-sm:z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-forest/30 text-[10px] font-bold leading-none text-forest/70 transition-colors hover:bg-forest/10"
       >
         i
       </button>
@@ -319,7 +352,7 @@ function InfoTip({ text, label }: { text: string; label: string }) {
 
 const TONE_CLASS: Record<BadgeTone, string> = {
   good: "bg-forest/10 text-forest",
-  neutral: "bg-brass/15 text-brass",
+  neutral: "bg-brass/15 text-brass-ink",
   bad: "bg-rust-pale text-rust",
 };
 
@@ -582,7 +615,7 @@ const SCENARIO_FILL: Record<ScenarioKey, string> = {
 
 const DECISION_STYLE: Record<Decision, string> = {
   "Invest for growth": "bg-forest text-cream",
-  "Run cautiously": "bg-brass-pale text-brass",
+  "Run cautiously": "bg-brass-pale text-brass-ink",
   "Preserve cash": "bg-rust-pale text-rust",
 };
 
@@ -915,7 +948,7 @@ function GenericForecastChart({
             textAnchor="end"
             fontSize={10}
             fontWeight={700}
-            fill={s.stroke}
+            fill={s.stroke === "#96703e" ? "#76572e" : s.stroke}
             stroke="#f5f1e6"
             strokeWidth={4}
             paintOrder="stroke"
@@ -1086,7 +1119,7 @@ function formatChartValue(format: ChartValueFormat, value: number): string {
 // as every other badge in the app, reused rather than a second palette.
 const ALERT_STYLE: Record<BadgeTone, string> = {
   good: "bg-forest/5 text-charcoal",
-  neutral: "bg-brass-pale text-brass",
+  neutral: "bg-brass-pale text-brass-ink",
   bad: "bg-rust-pale text-rust",
 };
 
@@ -1187,7 +1220,7 @@ function ChartSection<TResult, TAssumptions>({
     <section
       className={`rounded-xl border border-forest/15 bg-white p-4 sm:p-6 ${first ? "" : "mt-6"}`}
     >
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+      <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
         {chart.chartLabel}
       </h2>
       <GenericForecastChart
@@ -1257,17 +1290,19 @@ export default function FpaDecisionLab() {
 
   // Save / Load / Share — saved scenarios are user-named Base assumption
   // sets, kept structurally separate from the fixed Upside/Downside deltas.
-  const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([]);
+  const savedScenarios = useSyncExternalStore(subscribeSavedScenarios, getSavedScenarios, () => NO_SAVED_SCENARIOS);
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [saveNameDraft, setSaveNameDraft] = useState("");
   const [showLoadList, setShowLoadList] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    setSavedScenarios(loadSavedScenarios());
-
-    const params = new URLSearchParams(window.location.search);
-    const shared = params.get("s");
+  // A shared link (?s=...) loads its assumptions once the page is on the client: the query
+  // string is read as an external value, and applied during render when it first differs.
+  const search = useSyncExternalStore(subscribeNever, getLocationSearch, getServerSearch);
+  const [appliedSearch, setAppliedSearch] = useState("");
+  if (search !== appliedSearch) {
+    setAppliedSearch(search);
+    const shared = new URLSearchParams(search).get("s");
     if (shared) {
       const decoded = decodeAssumptions(shared);
       // A malformed or tampered share link is ignored silently rather than
@@ -1275,7 +1310,7 @@ export default function FpaDecisionLab() {
       // to the default Base values.
       if (decoded) setAssumptions(decoded);
     }
-  }, []);
+  }
 
   const set = <K extends keyof SaaSAssumptions>(key: K) => (value: number) =>
     setAssumptions((prev) => ({ ...prev, [key]: value }));
@@ -1324,25 +1359,14 @@ export default function FpaDecisionLab() {
       ...savedScenarios.filter((s) => s.name !== name),
       { name, assumptions, savedAt: Date.now() },
     ];
-    setSavedScenarios(updated);
-    try {
-      window.localStorage.setItem(SAVED_SCENARIOS_KEY, JSON.stringify(updated));
-    } catch {
-      // localStorage unavailable (private browsing, quota) — the scenario
-      // still applies for this session, it just won't persist.
-    }
+    writeSavedScenarios(updated);
     setSaveNameDraft("");
     setShowSaveInput(false);
   };
 
   const deleteScenario = (name: string) => {
     const updated = savedScenarios.filter((s) => s.name !== name);
-    setSavedScenarios(updated);
-    try {
-      window.localStorage.setItem(SAVED_SCENARIOS_KEY, JSON.stringify(updated));
-    } catch {
-      // Nothing to do if storage isn't available — state is already updated.
-    }
+    writeSavedScenarios(updated);
   };
 
   const shareScenario = () => {
@@ -1606,14 +1630,14 @@ export default function FpaDecisionLab() {
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
         <Link
           href="/#interactive-tools"
-          className="text-sm font-semibold text-forest hover:text-forest-dark"
+          className="tap text-sm font-semibold text-forest hover:text-forest-dark"
         >
           &larr; Back to Interactive Tools
         </Link>
 
         {/* Hero */}
         <div className="mt-8 max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <p className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Interactive Demo
           </p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-charcoal sm:text-5xl">
@@ -1660,7 +1684,7 @@ export default function FpaDecisionLab() {
                     type="button"
                     onClick={() => setIndustry(key)}
                     aria-pressed={industry === key}
-                    className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                    className={`rounded-lg px-3 py-2 text-left max-sm:min-h-11 text-sm font-semibold transition-colors ${
                       industry === key
                         ? "bg-forest text-cream"
                         : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
@@ -1677,7 +1701,7 @@ export default function FpaDecisionLab() {
             <button
               type="button"
               onClick={() => setAssumptions(SAAS_BASE_DEFAULTS)}
-              className="mb-3 w-full rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
+              className="tap mb-3 w-full rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
             >
               Reset to Defaults
             </button>
@@ -1690,7 +1714,7 @@ export default function FpaDecisionLab() {
                   setShowLoadList(false);
                   setShareUrl(null);
                 }}
-                className="rounded-lg border border-forest/20 px-2 py-1.5 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+                className="rounded-lg border border-forest/20 px-2 py-1.5 max-sm:min-h-11 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
               >
                 Save
               </button>
@@ -1701,7 +1725,7 @@ export default function FpaDecisionLab() {
                   setShowSaveInput(false);
                   setShareUrl(null);
                 }}
-                className="rounded-lg border border-forest/20 px-2 py-1.5 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+                className="rounded-lg border border-forest/20 px-2 py-1.5 max-sm:min-h-11 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
               >
                 Load
               </button>
@@ -1712,7 +1736,7 @@ export default function FpaDecisionLab() {
                   setShowSaveInput(false);
                   setShowLoadList(false);
                 }}
-                className="rounded-lg border border-forest/20 px-2 py-1.5 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+                className="rounded-lg border border-forest/20 px-2 py-1.5 max-sm:min-h-11 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
               >
                 Share
               </button>
@@ -1725,13 +1749,13 @@ export default function FpaDecisionLab() {
                   value={saveNameDraft}
                   onChange={(e) => setSaveNameDraft(e.target.value)}
                   placeholder="Scenario name"
-                  className="rounded-md border border-forest/20 bg-white px-2 py-1 text-xs text-charcoal"
+                  className="rounded-md border border-forest/20 bg-white px-2 py-1 max-sm:min-h-11 text-xs text-charcoal"
                 />
                 <button
                   type="button"
                   onClick={saveScenario}
                   disabled={!saveNameDraft.trim()}
-                  className="rounded-md bg-forest px-2 py-1 text-[11px] font-semibold text-cream transition-opacity disabled:opacity-40"
+                  className="rounded-md bg-forest px-2 py-1 max-sm:min-h-11 text-[11px] font-semibold text-cream transition-opacity disabled:opacity-40"
                 >
                   Save Current Assumptions
                 </button>
@@ -1751,7 +1775,7 @@ export default function FpaDecisionLab() {
                           setAssumptions(s.assumptions);
                           setShowLoadList(false);
                         }}
-                        className="flex-1 truncate text-left text-xs font-semibold text-forest hover:underline"
+                        className="flex-1 truncate text-left text-xs font-semibold text-forest hover:underline max-sm:min-h-11"
                       >
                         {s.name}
                       </button>
@@ -1759,7 +1783,7 @@ export default function FpaDecisionLab() {
                         type="button"
                         onClick={() => deleteScenario(s.name)}
                         aria-label={`Delete ${s.name}`}
-                        className="text-[11px] text-rust hover:underline"
+                        className="text-[11px] text-rust hover:underline max-sm:min-h-11 max-sm:min-w-11"
                       >
                         Delete
                       </button>
@@ -1780,7 +1804,7 @@ export default function FpaDecisionLab() {
                   readOnly
                   value={shareUrl}
                   onFocus={(e) => e.target.select()}
-                  className="rounded-md border border-forest/20 bg-white px-2 py-1 text-[10px] text-charcoal"
+                  className="rounded-md border border-forest/20 bg-white px-2 py-1 max-sm:min-h-11 text-[10px] text-charcoal"
                 />
               </div>
             )}
@@ -1802,7 +1826,7 @@ export default function FpaDecisionLab() {
                     type="button"
                     onClick={() => setActiveScenario(key)}
                     aria-pressed={activeScenario === key}
-                    className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                    className={`rounded-lg px-3 py-2 text-left max-sm:min-h-11 text-sm font-semibold transition-colors ${
                       activeScenario === key
                         ? "bg-forest text-cream"
                         : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
@@ -1858,7 +1882,7 @@ export default function FpaDecisionLab() {
               title="Data & Upload"
               badge={
                 customBaseline ? (
-                  <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brass">
+                  <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brass-ink">
                     Imported
                   </span>
                 ) : undefined
@@ -1896,7 +1920,7 @@ export default function FpaDecisionLab() {
                     {csvWarnings.map((w) => (
                       <li
                         key={w}
-                        className="text-[11px] leading-4 text-brass before:mr-1 before:content-['⚠_']"
+                        className="text-[11px] leading-4 text-brass-ink before:mr-1 before:content-['⚠_']"
                       >
                         {w}
                       </li>
@@ -1972,7 +1996,7 @@ export default function FpaDecisionLab() {
                         type="button"
                         onClick={() => setConsultingActiveScenario(key)}
                         aria-pressed={consultingActiveScenario === key}
-                        className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                        className={`rounded-lg px-3 py-2 text-left max-sm:min-h-11 text-sm font-semibold transition-colors ${
                           consultingActiveScenario === key
                             ? "bg-forest text-cream"
                             : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
@@ -2068,7 +2092,7 @@ export default function FpaDecisionLab() {
                         type="button"
                         onClick={() => setRealEstateActiveScenario(key)}
                         aria-pressed={realEstateActiveScenario === key}
-                        className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                        className={`rounded-lg px-3 py-2 text-left max-sm:min-h-11 text-sm font-semibold transition-colors ${
                           realEstateActiveScenario === key
                             ? "bg-forest text-cream"
                             : "border border-forest/20 bg-white text-charcoal hover:border-forest/40"
@@ -2132,7 +2156,7 @@ export default function FpaDecisionLab() {
               <>
             {/* Decision banner */}
             <section>
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 Recommendation
               </h2>
               <div className={`mt-1.5 rounded-xl px-4 py-2.5 ${DECISION_STYLE[decision]}`}>
@@ -2164,7 +2188,7 @@ export default function FpaDecisionLab() {
 
             {/* KPI cards */}
             <section>
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 12-Month Outlook
               </h2>
               <div className="mt-1.5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -2257,7 +2281,7 @@ export default function FpaDecisionLab() {
             ))}
 
             <section className="mt-6 rounded-xl border border-forest/15 bg-white p-4 sm:p-6">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 MRR Bridge — Month 12
               </h2>
               <p className="mt-1 text-xs leading-5 text-charcoal-soft">
@@ -2280,7 +2304,7 @@ export default function FpaDecisionLab() {
 
             {/* Scenario comparison table */}
             <section className="border-t border-forest/10 pt-8">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 Scenario Comparison
               </h2>
               <div className="mt-3">
@@ -2294,7 +2318,7 @@ export default function FpaDecisionLab() {
             {/* Top Drivers Sensitivity */}
             <section className="border-t border-forest/10 pt-8">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                   Top Drivers Sensitivity
                 </h2>
                 <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
@@ -2304,7 +2328,7 @@ export default function FpaDecisionLab() {
                       type="button"
                       onClick={() => setSensitivityTab(tab.key)}
                       aria-pressed={sensitivityTab === tab.key}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                      className={`tap rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                         sensitivityTab === tab.key
                           ? "bg-forest text-cream"
                           : "text-charcoal-soft hover:text-charcoal"
@@ -2371,34 +2395,34 @@ export default function FpaDecisionLab() {
             {/* CFO Commentary */}
             <section className="border-t border-forest/10 pt-8">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                   CFO Commentary — {scenarioStatusLabel}
                 </h2>
                 <CommentaryModeToggle />
               </div>
               <div className="mt-3 flex flex-col gap-3 rounded-xl border border-forest/15 bg-white p-4">
                 <p className="text-sm leading-6 text-charcoal">
-                  <span className="font-semibold text-brass">Performance: </span>
+                  <span className="font-semibold text-brass-ink">Performance: </span>
                   {cfoCommentary.performance}
                 </p>
                 <p className="text-sm leading-6 text-charcoal">
-                  <span className="font-semibold text-brass">Profitability: </span>
+                  <span className="font-semibold text-brass-ink">Profitability: </span>
                   {cfoCommentary.profitability}
                 </p>
                 <p className="text-sm leading-6 text-charcoal">
-                  <span className="font-semibold text-brass">Retention / Unit Economics: </span>
+                  <span className="font-semibold text-brass-ink">Retention / Unit Economics: </span>
                   {cfoCommentary.retention}
                 </p>
                 <p className="text-sm leading-6 text-charcoal">
-                  <span className="font-semibold text-brass">Cash Position: </span>
+                  <span className="font-semibold text-brass-ink">Cash Position: </span>
                   {cfoCommentary.cashPosition}
                 </p>
                 <p className="text-sm leading-6 text-charcoal">
-                  <span className="font-semibold text-brass">Key Risk: </span>
+                  <span className="font-semibold text-brass-ink">Key Risk: </span>
                   {cfoCommentary.keyRisk}
                 </p>
                 <p className="text-sm leading-6 text-charcoal">
-                  <span className="font-semibold text-brass">Next Action: </span>
+                  <span className="font-semibold text-brass-ink">Next Action: </span>
                   {cfoCommentary.nextAction}
                 </p>
               </div>
@@ -2410,7 +2434,7 @@ export default function FpaDecisionLab() {
             {/* Monte Carlo simulation */}
             <section className="border-t border-forest/10 pt-8">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                   Monte Carlo Simulation
                 </h2>
                 <div className="flex items-center gap-2">
@@ -2421,7 +2445,7 @@ export default function FpaDecisionLab() {
                         type="button"
                         onClick={() => setMcSimCount(n)}
                         aria-pressed={mcSimCount === n}
-                        className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                        className={`tap rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                           mcSimCount === n
                             ? "bg-forest text-cream"
                             : "text-charcoal-soft hover:text-charcoal"
@@ -2435,7 +2459,7 @@ export default function FpaDecisionLab() {
                     type="button"
                     onClick={runMonteCarlo}
                     disabled={mcRunning}
-                    className="rounded-full bg-forest px-4 py-1.5 text-xs font-semibold text-cream transition-opacity hover:bg-forest-dark disabled:opacity-50"
+                    className="tap rounded-full bg-forest px-4 py-1.5 text-xs font-semibold text-cream transition-opacity hover:bg-forest-dark disabled:opacity-50"
                   >
                     {mcRunning ? `Running… ${Math.round(mcProgress * 100)}%` : "Run Simulation"}
                   </button>
@@ -2452,7 +2476,7 @@ export default function FpaDecisionLab() {
               {mcResult && (
                 <>
                   {mcStale && (
-                    <p className="mt-3 text-[11px] font-semibold text-brass">
+                    <p className="mt-3 text-[11px] font-semibold text-brass-ink">
                       Assumptions changed since this run — click Run
                       Simulation to refresh.
                     </p>
@@ -2507,7 +2531,7 @@ export default function FpaDecisionLab() {
                 </>
               )}
 
-              <p className="mt-3 rounded-lg bg-brass-pale px-3 py-2 text-[11px] leading-4 text-brass">
+              <p className="mt-3 rounded-lg bg-brass-pale px-3 py-2 text-[11px] leading-4 text-brass-ink">
                 Illustrative simulation based on user-defined assumptions,
                 not a forecast guarantee.
               </p>
@@ -2519,7 +2543,7 @@ export default function FpaDecisionLab() {
               <>
                 {/* Decision banner */}
                 <section>
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                     Recommendation
                   </h2>
                   <div
@@ -2557,7 +2581,7 @@ export default function FpaDecisionLab() {
 
                 {/* KPI cards */}
                 <section>
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                     12-Month Outlook
                   </h2>
                   <div className="mt-1.5 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -2670,7 +2694,7 @@ export default function FpaDecisionLab() {
 
                 {/* Scenario comparison */}
                 <section className="border-t border-forest/10 pt-8">
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                     Scenario Comparison
                   </h2>
                   <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white">
@@ -2737,7 +2761,7 @@ export default function FpaDecisionLab() {
                 {/* Sensitivity */}
                 <section className="border-t border-forest/10 pt-8">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                       Top Drivers Sensitivity
                     </h2>
                     <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
@@ -2753,7 +2777,7 @@ export default function FpaDecisionLab() {
                           type="button"
                           onClick={() => setConsultingSensitivityTab(tab.key)}
                           aria-pressed={consultingSensitivityTab === tab.key}
-                          className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                          className={`tap rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                             consultingSensitivityTab === tab.key
                               ? "bg-forest text-cream"
                               : "text-charcoal-soft hover:text-charcoal"
@@ -2813,33 +2837,33 @@ export default function FpaDecisionLab() {
                 {/* CFO Commentary */}
                 <section className="border-t border-forest/10 pt-8">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                       CFO Commentary — {consultingScenarioStatusLabel}
                     </h2>
                     <CommentaryModeToggle />
                   </div>
                   <div className="mt-3 flex flex-col gap-3 rounded-xl border border-forest/15 bg-white p-4">
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Performance: </span>
+                      <span className="font-semibold text-brass-ink">Performance: </span>
                       Net revenue runs at{" "}
                       {formatCurrencyCompact(consultingResult.endingNetRevenueAnnualized)}/yr on{" "}
                       {formatPercent(consultingResult.endingUtilization, 0)} achieved utilization
                       across {consultingActiveAssumptions.billableHeadcount} billable consultants.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Profitability: </span>
+                      <span className="font-semibold text-brass-ink">Profitability: </span>
                       Project margin is {formatPercent(consultingResult.endingProjectMarginPct)}{" "}
                       before SG&amp;A, landing at{" "}
                       {formatPercent(consultingResult.endingEBITDAMargin)} EBITDA margin.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Cash Position: </span>
+                      <span className="font-semibold text-brass-ink">Cash Position: </span>
                       {consultingResult.runwayMonths === null
                         ? `Ending cash of ${formatCurrencyCompact(consultingResult.endingCash)} is cash-flow positive, removing near-term runway pressure.`
                         : `Ending cash of ${formatCurrencyCompact(consultingResult.endingCash)} implies ${consultingResult.runwayMonths.toFixed(1)} months of runway.`}
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Utilization: </span>
+                      <span className="font-semibold text-brass-ink">Utilization: </span>
                       Achieved utilization is{" "}
                       {formatPercent(consultingResult.endingUtilization, 0)} against a{" "}
                       {formatPercent(consultingActiveAssumptions.utilizationPct, 0)} target —{" "}
@@ -2851,11 +2875,11 @@ export default function FpaDecisionLab() {
                       .
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Key Risk: </span>
+                      <span className="font-semibold text-brass-ink">Key Risk: </span>
                       {consultingRiskAndAction.keyRiskPhrase}
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Next Action: </span>
+                      <span className="font-semibold text-brass-ink">Next Action: </span>
                       {consultingRiskAndAction.nextActionPhrase}
                     </p>
                   </div>
@@ -2869,7 +2893,7 @@ export default function FpaDecisionLab() {
               <>
                 {/* Decision banner */}
                 <section>
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                     Recommendation
                   </h2>
                   <div
@@ -2908,7 +2932,7 @@ export default function FpaDecisionLab() {
 
                 {/* KPI cards */}
                 <section>
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                     12-Month Outlook
                   </h2>
                   <div className="mt-1.5 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -3045,7 +3069,7 @@ export default function FpaDecisionLab() {
 
                 {/* Scenario comparison */}
                 <section className="border-t border-forest/10 pt-8">
-                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                     Scenario Comparison
                   </h2>
                   <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white">
@@ -3114,7 +3138,7 @@ export default function FpaDecisionLab() {
                 {/* Sensitivity */}
                 <section className="border-t border-forest/10 pt-8">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                       Top Drivers Sensitivity
                     </h2>
                     <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
@@ -3131,7 +3155,7 @@ export default function FpaDecisionLab() {
                           type="button"
                           onClick={() => setRealEstateSensitivityTab(tab.key)}
                           aria-pressed={realEstateSensitivityTab === tab.key}
-                          className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                          className={`tap rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                             realEstateSensitivityTab === tab.key
                               ? "bg-forest text-cream"
                               : "text-charcoal-soft hover:text-charcoal"
@@ -3193,43 +3217,43 @@ export default function FpaDecisionLab() {
                 {/* CFO Commentary */}
                 <section className="border-t border-forest/10 pt-8">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                    <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                       CFO Commentary — {realEstateScenarioStatusLabel}
                     </h2>
                     <CommentaryModeToggle />
                   </div>
                   <div className="mt-3 flex flex-col gap-3 rounded-xl border border-forest/15 bg-white p-4">
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Performance: </span>
+                      <span className="font-semibold text-brass-ink">Performance: </span>
                       Rental revenue runs at{" "}
                       {formatCurrencyCompact(realEstateResult.endingRentalRevenueAnnualized)}/yr at{" "}
                       {formatPercent(realEstateEndingOccupancy, 0)} occupancy (Month 12) across{" "}
                       {realEstateActiveAssumptions.totalUnits} units.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Profitability: </span>
+                      <span className="font-semibold text-brass-ink">Profitability: </span>
                       NOI margin is {formatPercent(realEstateResult.endingNOIMargin)}, landing at{" "}
                       {formatPercent(realEstateResult.endingFreeCashFlowMargin)} free cash flow
                       margin after debt service —{" "}
                       {REAL_ESTATE_MARGIN_PHRASE[realEstateMarginStatus]}.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Cash Position: </span>
+                      <span className="font-semibold text-brass-ink">Cash Position: </span>
                       {realEstateResult.runwayMonths === null
                         ? `Ending cash of ${formatCurrencyCompact(realEstateResult.endingCash)} is cash-flow positive, removing near-term runway pressure.`
                         : `Ending cash of ${formatCurrencyCompact(realEstateResult.endingCash)} implies ${realEstateResult.runwayMonths.toFixed(1)} months of runway.`}
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Debt Coverage: </span>
+                      <span className="font-semibold text-brass-ink">Debt Coverage: </span>
                       NOI covers debt service at {realEstateDscr.toFixed(2)}x —{" "}
                       {REAL_ESTATE_DSCR_PHRASE[realEstateDscrStatus]}.
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Key Risk: </span>
+                      <span className="font-semibold text-brass-ink">Key Risk: </span>
                       {realEstateRiskAndAction.keyRiskPhrase}
                     </p>
                     <p className="text-sm leading-6 text-charcoal">
-                      <span className="font-semibold text-brass">Next Action: </span>
+                      <span className="font-semibold text-brass-ink">Next Action: </span>
                       {realEstateRiskAndAction.nextActionPhrase}
                     </p>
                   </div>

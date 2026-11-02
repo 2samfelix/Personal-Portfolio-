@@ -35,8 +35,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-forest/10 bg-cream/95 backdrop-blur">
       <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-        <a href={to("#home")} className="text-lg font-bold tracking-tight text-charcoal">
-          SAM <span className="text-brass">FELIX</span>
+        <a href={to("#home")} className="tap text-lg font-bold tracking-tight text-charcoal">
+          SAM <span className="text-brass-ink">FELIX</span>
         </a>
         {/* Desktop nav — unchanged, sm and up only. */}
         <nav className="hidden items-center gap-8 text-sm font-medium text-charcoal-soft sm:flex">
@@ -55,7 +55,7 @@ export default function Header() {
             href={siteConfig.resumeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full bg-forest px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+            className="tap rounded-full bg-forest px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
           >
             Resume
           </a>

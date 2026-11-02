@@ -344,7 +344,7 @@ export const builds: Project[] = [
     year: "2026",
     status: "live",
     icon: "🏈",
-    visual: "/project-visuals/front-office.png",
+    visual: "/project-visuals/front-office.webp",
     link: "/tools/front-office-simulator",
     ctaLabel: "Run the Simulation →",
   },

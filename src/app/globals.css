@@ -17,11 +17,36 @@
   --color-forest: #1e3a2b;
   --color-forest-dark: #152a1f;
   --color-brass: #96703e;
+  /* Brass for text on cream, white and pale surfaces: same hue, darker, so small text reaches
+     WCAG AA (5.9:1 on cream). --color-brass stays for large display text, rules and fills;
+     --color-brass-light is the brass for text on forest. */
+  --color-brass-ink: #76572e;
   --color-brass-light: #d8b888;
   --color-brass-pale: #ecdfc2;
   --color-mist: #e6ebea;
   --color-rust: #a1462f;
   --color-rust-pale: #f1ded8;
+}
+
+/* Tap targets on phones (below the sm breakpoint): at least 44 x 44 CSS px. An invisible
+   pseudo-element, centred on a small link or button, enlarges its hit area without moving
+   anything; from sm up nothing changes. In the components layer, so a positioning utility
+   on the element (absolute, sticky) still wins over position: relative. */
+@layer components {
+  @media (max-width: 639.98px) {
+    .tap {
+      position: relative;
+    }
+    .tap::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
 }
 
 body {

@@ -205,7 +205,7 @@ export function MultiSeriesLineChart({
               textAnchor="end"
               fontSize={10}
               fontWeight={700}
-              fill={s.stroke}
+              fill={s.stroke === "#96703e" ? "#76572e" : s.stroke}
               stroke="#f5f1e6"
               strokeWidth={4}
               paintOrder="stroke"
@@ -304,7 +304,7 @@ export function SegmentTrajectoryChart({
             textAnchor="middle"
             fontSize={10}
             fontWeight={700}
-            fill="#96703e"
+            fill="#76572e"
             stroke="#f5f1e6"
             strokeWidth={4}
             paintOrder="stroke"

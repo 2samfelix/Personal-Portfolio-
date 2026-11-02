@@ -98,7 +98,7 @@ const BRIEF_STATEMENTS: { id: string; type: StatementType; linkedTo: string; tex
 const TYPE_TAG_CLASS: Record<StatementType, string> = {
   FACT: "bg-forest/10 text-forest",
   INTERPRETIVE: "bg-mist text-charcoal",
-  LIMITATION: "bg-brass/15 text-brass",
+  LIMITATION: "bg-brass/15 text-brass-ink",
 };
 
 // Caterpillar workbook, Dealer Inventory tab, rows 10-11, columns A, C, D, E, F, G.
@@ -121,7 +121,7 @@ const WORKBOOK_COL_CLASS = [
 // Stacked below md: the verbatim language and the source take the full width.
 const WORKBOOK_STACK_WIDE = [false, false, true, true, false, false];
 
-const linkClass = "font-semibold text-forest hover:text-forest-dark";
+const linkClass = "tap font-semibold text-forest hover:text-forest-dark";
 
 /**
  * One statement from the example brief. The LIMITATION card gets a warm brass
@@ -150,7 +150,7 @@ function StatementCard({ statement }: { statement: (typeof BRIEF_STATEMENTS)[num
 }
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{children}</h2>;
+  return <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">{children}</h2>;
 }
 
 export default function EngineProjectPage({
@@ -170,7 +170,7 @@ export default function EngineProjectPage({
         <div className="mx-auto w-full max-w-6xl px-6 pb-12 pt-10 sm:pb-16">
           <Link
             href="/#work"
-            className="rounded-sm text-base font-semibold text-cream/90 underline-offset-4 hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+            className="tap rounded-sm text-base font-semibold text-cream/90 underline-offset-4 hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
           >
             &larr; Back to Projects
           </Link>
@@ -194,19 +194,19 @@ export default function EngineProjectPage({
                   href={ENGINE_REPO}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full bg-cream px-5 py-2.5 text-sm font-semibold text-forest transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+                  className="tap rounded-full bg-cream px-5 py-2.5 text-sm font-semibold text-forest transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
                 >
                   View on GitHub ↗
                 </a>
                 <a
                   href="#validation-lab"
-                  className="rounded-full border border-brass-light/70 px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-cream/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+                  className="tap rounded-full border border-brass-light/70 px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-cream/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
                 >
                   Validation lab ↓
                 </a>
                 <a
                   href="#trace-a-statement"
-                  className="rounded-full border border-brass-light/70 px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-cream/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+                  className="tap rounded-full border border-brass-light/70 px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-cream/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
                 >
                   Trace a statement ↓
                 </a>
@@ -224,7 +224,7 @@ export default function EngineProjectPage({
           precision written, and that quoted text matches the curated excerpt word for word; any failure rejects the
           brief. It does not check fiscal periods, direction, segment, causal claims or whether a citation is relevant,
           and nothing is compared with the filings (see{" "}
-          <a href="#what-the-validator-does-not-check" className="font-semibold text-forest underline-offset-2 hover:underline">
+          <a href="#what-the-validator-does-not-check" className="tap font-semibold text-forest underline-offset-2 hover:underline">
             What the validator does not check
           </a>
           ).
@@ -261,7 +261,7 @@ export default function EngineProjectPage({
           <p className={`mt-3 text-xs leading-5 text-charcoal-soft ${MEASURE}`}>
             Run 1 of the five-run evaluation, the only run recorded on this site. Accepted on the first attempt,
             against the benchmark as it stood before the Oct 30, 2026 corrections (see{" "}
-            <a href="#corrections" className="font-semibold text-forest underline-offset-2 hover:underline">
+            <a href="#corrections" className="tap font-semibold text-forest underline-offset-2 hover:underline">
               Corrections
             </a>
             ). The full brief has 8 statements; four are shown. Its numbers were checked against the facts it cites,
@@ -270,14 +270,14 @@ export default function EngineProjectPage({
         </section>
 
         <section id="trace-a-statement" aria-labelledby="trace-heading" className="mt-12 scroll-mt-24 border-t border-forest/10 pt-12">
-          <h2 id="trace-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 id="trace-heading" className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Trace a statement
           </h2>
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             Follow any sentence of the accepted brief back to the facts, bridges and evidence it cites, and see what the
             validator checked. The second tab shows what the checker rejects. This shows that the figures trace to their
             evidence and that the checker enforces its rules, not that the brief&apos;s reading is right (see{" "}
-            <a href="#what-this-doesnt-prove" className="font-semibold text-forest underline-offset-2 hover:underline">
+            <a href="#what-this-doesnt-prove" className="tap font-semibold text-forest underline-offset-2 hover:underline">
               What this doesn&apos;t prove
             </a>
             ).
@@ -289,7 +289,7 @@ export default function EngineProjectPage({
               before the Oct 30, 2026 corrections: the current engine (c91e254) builds a different packet (5eeb00d3…),
               and no live run has been made against it.
             </span>
-            <a href={ENGINE_REPO} target="_blank" rel="noopener noreferrer" className="font-semibold text-forest hover:text-forest-dark">
+            <a href={ENGINE_REPO} target="_blank" rel="noopener noreferrer" className="tap font-semibold text-forest hover:text-forest-dark">
               Engine on GitHub ↗
             </a>
           </p>
@@ -297,7 +297,7 @@ export default function EngineProjectPage({
         </section>
 
         <section id="validation-lab" aria-labelledby="validation-lab-heading" className="mt-12 scroll-mt-24 border-t border-forest/10 pt-12">
-          <h2 id="validation-lab-heading" className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 id="validation-lab-heading" className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Validation lab
           </h2>
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
@@ -451,7 +451,7 @@ export default function EngineProjectPage({
         </section>
 
         <section className="mt-12 border-t border-forest/10 pt-8">
-          <p className="text-sm text-charcoal-soft">
+          <p className="text-sm text-charcoal-soft max-sm:leading-[44px]">
             Links:{" "}
             <a href={ENGINE_REPO} target="_blank" rel="noopener noreferrer" className={linkClass}>
               GitHub repo ↗
@@ -469,14 +469,14 @@ export default function EngineProjectPage({
 
         <nav className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
           {prev ? (
-            <Link href={`/projects/${prev.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+            <Link href={`/projects/${prev.slug}`} className="tap text-sm font-semibold text-charcoal-soft hover:text-charcoal">
               &larr; Previous Project
             </Link>
           ) : (
             <span />
           )}
           {next ? (
-            <Link href={`/projects/${next.slug}`} className="text-sm font-semibold text-charcoal-soft hover:text-charcoal">
+            <Link href={`/projects/${next.slug}`} className="tap text-sm font-semibold text-charcoal-soft hover:text-charcoal">
               Next Project &rarr;
             </Link>
           ) : (

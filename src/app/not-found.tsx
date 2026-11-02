@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Page not found — Sam Felix",
   description: "This page does not exist on Sam Felix's finance and analytics portfolio.",
-};
+  path: null,
+});
 
 /** The site's 404: unmatched URLs and notFound() both render it, with a 404 status. */
 export default function NotFound() {
@@ -25,13 +27,13 @@ export default function NotFound() {
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Link
               href="/#work"
-              className="rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+              className="tap rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
             >
               See the projects
             </Link>
             <Link
               href="/"
-              className="rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
+              className="tap rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
             >
               Go to the home page
             </Link>

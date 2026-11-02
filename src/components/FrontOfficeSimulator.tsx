@@ -108,13 +108,13 @@ function buildStandings(result: FrontOfficeResult): StandingsRow[] {
 
 const TONE_CLASS: Record<BadgeTone, string> = {
   good: "bg-forest/10 text-forest",
-  neutral: "bg-brass/15 text-brass",
+  neutral: "bg-brass/15 text-brass-ink",
   bad: "bg-rust-pale text-rust",
 };
 
 const ALERT_STYLE: Record<BadgeTone, string> = {
   good: "bg-forest/5 text-charcoal",
-  neutral: "bg-brass-pale text-brass",
+  neutral: "bg-brass-pale text-brass-ink",
   bad: "bg-rust-pale text-rust",
 };
 
@@ -189,7 +189,7 @@ function SliderField({
         step={driver.step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest sm:h-1.5"
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest sm:h-1.5 max-sm:relative max-sm:box-content max-sm:-my-[18px] max-sm:bg-clip-content max-sm:py-[18px]"
       />
       {delta && <span className="text-[11px] font-semibold text-charcoal-soft">{delta.text}</span>}
     </label>
@@ -240,7 +240,7 @@ function PayrollAxis({
         <span className="absolute inset-y-0 border-l border-dashed border-charcoal/30" style={{ left: `${floorPct}%` }} />
         <span className="absolute inset-y-0 border-l border-dashed border-charcoal/30" style={{ left: `${capPct}%` }} />
       </div>
-      <div className="relative h-7 text-[9px] font-semibold leading-tight text-charcoal-soft/70" aria-hidden>
+      <div className="relative h-7 text-[9px] font-semibold leading-tight text-charcoal-soft" aria-hidden>
         <span className="absolute left-0 top-0">{formatCurrencyCompact(PAYROLL_AXIS_MIN)}</span>
         <span className="absolute top-0 text-center text-forest" style={{ left: `${floorPct}%`, transform: "translateX(-50%)" }}>
           Floor
@@ -268,7 +268,7 @@ function PayrollAxis({
         step={1_000_000}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/20 accent-forest sm:h-1.5"
+        className="mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/20 accent-forest sm:h-1.5 max-sm:relative max-sm:box-content max-sm:-my-[18px] max-sm:bg-clip-content max-sm:py-[18px]"
       />
       {delta && <span className="text-[11px] font-semibold text-charcoal-soft">{delta.text}</span>}
 
@@ -287,9 +287,9 @@ function PayrollAxis({
 // renumbering, or otherwise touching any of those headings themselves.
 function ChapterMark({ roman, label }: { roman: string; label: string }) {
   return (
-    <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass/70">
+    <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-ink">
       <span>{roman}</span>
-      <span className="text-brass/30" aria-hidden>
+      <span className="text-brass-ink" aria-hidden>
         &middot;
       </span>
       {label}
@@ -457,7 +457,7 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
           aria-hidden
         />
       </div>
-      <div className="relative mt-1 h-7 text-[9px] font-semibold leading-tight text-charcoal-soft/70" aria-hidden>
+      <div className="relative mt-1 h-7 text-[9px] font-semibold leading-tight text-charcoal-soft" aria-hidden>
         <span className="absolute top-0 text-center" style={{ left: `${floorPct}%`, transform: "translateX(-50%)" }}>
           Floor
           <br />
@@ -699,7 +699,7 @@ function MonteCarloChartCaption({
             type="button"
             onClick={() => setExplainerOpen((o) => !o)}
             aria-expanded={explainerOpen}
-            className="text-[11px] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
+            className="tap text-[11px] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
           >
             {explainerOpen ? "Hide sampling methodology" : "Show sampling methodology"}
           </button>
@@ -824,7 +824,7 @@ function formatMarginalImpact(metric: MarginalMetric, value: number): string {
 
 function DisclosureItem({ children }: { children: React.ReactNode }) {
   return (
-    <li className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass before:content-['—']">
+    <li className="text-sm leading-6 text-charcoal-soft before:mr-2 before:text-brass-ink before:content-['—']">
       {children}
     </li>
   );
@@ -852,9 +852,9 @@ function CollapsibleSection({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 text-left"
+        className="tap flex w-full items-center justify-between gap-3 text-left"
       >
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">{title}</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">{title}</h2>
         <svg
           viewBox="0 0 20 20"
           fill="none"
@@ -1502,7 +1502,7 @@ function StrategyMapChart({ result }: { result: FrontOfficeResult }) {
             return (
               <g key={preset.key}>
                 <circle cx={x} cy={y} r={6} fill="#96703e" stroke="#f5f1e6" strokeWidth={1.5} />
-                <text x={x} y={y - 11} textAnchor="middle" fontSize={9.5} fontWeight={600} fill="#96703e">
+                <text x={x} y={y - 11} textAnchor="middle" fontSize={9.5} fontWeight={600} fill="#76572e">
                   {preset.label}
                 </text>
               </g>
@@ -1788,13 +1788,13 @@ export default function FrontOfficeSimulator() {
   return (
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
-        <Link href="/#interactive-tools" className="text-sm font-semibold text-forest hover:text-forest-dark">
+        <Link href="/#interactive-tools" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
           &larr; Back to Interactive Tools
         </Link>
 
         {/* Hero */}
         <div className="mt-8 max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brass">Interactive Demo</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-brass-ink">Interactive Demo</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-charcoal sm:text-5xl">
             Front Office
           </h1>
@@ -1803,7 +1803,7 @@ export default function FrontOfficeSimulator() {
             the plan?&rdquo;
           </p>
 
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-brass-pale px-4 py-2 text-xs font-semibold text-brass">
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-brass-pale px-4 py-2 text-xs font-semibold text-brass-ink">
             <span className="text-sm">&#9873;</span>
             Built on the Green Bay Packers&apos; actual FY2026 disclosed financials. Every plan
             you build from here is modeled, not predicted.
@@ -1826,7 +1826,7 @@ export default function FrontOfficeSimulator() {
             they can only ever say what the engine actually found. */}
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-xl border-2 border-brass/30 bg-brass-pale/30 p-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brass">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brass-ink">
               FY2026 &mdash; Sourced
             </span>
             <p className="mt-1.5 text-xl font-black tracking-tight text-charcoal sm:text-2xl">
@@ -1839,7 +1839,7 @@ export default function FrontOfficeSimulator() {
             </p>
           </div>
           <div className="rounded-xl border-2 border-brass/30 bg-brass-pale/30 p-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brass">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brass-ink">
               Across the Full Strategy Range
             </span>
             <p className="mt-1.5 text-xl font-black tracking-tight text-charcoal sm:text-2xl">
@@ -1855,7 +1855,7 @@ export default function FrontOfficeSimulator() {
         {/* The board's mandate */}
         <section className="mt-12 border-t border-forest/10 pt-8">
           <ChapterMark roman="I" label="The Question" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             The Board&apos;s Mandate
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-charcoal-soft">
@@ -1890,7 +1890,7 @@ export default function FrontOfficeSimulator() {
             keeps its own, separate Reset to FY2026 Baseline. */}
         <section className="mt-12 border-t border-forest/10 pt-8">
           <ChapterMark roman="II" label="The Model" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             How This Model Thinks
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
@@ -1932,7 +1932,7 @@ export default function FrontOfficeSimulator() {
                     type="button"
                     onClick={() => setExpandedPresetKey(infoOpen ? null : preset.key)}
                     aria-expanded={infoOpen}
-                    className="self-start text-[11px] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
+                    className="tap self-start text-[11px] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
                   >
                     {infoOpen ? "Hide details" : "What is this?"}
                   </button>
@@ -1966,7 +1966,7 @@ export default function FrontOfficeSimulator() {
         {/* The console */}
         <section className="mt-12 border-t border-forest/10 pt-8">
           <ChapterMark roman="III" label="Your Decisions" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">The Console</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">The Console</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
             Move a lever and watch the Packers move in the standings beside it — record, seed,
             operating result, and franchise health all recompute in the same view as the control
@@ -2066,7 +2066,7 @@ export default function FrontOfficeSimulator() {
                     Cap Readout
                   </span>
                   {capBindState && (
-                    <span className="rounded-full bg-brass px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cream">
+                    <span className="rounded-full bg-brass-ink px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cream">
                       {capBindState === "cap" ? "At Cap" : "At Floor"}
                     </span>
                   )}
@@ -2101,7 +2101,7 @@ export default function FrontOfficeSimulator() {
               <button
                 type="button"
                 onClick={resetToBaseline}
-                className="mb-3 mt-3 w-full shrink-0 rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
+                className="tap mb-3 mt-3 w-full shrink-0 rounded-lg border border-forest/20 px-3 py-1.5 text-xs font-semibold text-forest transition-colors hover:bg-forest/5"
               >
                 Reset to FY2026 Baseline
               </button>
@@ -2159,7 +2159,7 @@ export default function FrontOfficeSimulator() {
                 <button
                   type="button"
                   onClick={() => setStandingsExpanded((v) => !v)}
-                  className="rounded-lg border border-forest/20 px-2.5 py-1 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+                  className="tap rounded-lg border border-forest/20 px-2.5 py-1 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
                 >
                   {standingsExpanded ? "Show playoff field only" : "Show all 16 teams"}
                 </button>
@@ -2239,7 +2239,7 @@ export default function FrontOfficeSimulator() {
               <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">Season P&amp;L</h3>
               <div className="mt-2 flex flex-col gap-4 rounded-xl border border-forest/15 bg-white p-3">
                 <div className="flex flex-col gap-2.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft/70">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft">
                     Revenue
                   </span>
                   <PnlBar label="National Revenue" value={result.revenue.national} tone="revenue" maxAbs={pnlScale} />
@@ -2261,7 +2261,7 @@ export default function FrontOfficeSimulator() {
                   />
                 </div>
                 <div className="flex flex-col gap-2.5 border-t border-forest/10 pt-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft/70">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft">
                     Cost
                   </span>
                   <PnlBar label="Payroll" value={result.cost.payroll} tone="cost" maxAbs={pnlScale} />
@@ -2311,7 +2311,7 @@ export default function FrontOfficeSimulator() {
 
         {/* FY2026 reference case */}
         <section className="mt-12 border-t border-forest/10 pt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             The FY2026 Reference Case
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-charcoal-soft">
@@ -2344,7 +2344,7 @@ export default function FrontOfficeSimulator() {
         <section className="mt-12 border-t border-forest/10 pt-8">
           <ChapterMark roman="IV" label="Marginal Effects" />
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
               Marginal Impact — What the Next $1M Does
             </h2>
             <div className="flex gap-1 rounded-full border border-forest/20 bg-white p-0.5">
@@ -2354,7 +2354,7 @@ export default function FrontOfficeSimulator() {
                   type="button"
                   onClick={() => setMarginalMetric(tab.key)}
                   aria-pressed={marginalMetric === tab.key}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                  className={`tap rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                     marginalMetric === tab.key
                       ? "bg-forest text-cream"
                       : "text-charcoal-soft hover:text-charcoal"
@@ -2387,7 +2387,7 @@ export default function FrontOfficeSimulator() {
                     {row.atCeiling ? (
                       <>
                         <span className="h-2 flex-1 overflow-hidden rounded-full bg-mist" />
-                        <span className="w-20 shrink-0 rounded-full bg-brass/15 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-brass">
+                        <span className="w-20 shrink-0 rounded-full bg-brass/15 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-brass-ink">
                           {row.key === "payroll" ? "At Cap" : "At Max"}
                         </span>
                       </>
@@ -2421,7 +2421,7 @@ export default function FrontOfficeSimulator() {
             effects → strategic position → uncertainty. */}
         <section className="mt-12 border-t border-forest/10 pt-8">
           <ChapterMark roman="V" label="Strategic Position" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             Strategy Map
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
@@ -2440,7 +2440,7 @@ export default function FrontOfficeSimulator() {
           <ChapterMark roman="VI" label="Uncertainty" />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                 Run {MONTE_CARLO_RUNS.toLocaleString()} Seasons
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
@@ -2453,7 +2453,7 @@ export default function FrontOfficeSimulator() {
             <button
               type="button"
               onClick={runSimulation}
-              className="shrink-0 rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+              className="tap shrink-0 rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
             >
               Run {MONTE_CARLO_RUNS.toLocaleString()} Seasons
             </button>
@@ -2549,7 +2549,7 @@ export default function FrontOfficeSimulator() {
 
               {/* Win total distribution */}
               <section className="rounded-xl border border-forest/15 bg-white p-4 sm:p-6">
-                <h3 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                   Win Total Distribution
                 </h3>
                 <div className="mt-2">
@@ -2577,7 +2577,7 @@ export default function FrontOfficeSimulator() {
 
               {/* Operating result distribution */}
               <section className="rounded-xl border border-forest/15 bg-white p-4 sm:p-6">
-                <h3 className="text-sm font-semibold uppercase tracking-widest text-brass">
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
                   Operating Result Distribution
                 </h3>
                 <div className="mt-2">
@@ -2621,7 +2621,7 @@ export default function FrontOfficeSimulator() {
             next layer for anyone who wants more than six cards. */}
         <section className="mt-12 border-t border-forest/10 pt-8">
           <ChapterMark roman="VII" label="How It Was Built" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             How the Model Was Built
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft">
@@ -3077,7 +3077,7 @@ export default function FrontOfficeSimulator() {
             1,000 seasons themselves. */}
         <section className="mt-12 border-t border-forest/10 pt-8">
           <ChapterMark roman="VIII" label="What It Shows" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
             What the Model Shows
           </h2>
           <div className="mt-4 rounded-xl border-2 border-brass/30 bg-brass-pale/30 p-4 sm:p-6">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -28,10 +29,13 @@ export async function generateMetadata({
   const project = getProjectBySlug(slug);
   if (!project) return {};
 
-  return {
+  return pageMetadata({
     title: `${project.title} — ${project.category} | Sam Felix`,
     description: project.description ?? project.summary,
-  };
+    path: `/projects/${project.slug}`,
+    image: `/og/${project.slug}.png`,
+    imageAlt: `${project.title}: ${project.category}`,
+  });
 }
 
 export default async function Page({

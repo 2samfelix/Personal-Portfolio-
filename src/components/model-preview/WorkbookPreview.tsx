@@ -65,7 +65,7 @@ const DIALOG_ZOOM = 1;
 const FROZEN_MAX_SHARE = 0.28;
 
 const HEADER_BG = "#ECE8DC";
-const HEADER_SELECTED_BG = "#D8B888";
+const HEADER_SELECTED_BG = "#D8B888"; // its header text is charcoal (7.8:1); soft charcoal would be 3.8:1
 const GRIDLINE = "#E2E5E1";
 const SELECT_RING = "#1E3A2B";
 
@@ -339,7 +339,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
                   key={c}
                   scope="col"
                   aria-colindex={c + 2}
-                  className="sticky top-0 border-b border-r p-0 text-center font-semibold text-charcoal-soft"
+                  className={`sticky top-0 border-b border-r p-0 text-center font-semibold ${c === selection.c ? "text-charcoal" : "text-charcoal-soft"}`}
                   style={{
                     fontSize: headerFontPx,
                     background: c === selection.c ? HEADER_SELECTED_BG : HEADER_BG,
@@ -371,7 +371,7 @@ function SheetGrid({ doc, sheet, selection, onSelect, compact, zoom, viewportWid
                 <th
                   scope="row"
                   aria-colindex={1}
-                  className="sticky left-0 border-b border-r p-0 text-center font-semibold text-charcoal-soft"
+                  className={`sticky left-0 border-b border-r p-0 text-center font-semibold ${r === selection.r ? "text-charcoal" : "text-charcoal-soft"}`}
                   style={{
                     fontSize: headerFontPx,
                     background: r === selection.r ? HEADER_SELECTED_BG : HEADER_BG,
@@ -608,7 +608,7 @@ function FormulaBar({
         {/* Takes only the lines the formula needs, so "Shows" sits right under it; a
             formula longer than the bar allows shrinks this and scrolls. */}
         <p className="flex min-h-0 items-start gap-2">
-          <span className="shrink-0 font-serif text-sm italic leading-5 text-brass" aria-hidden="true">
+          <span className="shrink-0 font-serif text-sm italic leading-5 text-brass-ink" aria-hidden="true">
             fx
           </span>
           <span className="sr-only">Formula:</span>
@@ -775,7 +775,7 @@ export default function WorkbookPreview({
     <p className="p-6 text-sm text-charcoal-soft">
       {status === "error" ? "The preview could not be loaded. " : "Loading the workbook preview… "}
       {downloadUrl && (
-        <a href={downloadUrl} className="font-semibold text-forest underline-offset-2 hover:underline">
+        <a href={downloadUrl} className="tap font-semibold text-forest underline-offset-2 hover:underline">
           Download the workbook instead
         </a>
       )}

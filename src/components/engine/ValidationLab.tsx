@@ -286,7 +286,7 @@ export function DetectionMap({ lab }: { lab: ValidationLab }) {
         they are in the table below with every other case.
       </figcaption>
       <details className="mt-3 text-base text-charcoal print:hidden">
-        <summary className="cursor-pointer rounded-sm font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass">
+        <summary className="tap cursor-pointer rounded-sm font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass">
           Data table
         </summary>
         <div className="mt-2 overflow-x-auto">

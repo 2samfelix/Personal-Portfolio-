@@ -104,7 +104,7 @@ function Shot({ skill, shown = true }: { skill: (typeof SKILLS)[number]; shown?:
 }
 
 const FRAME = "relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-forest/15 bg-white shadow-sm";
-const LINK = "font-semibold text-forest hover:text-forest-dark";
+const LINK = "tap font-semibold text-forest hover:text-forest-dark";
 
 /**
  * "Core Expertise" as a proof stage: each skill row shows a real capture of

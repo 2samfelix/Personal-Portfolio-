@@ -71,8 +71,8 @@ export function ProjectHero({
             {...(cta.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className={
               cta.variant === "primary"
-                ? "rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
-                : "rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
+                ? "tap rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+                : "tap rounded-full border border-forest/30 px-5 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:border-forest hover:bg-white"
             }
           >
             {cta.label}

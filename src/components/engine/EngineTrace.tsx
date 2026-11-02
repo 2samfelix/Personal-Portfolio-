@@ -94,7 +94,7 @@ const KIND_LABEL: Record<string, string> = { fact: "Fact", explicit_claim: "Expl
 const STATUS_CLASS: Record<string, string> = {
   RECONCILED: "bg-forest/10 text-forest",
   UNRESOLVED: "bg-rust-pale text-rust",
-  NOT_APPLICABLE: "bg-brass-pale text-brass",
+  NOT_APPLICABLE: "bg-brass-pale text-brass-ink",
   VALID: "bg-forest/10 text-forest",
   REJECTED: "bg-rust-pale text-rust",
 };
@@ -121,7 +121,7 @@ function Badge({ children, className = "" }: { children: ReactNode; className?: 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-5">
-      <h4 className="text-xs font-semibold uppercase tracking-widest text-brass">{title}</h4>
+      <h4 className="text-xs font-semibold uppercase tracking-widest text-brass-ink">{title}</h4>
       <div className="mt-2 grid grid-cols-1 gap-3 lg:grid-cols-2">{children}</div>
     </section>
   );
@@ -187,7 +187,7 @@ function StatementDetail({ s, doc }: { s: Statement; doc: TraceDoc }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-sm font-bold text-charcoal">{s.id}</span>
         <Badge>{KIND_LABEL[s.kind]}</Badge>
-        <Badge className={s.severity === "warning" ? "bg-brass-pale text-brass" : "bg-forest/10 text-forest"}>{s.severity}</Badge>
+        <Badge className={s.severity === "warning" ? "bg-brass-pale text-brass-ink" : "bg-forest/10 text-forest"}>{s.severity}</Badge>
       </div>
       <p className={`mt-2 text-base leading-7 text-charcoal ${MEASURE}`}>{s.text}</p>
 
@@ -272,7 +272,7 @@ function StatementDetail({ s, doc }: { s: Statement; doc: TraceDoc }) {
       )}
 
       <section className="mt-6">
-        <h4 className="text-xs font-semibold uppercase tracking-widest text-brass">What the code checked</h4>
+        <h4 className="text-xs font-semibold uppercase tracking-widest text-brass-ink">What the code checked</h4>
         {s.numbers.length > 0 && (
           <div className="mt-2">
             <p className="text-sm text-charcoal">Each number in the text, and what it matched:</p>
@@ -290,7 +290,7 @@ function StatementDetail({ s, doc }: { s: Statement; doc: TraceDoc }) {
         <ul className={`mt-1 flex flex-col gap-1.5 text-sm leading-6 text-charcoal-soft ${MEASURE}`}>
           {s.rules.map((r) => (
             <li key={r.codes[0]} className="before:mr-2 before:text-forest before:content-['✓']">
-              {r.check} <span className="font-mono text-xs text-charcoal-soft/80">{r.codes.join(", ")}</span>
+              {r.check} <span className="font-mono text-xs text-charcoal-soft">{r.codes.join(", ")}</span>
             </li>
           ))}
         </ul>
@@ -313,13 +313,13 @@ function TestDetail({ t }: { t: TestBrief }) {
       <p className={`mt-2 text-base leading-7 text-charcoal ${MEASURE}`}>{t.description}</p>
       {t.statements.map((st) => (
         <div key={st.id} className="mt-4">
-          <h4 className="text-xs font-semibold uppercase tracking-widest text-brass">
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-brass-ink">
             Offending sentence ({st.id}, {KIND_LABEL[st.kind] ?? st.kind})
           </h4>
           <blockquote className={`mt-1 border-l-2 border-rust/60 pl-3 text-sm leading-6 text-charcoal ${MEASURE}`}>{st.text}</blockquote>
         </div>
       ))}
-      <h4 className="mt-5 text-xs font-semibold uppercase tracking-widest text-brass">Validator output</h4>
+      <h4 className="mt-5 text-xs font-semibold uppercase tracking-widest text-brass-ink">Validator output</h4>
       {t.errors.length === 0 ? (
         <p className="mt-1 text-sm font-semibold text-forest">VALID: the validator returned no errors.</p>
       ) : (
@@ -471,7 +471,7 @@ export default function EngineTrace({ headers, src }: { headers: TraceHeaders; s
       <>
         <span className="font-mono text-xs font-bold text-charcoal">{s.id}</span>
         <Badge>{KIND_LABEL[s.kind]}</Badge>
-        <Badge className={s.severity === "warning" ? "bg-brass-pale text-brass" : "bg-forest/10 text-forest"}>{s.severity}</Badge>
+        <Badge className={s.severity === "warning" ? "bg-brass-pale text-brass-ink" : "bg-forest/10 text-forest"}>{s.severity}</Badge>
       </>
     ),
     summary: s.text,
@@ -512,7 +512,7 @@ export default function EngineTrace({ headers, src }: { headers: TraceHeaders; s
             aria-controls={`${uid}-panel-${i}`}
             tabIndex={tab === i ? 0 : -1}
             onClick={() => setTab(i)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-cream ${
+            className={`tap rounded-full px-4 py-2 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-cream ${
               tab === i ? "bg-forest text-cream" : "border border-forest/25 bg-white text-charcoal"
             }`}
           >
