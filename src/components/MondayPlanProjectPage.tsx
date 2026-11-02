@@ -35,6 +35,7 @@ import { BreakevenChart, BridgeChart, GrowthChart, QuarterlyCharts, RangeChart, 
 import InPageMenu from "@/components/monday/InPageMenu";
 import ResultsCountdown from "@/components/monday/ResultsCountdown";
 import ResultsSection from "@/components/monday/ResultsSection";
+import { formatValue, loadMondayResults } from "@/lib/mondayResults";
 
 // Whole sheets at 100% zoom; the desktop grid is sized to each tab at build time.
 const PREVIEW_ZOOM = 1;
@@ -128,6 +129,11 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
   const [watchMap, actionMap, plusT3Map] = plan.mapping;
   // The lever each trigger maps to, from the workbook's tier-to-action table.
   const triggerLever = [watchMap, actionMap, actionMap, plusT3Map];
+  // Every status line below follows the validated results file (src/lib/mondayResults.ts):
+  // pending while there is none, scored once it is published and pinned.
+  const results = loadMondayResults();
+  const scored = results.state === "scored" ? results : null;
+  const scoredRow = (metric: string) => scored?.rows.find((r) => r.metric === metric) ?? null;
 
   const summary = [
     <>
@@ -151,8 +157,13 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
   const timeline = [
     { when: utc(q3Release.publishedAt), what: "Q3 call locked", detail: q3Release.tag, href: q3Release.url, done: true },
     { when: utc(planRelease.publishedAt), what: "Operating plan locked", detail: planRelease.tag, href: planRelease.url, done: true },
-    { when: RESULTS_DATE, what: "Q3 2026 results", detail: "Pending", done: false },
-    { when: "After the results", what: "Scoring", detail: "Actuals recorded in the Scorecard; thresholds unchanged", done: false },
+    { when: RESULTS_DATE, what: "Q3 2026 results", detail: scored ? "Reported" : "Pending", done: !!scored },
+    {
+      when: "After the results",
+      what: "Scoring",
+      detail: scored ? "Scored below in Results; thresholds unchanged" : "Actuals recorded in the Scorecard; thresholds unchanged",
+      done: !!scored,
+    },
   ];
 
   return (
@@ -182,8 +193,22 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                 A plan that says in advance what management should do if growth slows faster than guided, locked before the results.
               </p>
               <div className="mt-6 inline-flex flex-wrap items-center gap-3 rounded-xl border border-brass-light/60 px-4 py-3">
-                <span className="rounded-md bg-brass-light px-2 py-0.5 text-sm font-black uppercase tracking-widest text-forest">Pending</span>
-                <span className="text-base text-cream/90">Q3 2026 results: {RESULTS_DATE}. No result is claimed on this page.</span>
+                {scored ? (
+                  <>
+                    <span className="rounded-md bg-brass-light px-2 py-0.5 text-sm font-black uppercase tracking-widest text-forest">Scored</span>
+                    <span className="text-base text-cream/90">
+                      Q3 2026 results reported {RESULTS_DATE}{scored.fixture ? " (test fixture, not real results)" : ""}.{" "}
+                      <a href="#results" className="tap inline-block font-semibold text-cream underline underline-offset-4 hover:text-brass-light">
+                        Scored against the locked call ↓
+                      </a>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="rounded-md bg-brass-light px-2 py-0.5 text-sm font-black uppercase tracking-widest text-forest">Pending</span>
+                    <span className="text-base text-cream/90">Q3 2026 results: {RESULTS_DATE}. No result is claimed on this page.</span>
+                  </>
+                )}
               </div>
             </div>
             <GrowthChart g={charts.growth} />
@@ -216,8 +241,22 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
           </div>
           <div className="rounded-2xl border border-forest/30 bg-forest/5 p-6">
             <p className={`text-sm font-semibold uppercase tracking-widest ${LABEL}`}>Q3 results</p>
-            <p className="mt-2 text-3xl font-black tracking-tight text-forest">{RESULTS_DATE_SHORT}</p>
-            <ResultsCountdown at={RESULTS_AT_UTC} className="mt-2 text-base text-charcoal-soft" />
+            {scored ? (
+              <>
+                <p className="mt-2 text-3xl font-black tracking-tight text-forest">Reported</p>
+                {/* Static once scored: no timer. */}
+                <p className="mt-2 min-h-6 text-base text-charcoal-soft">
+                  <a href="#results" className="tap font-semibold text-forest underline-offset-4 hover:underline">
+                    Scored below in Results ↓
+                  </a>
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-3xl font-black tracking-tight text-forest">{RESULTS_DATE_SHORT}</p>
+                <ResultsCountdown at={RESULTS_AT_UTC} className="mt-2 text-base text-charcoal-soft" />
+              </>
+            )}
           </div>
         </section>
 
@@ -426,11 +465,17 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
         {/* Pre-Registered Q3 Test */}
         <section id="q3-test" aria-labelledby="q3-heading" className={`mt-20 ${SECTION}`}>
           <SectionHeading id="q3-heading" eyebrow="Locked test">Pre-Registered Q3 Test</SectionHeading>
-          <p className="mt-4 inline-flex w-fit rounded-full border border-dashed border-charcoal-soft px-3 py-1 text-sm font-bold uppercase tracking-widest text-charcoal">
-            Status: pending
-          </p>
+          {scored ? (
+            <p className="mt-4 inline-flex w-fit rounded-full bg-forest px-3 py-1 text-sm font-bold uppercase tracking-widest text-cream">Status: scored</p>
+          ) : (
+            <p className="mt-4 inline-flex w-fit rounded-full border border-dashed border-charcoal-soft px-3 py-1 text-sm font-bold uppercase tracking-widest text-charcoal">
+              Status: pending
+            </p>
+          )}
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
-            The Q3 forecast and operating plan were locked before results were released. Actuals will be scored against the frozen files on November 9, 2026.
+            {scored
+              ? "The Q3 forecast and operating plan were locked before results were released. The actuals were scored against the frozen files; the results are below."
+              : "The Q3 forecast and operating plan were locked before results were released. Actuals will be scored against the frozen files on November 9, 2026."}
           </p>
 
           <h3 className="mt-10 text-lg font-bold text-charcoal">Lock timeline</h3>
@@ -467,7 +512,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
           </div>
 
           <div className="mt-8 rounded-2xl border border-forest/15 bg-white p-5 sm:p-8">
-            <RangeChart ranges={charts.ranges} />
+            <RangeChart ranges={charts.ranges} results={scored ? scored.rows : null} />
             <ul className="mt-6 flex flex-col gap-3 border-t border-forest/10 pt-5">
               {scorecard.noCalls.map((s) => (
                 <li key={s.metric} className="text-base leading-7 text-charcoal">
@@ -480,7 +525,8 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
 
           <h3 className="mt-10 text-lg font-bold text-charcoal">Scorecard</h3>
           <p className={`mt-2 text-base leading-7 text-charcoal-soft ${MEASURE}`}>
-            Locked values from the locked Q3 call workbook ({q3Release.file}); guidance from the company&apos;s August 10, 2026 outlook. Actual, variance and interpretation stay empty until the results.
+            Locked values from the locked Q3 call workbook ({q3Release.file}); guidance from the company&apos;s August 10, 2026 outlook.{" "}
+            {scored ? "Actual from the published results file; result and comparison with guidance as scored in Results below." : "Actual, variance and interpretation stay empty until the results."}
           </p>
           <div className="mt-3 overflow-x-auto rounded-2xl border border-forest/15 bg-white max-md:overflow-visible">
             <table className={`w-full min-w-[64rem] border-collapse ${STACK_TABLE}`}>
@@ -492,12 +538,14 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                   <th scope="col" className={TH}>Locked Mid</th>
                   <th scope="col" className={TH}>Locked High</th>
                   <th scope="col" className={TH_LEFT}>Actual</th>
-                  <th scope="col" className={TH_LEFT}>Variance</th>
-                  <th scope="col" className={TH_LEFT}>Interpretation</th>
+                  <th scope="col" className={TH_LEFT}>{scored ? "Result" : "Variance"}</th>
+                  <th scope="col" className={TH_LEFT}>{scored ? "Versus guidance" : "Interpretation"}</th>
                 </tr>
               </thead>
               <tbody className={STACK_BODY}>
-                {scorecard.rows.map((s) => (
+                {scorecard.rows.map((s) => {
+                  const r = scoredRow(s.metric);
+                  return (
                   <tr key={s.metric} className={`border-b border-forest/10 align-top ${STACK_ROW}`}>
                     <th scope="row" className={`min-w-[11rem] px-4 py-3 text-left text-base font-semibold text-charcoal ${STACK_LABEL}`}>
                       {s.metric}
@@ -510,11 +558,26 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                     {s.values.map((v, i) => (
                       <td key={i} data-label={`Locked ${["Low", "Mid", "High"][i]}`} className={`${TD} ${STACK_VALUE}`}>{v}</td>
                     ))}
-                    <td data-label="Actual" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending: Nov. 9</td>
-                    <td data-label="Variance" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
-                    <td data-label="Interpretation" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
+                    {r ? (
+                      <>
+                        <td data-label="Actual" className={`px-4 py-3 text-base font-semibold tabular-nums text-charcoal ${STACK_VALUE}`}>
+                          <span data-actual={r.key} data-v={r.actual} data-d={formatValue(r.key, r.actual)}>{formatValue(r.key, r.actual)}</span>
+                        </td>
+                        <td data-label="Result" className={`px-4 py-3 text-base ${!r.scored ? "text-charcoal-soft" : r.position === "inside" ? "font-semibold text-forest" : "font-semibold text-rust"} ${STACK_VALUE}`}>
+                          {r.result}
+                        </td>
+                        <td data-label="Versus guidance" className={`px-4 py-3 text-base text-charcoal ${STACK_VALUE}`}>{r.versusGuide ? r.versusGuide.text : "Not guided"}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td data-label="Actual" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending: Nov. 9</td>
+                        <td data-label="Variance" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
+                        <td data-label="Interpretation" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
+                      </>
+                    )}
                   </tr>
-                ))}
+                  );
+                })}
                 {scorecard.noCalls.map((s) => (
                   <tr key={s.metric} className={`border-b border-forest/10 align-top last:border-b-0 ${STACK_ROW}`}>
                     <th scope="row" className={`px-4 py-3 text-left text-base font-semibold text-charcoal ${STACK_LABEL}`}>{s.metric}</th>
@@ -523,9 +586,19 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                       <span className="font-semibold">No call made.</span>{" "}
                       <span className="text-charcoal-soft">Workbook reason: &ldquo;{s.reason}&rdquo;</span>
                     </td>
-                    <td data-label="Actual" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending: Nov. 9</td>
-                    <td data-label="Variance" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
-                    <td data-label="Interpretation" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
+                    {scored ? (
+                      <>
+                        <td data-label="Actual" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Not scored</td>
+                        <td data-label="Result" className={`px-4 py-3 text-base text-charcoal-soft ${STACK_VALUE}`}>No call</td>
+                        <td data-label="Versus guidance" className={`px-4 py-3 text-base text-charcoal-soft ${STACK_VALUE}`}>Not scored</td>
+                      </>
+                    ) : (
+                      <>
+                        <td data-label="Actual" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending: Nov. 9</td>
+                        <td data-label="Variance" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
+                        <td data-label="Interpretation" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -592,7 +665,9 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
               {
                 title: `GitHub Release ${q3Release.tag}`,
                 format: "AUTHORITATIVE",
-                description: "The authoritative copy of the Q3 2026 forecast to be scored on November 9.",
+                description: scored
+                  ? "The authoritative copy of the Q3 2026 forecast, scored on November 9 (see Results above)."
+                  : "The authoritative copy of the Q3 2026 forecast to be scored on November 9.",
                 href: q3Release.url,
                 cta: "Open Release ↗",
               },

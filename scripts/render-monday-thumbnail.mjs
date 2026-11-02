@@ -1,5 +1,7 @@
 // Renders the home-card thumbnail for the monday.com Operating Plan:
-//   node scripts/render-monday-thumbnail.mjs
+//   node scripts/render-monday-thumbnail.mjs                  (Q3: PENDING)
+//   node scripts/render-monday-thumbnail.mjs --status scored  (Q3: SCORED, *-scored.webp)
+// The site picks the variant from the Q3 results status (src/lib/mondayResults.ts).
 // Figures come from the Model Preview JSON exported from the locked plan workbook
 // (looked up by row label, as src/lib/mondayPlan.ts does); the workbook's SHA-256
 // must match the locked release. Writes public/project-visuals/monday-operating-plan.webp
@@ -13,7 +15,9 @@ import { chromium } from "playwright";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PLAN_SHA256 = "125af68742c9d3501cd2f23944899cc4625cf5285e79ba9ea2bee34f24315419";
-const OUT = "public/project-visuals/monday-operating-plan.webp";
+const SCORED = process.argv.includes("--status") && process.argv[process.argv.indexOf("--status") + 1] === "scored";
+const OUT = SCORED ? "public/project-visuals/monday-operating-plan-scored.webp" : "public/project-visuals/monday-operating-plan.webp";
+const STATUS = SCORED ? "Q3: SCORED" : "Q3: PENDING";
 const MAX_BYTES = 60 * 1024;
 
 const doc = JSON.parse(readFileSync(join(root, "public/monday-operating-plan/model-preview.json"), "utf8"));
@@ -59,7 +63,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
   <p class="k">FY27 revenue, USD m</p>
   <div class="row"><span class="name">Base</span><div class="track"><div class="fill base" style="width:${bar(base.v)}">${shown(base)}</div></div></div>
   <div class="row"><span class="name">Downside</span><div class="track"><div class="fill down" style="width:${bar(down.v)}">${shown(down)}</div></div></div>
-  <div class="foot"><span>Gap ${gapX} avg miss</span><span class="pending">Q3: PENDING</span></div>
+  <div class="foot"><span>Gap ${gapX} avg miss</span><span class="pending">${STATUS}</span></div>
 </body></html>`;
 
 const browser = await chromium.launch();

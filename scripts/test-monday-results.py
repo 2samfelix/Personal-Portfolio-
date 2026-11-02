@@ -23,6 +23,11 @@ Scored state (a validated results file, or the fixture):
 6. On each chart axis, the drawn positions of locked marks and actuals are one linear
    function of their values, and the chart prints no number that is not tied to a
    workbook cell or a JSON value.
+
+Both states, across the whole monday.com page and the home page (its monday card):
+7. Status wording follows the state: no pending wording (or live countdown) survives in a
+   scored build, and no scored wording appears in a pending build. The home-card thumbnail
+   and the page's link-preview image, which show the status as pixels, are the state's own.
 Exits non-zero on any failure.
 """
 from __future__ import annotations
@@ -150,6 +155,76 @@ def sheet_row_prefix(ws, prefix: str) -> int:
     if len(hits) != 1:
         raise SystemExit(f"test-monday-results: {ws.title}: expected one row starting {prefix!r}, found {len(hits)}")
     return hits[0]
+
+
+# Wording that belongs to one state only, matched against the visible text of the
+# monday.com page and the home page.
+PENDING_ONLY = [
+    r"\bpending\b",
+    r"not known yet",
+    r"No result is claimed",
+    r"to be scored",
+    r"will be scored",
+    r"stay empty",
+    r"Nov\. 9\b",
+    r"Reported Nov 9, 2026",
+    r"days? to go",
+]
+SCORED_ONLY = [
+    r"Status: scored",
+    r"Scored below in Results",
+    r"scored against the locked call",
+    r"results reported",
+    r"\bReported\b(?! Nov 9, 2026)",
+    r"printed at right",
+    r"Test fixture",
+    r"How it was scored",
+]
+
+
+def visible_text(html: str) -> str:
+    """The page's text as shown: scripts, styles and the RSC payload removed, tags dropped."""
+    html = re.sub(r"<(script|style|template)\b.*?</\1>", " ", html, flags=re.S | re.I)
+    text = re.sub(r"<[^>]+>", " ", html)
+    text = text.replace("&amp;", "&").replace("&#x27;", "'").replace("&quot;", '"').replace("&lt;", "<").replace("&gt;", ">")
+    return re.sub(r"\s+", " ", text)
+
+
+def wording(dist: Path, state: str) -> list[str]:
+    """Checks that only the given state's wording is shown on the two pages."""
+    out = []
+    forbidden = SCORED_ONLY if state == "pending" else PENDING_ONLY
+    for name in ("projects/monday-operating-plan.html", "index.html"):
+        f = dist / "server/app" / name
+        html = f.read_text(encoding="utf-8")
+        text = visible_text(html)
+        if name == "index.html":
+            # The home page: only the monday card is in scope.
+            i = text.find("How should management adjust spend")
+            text = text[i : i + 600] if i >= 0 else ""
+            if not text:
+                out.append("home page: the monday.com card was not found")
+        for pat in forbidden:
+            for m in re.finditer(pat, text, flags=re.I if pat == r"\bpending\b" else 0):
+                out.append(f"{name}: {state} build shows {'scored' if state == 'pending' else 'pending'} wording {m.group(0)!r}: …{text[max(0, m.start() - 60) : m.end() + 40]}…")
+        # Images carry the status as pixels ("Q3: PENDING" / "Q3: SCORED"), so check which file each uses.
+        if name == "index.html":
+            img_scored = "monday-operating-plan-scored.webp" in html
+            if img_scored != (state == "scored"):
+                out.append(f"home page: the monday card uses the {'scored' if img_scored else 'pending'} thumbnail in a {state} build")
+        else:
+            og = re.search(r'<meta property="og:image" content="([^"]+)"', html)
+            og_scored = bool(og and og.group(1).endswith("/og/monday-operating-plan-scored.png"))
+            if og_scored != (state == "scored"):
+                out.append(f"{name}: og:image {og and og.group(1)!r} does not match the {state} state")
+        has_countdown = "data-countdown" in html
+        if name.startswith("projects/") and has_countdown != (state == "pending"):
+            out.append(f"{name}: the live countdown is {'missing' if state == 'pending' else 'still on the page'} in a {state} build")
+        if name == "index.html":
+            want = "Q3 2026 results pending." if state == "pending" else "Q3 2026 results scored against the locked call"
+            if want not in text:
+                out.append(f"home page: the monday card does not say {want!r}")
+    return out
 
 
 def main() -> int:
@@ -320,6 +395,24 @@ def main() -> int:
     else:
         failures.append(f"unknown section state {state!r}")
         summary = "?"
+
+    if state in ("pending", "scored"):
+        failures += wording(ROOT / args.dist, state)
+    if state == "scored":
+        # Actuals shown elsewhere on the page (Scorecard, range chart) must match the file too.
+        html = page_file.read_text(encoding="utf-8")
+        elsewhere = 0
+        for m in re.finditer(r"<[^>]*\bdata-actual=\"([^\"]+)\"[^>]*>", html):
+            tag = m.group(0)
+            v = re.search(r'data-v="([^"]+)"', tag)
+            d = re.search(r'data-d="([^"]+)"', tag)
+            key = m.group(1)
+            elsewhere += 1
+            if key not in values or not v or abs(float(v.group(1)) - values[key]) > 1e-12:
+                failures.append(f"page: actual {key} = {v and v.group(1)} does not match {rel}")
+            if d and d.group(1).replace("&#x27;", "'") != fmt(key, values[key]):
+                failures.append(f"page: actual {key} printed {d.group(1)!r}, the file prints as {fmt(key, values[key])!r}")
+        summary += f"; {elsewhere} tagged actuals on the whole page"
 
     for f in failures:
         print(f"FAIL: {f}")

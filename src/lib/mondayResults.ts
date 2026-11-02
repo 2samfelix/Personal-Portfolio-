@@ -14,11 +14,9 @@
 // instead, which is not real data, lives outside public/, and is labelled as a
 // fixture on the page. Production builds never read it.
 //
-// Publishing the results (November 9, 2026):
-//   1. Write public/monday-operating-plan/monday_q3_actuals.json in the schema below, from
-//      the company's own Q3 2026 results release ("status": "scored").
-//   2. npm run build: it stops with the file's SHA-256; set ACTUALS_SHA256 to it.
-//   3. npm run build && npm run test:monday-results && npm run test:monday-charts, then commit.
+// Publishing the results (November 9, 2026), as in the README: add the actuals file, set the
+// pin (npm run build prints it), run the checks, commit. Every status line on the page and
+// its home-page card follows loadMondayResults(), so nothing else needs editing.
 //
 // Server-only: it reads files at build time.
 import { createHash } from "node:crypto";
@@ -333,6 +331,11 @@ export function loadMondayResults(): MondayResults {
   cached = doc.status === "pending" ? { state: "pending", file: null } : score(doc as ActualsDoc & { status: "scored" }, { fixture: false, file: `public${ACTUALS_PATH}`, sha256: digest });
   return cached;
 }
+
+/** The home-card thumbnail and link-preview card once scored ("Q3: SCORED"); the pending ones
+ * are the project's own (src/lib/projects.ts, public/og/<slug>.png). */
+export const SCORED_VISUAL = "/project-visuals/monday-operating-plan-scored.webp";
+export const SCORED_OG_IMAGE = "/og/monday-operating-plan-scored.png";
 
 /** The locked Q3 call release (tag, commit, published time, SHA-256), for the lock facts. */
 export const Q3_RELEASE = RELEASES.find((r) => r.tag === "q3-2026-call-locked")!;

@@ -3,6 +3,14 @@ import Link from "next/link";
 import { CARD_CTA, CARD_LIFT } from "@/components/project/cardLift";
 import { PROJECT_ORDER, flagshipProjects, type Project } from "@/lib/projects";
 import { loadMondayCharts, loadMondayPlan } from "@/lib/mondayPlan";
+import { SCORED_VISUAL, loadMondayResults } from "@/lib/mondayResults";
+
+// The monday card's results line follows the validated results file (src/lib/mondayResults.ts).
+const MONDAY_RESULTS = loadMondayResults();
+const MONDAY_STATUS =
+  MONDAY_RESULTS.state === "scored"
+    ? `Q3 2026 results scored against the locked call${MONDAY_RESULTS.fixture ? " (test fixture, not real results)" : ""}.`
+    : "Q3 2026 results pending.";
 
 /** A run of answer text; `figure` parts are set in bold. */
 type Part = string | { figure: string };
@@ -62,7 +70,7 @@ const CARDS: Record<string, CardCopy> = {
     answer: [
       "The FY27 Base–Downside revenue gap is ",
       { figure: MONDAY.gapX.values[0] },
-      " the average 4-quarter-ahead backtest miss, so the plan acts on triggers. Q3 2026 results pending.",
+      ` the average 4-quarter-ahead backtest miss, so the plan acts on triggers. ${MONDAY_STATUS}`,
     ],
     tags: ["Strategic FP&A", "Scenario analysis", "Cash / FCF"],
   },
@@ -74,7 +82,7 @@ const projects = PROJECT_ORDER.map((slug) => flagshipProjects.find((p) => p.slug
 
 // The monday card's alt text states its thumbnail's figures, read from the locked workbook.
 const MONDAY_STRIP = loadMondayCharts().strip;
-const MONDAY_ALT = `monday.com operating plan: FY27 revenue ${MONDAY_STRIP.baseRevenue.d} (Base) vs ${MONDAY_STRIP.downRevenue.d} (Downside), USD millions; the gap is ${MONDAY_STRIP.gapX.d} the average 4-quarter backtest miss. Q3 2026 results pending.`;
+const MONDAY_ALT = `monday.com operating plan: FY27 revenue ${MONDAY_STRIP.baseRevenue.d} (Base) vs ${MONDAY_STRIP.downRevenue.d} (Downside), USD millions; the gap is ${MONDAY_STRIP.gapX.d} the average 4-quarter backtest miss. ${MONDAY_STATUS}`;
 
 // Card image width: one column below 640px, two to 1023px, three from 1024px
 // (the grid's container is max-w-6xl, 1152px less 48px padding and 64px of gaps).
@@ -89,7 +97,7 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
       <div className="flex h-48 w-full shrink-0 items-center justify-center overflow-hidden border-b border-forest/10 bg-cream">
         {project.visual && project.visualSize && (
           <Image
-            src={project.visual}
+            src={project.slug === "monday-operating-plan" && MONDAY_RESULTS.state === "scored" ? SCORED_VISUAL : project.visual}
             alt={project.slug === "monday-operating-plan" ? MONDAY_ALT : (project.visualAlt ?? `${project.title} preview`)}
             width={project.visualSize.width}
             height={project.visualSize.height}

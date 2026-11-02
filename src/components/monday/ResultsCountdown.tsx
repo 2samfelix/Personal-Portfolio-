@@ -18,7 +18,7 @@ export default function ResultsCountdown({ at, className = "" }: { at: string; c
     if (left > 0) setText(`${Math.ceil(left / DAY_MS)} ${Math.ceil(left / DAY_MS) === 1 ? "day" : "days"} to go. No result is claimed here.`);
   }, [at]);
   return (
-    <p className={`min-h-6 ${className}`} aria-live="polite">
+    <p className={`min-h-6 ${className}`} aria-live="polite" data-countdown="">
       {text}
     </p>
   );
