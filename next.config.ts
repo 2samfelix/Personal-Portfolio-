@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // The scored-results test fixture (npm run build:monday-results-fixture) builds into its
+  // own folder, so the production build in .next never holds fixture numbers.
+  distDir: process.env.MONDAY_RESULTS_FIXTURE === "1" ? ".next-fixture" : ".next",
+  // Production builds never read the fixture; keep it out of every route's file trace.
+  outputFileTracingExcludes: process.env.MONDAY_RESULTS_FIXTURE === "1" ? {} : { "/*": ["./monday-operating-plan/fixtures/**/*"] },
   async headers() {
     return [
       {

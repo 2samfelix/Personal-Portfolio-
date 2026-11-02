@@ -27,11 +27,11 @@ export const C = {
   sage: "#c9d6cf",
 } as const;
 
-const FONT = "Arial, Helvetica, sans-serif";
+export const FONT = "Arial, Helvetica, sans-serif";
 
 type Scale = (v: number) => number;
-const linear = (d0: number, d1: number, r0: number, r1: number): Scale => (v) => r0 + ((v - d0) * (r1 - r0)) / (d1 - d0);
-const r2 = (n: number) => Math.round(n * 100) / 100;
+export const linear = (d0: number, d1: number, r0: number, r1: number): Scale => (v) => r0 + ((v - d0) * (r1 - r0)) / (d1 - d0);
+export const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * Baselines for two direct labels at the end of two lines, the upper one first:
@@ -51,11 +51,11 @@ function separate(yUpper: number, yLower: number, fs: number, upperLines: number
 }
 
 /** Attributes tying a drawn mark to its workbook cell and its value-axis coordinate. */
-function mark(c: CellValue, axis: string, pos: number) {
+export function mark(c: CellValue, axis: string, pos: number) {
   return { "data-ref": c.ref, "data-wb": c.wb, "data-v": c.v, "data-axis": axis, "data-pos": r2(pos) };
 }
 /** Attributes tying a printed number to its workbook cell. */
-function num(c: CellValue) {
+export function num(c: CellValue) {
   return { "data-ref": c.ref, "data-wb": c.wb, "data-v": c.v, "data-d": c.d };
 }
 
@@ -92,7 +92,7 @@ export function ChartFigure({
   );
 }
 
-function DataTable({ head, rows, dark = false }: { head: string[]; rows: ReactNode[][]; dark?: boolean }) {
+export function DataTable({ head, rows, dark = false }: { head: string[]; rows: ReactNode[][]; dark?: boolean }) {
   const line = dark ? "border-cream/20" : "border-forest/10";
   return (
     <table className="w-full border-collapse text-left tabular-nums">
@@ -414,7 +414,7 @@ export function BridgeChart({ b }: { b: MondayCharts["bridge"] }) {
 
 // --- 4. Scorecard as range bars -------------------------------------------------------
 
-function money(unit: string, c: CellValue) {
+export function money(unit: string, c: CellValue) {
   return unit === "USD millions" ? `$${c.d}M` : c.d;
 }
 

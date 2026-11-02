@@ -90,7 +90,8 @@ class Page(HTMLParser):
         if self.svg_depth and data.strip() and re.search(r"\d", data):
             # Digits printed in a chart must sit inside a tagged element.
             # Row labels (data-label) are names, such as "Lever 1: ... 5% below plan", not values.
-            if not any("data-ref" in n["attrs"] or "data-label" in n["attrs"] for n in self.stack) and not ALLOWED.fullmatch(data.strip()):
+            # Actuals (data-actual) are checked against the results file by test-monday-results.py.
+            if not any("data-ref" in n["attrs"] or "data-label" in n["attrs"] or "data-actual" in n["attrs"] for n in self.stack) and not ALLOWED.fullmatch(data.strip()):
                 rest = ALLOWED.sub("", data)
                 if re.search(r"\d", rest):
                     self.loose_svg_numbers.append(data.strip())
