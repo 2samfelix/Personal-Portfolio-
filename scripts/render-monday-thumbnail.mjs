@@ -1,95 +1,112 @@
-// Renders the home-card thumbnail for the monday.com Operating Plan:
-//   node scripts/render-monday-thumbnail.mjs                  (Q3: PENDING)
-//   node scripts/render-monday-thumbnail.mjs --status scored  (Q3: SCORED, *-scored.webp)
-// The site picks the variant from the Q3 results status (src/lib/mondayResults.ts).
-// Figures come from the Model Preview JSON exported from the locked plan workbook
-// (looked up by row label, as src/lib/mondayPlan.ts does); the workbook's SHA-256
-// must match the locked release. Writes public/project-visuals/monday-operating-plan.webp
-// at 680 x 400. The card shows it at about 0.48x (327 x 192 on a 375px phone), so
-// the smallest text, 30px here, reads at about 14px.
+// Renders the home-card thumbnail for the monday.com Operating Plan, in both states:
+//   node scripts/render-monday-thumbnail.mjs
+// writes public/project-visuals/monday-operating-plan.webp (Q3: PENDING) and
+// monday-operating-plan-scored.webp (Q3: SCORED); the site picks one from the Q3 results
+// status (src/lib/mondayResults.ts).
+//
+// The chart is the page's hero chart in small: year-over-year revenue growth by quarter
+// (plan-data.json, the locked plan's Trigger_History sheet) and the plan's Base and
+// Downside paths to Q4 2027 (model-preview.json, Revenue_Build). The plan workbook's
+// SHA-256 must match the locked release. Every number is tagged (scripts/thumbnail-kit.mjs)
+// and checked by scripts/test-thumbnails.py. 680 x 400 at 2x; the card shows it about 0.48x.
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { chromium } from "playwright";
+import { C, label, linear, mark, r2, renderAll, root, sheetCells, svgDoc, tNum } from "./thumbnail-kit.mjs";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PLAN_SHA256 = "125af68742c9d3501cd2f23944899cc4625cf5285e79ba9ea2bee34f24315419";
-const SCORED = process.argv.includes("--status") && process.argv[process.argv.indexOf("--status") + 1] === "scored";
-const OUT = SCORED ? "public/project-visuals/monday-operating-plan-scored.webp" : "public/project-visuals/monday-operating-plan.webp";
-const STATUS = SCORED ? "Q3: SCORED" : "Q3: PENDING";
-const MAX_BYTES = 60 * 1024;
+const W = 680;
+const H = 400;
+const PAD = 34;
 
-const doc = JSON.parse(readFileSync(join(root, "public/monday-operating-plan/model-preview.json"), "utf8"));
-const actual = createHash("sha256").update(readFileSync(join(root, doc.workbook.file))).digest("hex");
-if (actual !== PLAN_SHA256 || doc.workbook.sha256 !== PLAN_SHA256) {
-  console.error(`Workbook ${doc.workbook.file} does not match the locked release (${actual}).`);
-  process.exit(1);
+const PREVIEW = "public/monday-operating-plan/model-preview.json";
+const DATA = "public/monday-operating-plan/plan-data.json";
+for (const f of [PREVIEW, DATA]) {
+  const d = JSON.parse(readFileSync(join(root, f), "utf8"));
+  const actual = createHash("sha256").update(readFileSync(join(root, d.workbook.file))).digest("hex");
+  if (actual !== PLAN_SHA256 || d.workbook.sha256 !== PLAN_SHA256) throw new Error(`${f}: workbook ${d.workbook.file} does not match the locked release`);
 }
 
-const es = doc.sheets.find((s) => s.name === "Executive_Summary");
-const shown = (c) => (c?.d ?? (c?.v === undefined ? "" : String(c.v))).trim();
-function rowOf(label) {
-  const hits = es.cells.filter((c) => c.c === 0 && shown(c) === label);
-  if (hits.length !== 1) throw new Error(`Executive_Summary: expected one row "${label}"`);
-  return hits[0].r;
+// History: Trigger_History rows "Qn YYYY" with a YoY growth value (column D).
+const hist = sheetCells(DATA, "Trigger_History");
+const history = hist
+  .filter((c) => c.addr.startsWith("A") && /^Q\d \d{4}$/.test(c.d))
+  .map((q) => ({ quarter: q.d, value: hist.find((c) => c.addr === `D${q.r}`) }))
+  .filter((p) => p.value && typeof p.value.v === "number");
+if (history.length < 8) throw new Error("growth history too short");
+
+// Plan paths: the "Revenue YoY growth" row after BASE and after DOWNSIDE, Q3 2026 ... Q4 2027 (E:J).
+const rb = sheetCells(PREVIEW, "Revenue_Build");
+function pathAfter(section) {
+  const start = rb.find((c) => c.addr.startsWith("A") && c.d.startsWith(section));
+  if (!start) throw new Error(`Revenue_Build: no "${section}"`);
+  const row = rb.filter((c) => c.addr === `A${c.r}` && c.r > start.r && c.d === "Revenue YoY growth").sort((a, b) => a.r - b.r)[0];
+  const head = rb.filter((c) => c.addr === `A${c.r}` && c.r > start.r && c.d === "Line").sort((a, b) => a.r - b.r)[0];
+  return ["E", "F", "G", "H", "I", "J"].map((col) => {
+    const v = rb.find((c) => c.addr === `${col}${row.r}`);
+    const q = rb.find((c) => c.addr === `${col}${head.r}`);
+    if (typeof v?.v !== "number") throw new Error(`Revenue_Build!${col}${row.r} is not a number`);
+    return { quarter: q.d, value: v };
+  });
 }
-const at = (r, c) => es.cells.find((x) => x.r === r && x.c === c);
-const rev = rowOf("Revenue");
-const base = at(rev, 2); // Base FY27
-const down = at(rev, 4); // Downside FY27
-const gapX = shown(at(rowOf("Gap / average 4-quarter-ahead backtest miss"), 1));
-const head = rowOf("Base vs Downside");
-if (shown(at(head, 2)) !== "Base FY27" || shown(at(head, 4)) !== "Downside FY27") throw new Error("Executive_Summary columns moved");
+const base = pathAfter("BASE");
+const down = pathAfter("DOWNSIDE");
+const lastActual = history[history.length - 1];
+if (base[0].quarter !== "Q3 2026") throw new Error(`plan paths start at ${base[0].quarter}, not Q3 2026`);
 
-// Bars share one scale from zero; values are the workbook's raw numbers.
-const max = Math.max(base.v, down.v);
-const bar = (v) => `${((v / max) * 100).toFixed(2)}%`;
+function thumb(scored) {
+  const n = history.length + base.length;
+  const plotL = PAD + 6;
+  const plotR = W - 150;
+  const x = linear(0, n - 1, plotL, plotR);
+  const max = Math.max(...history.map((p) => p.value.v));
+  const y = linear(0, max, 292, 118);
+  const axis = "monday-growth";
+  const pts = (arr, from) => arr.map((p, i) => [x(from + i), y(p.value.v)]);
+  const poly = (ps, color, dash = "") => `<polyline points="${ps.map(([a, b]) => `${r2(a)},${r2(b)}`).join(" ")}" fill="none" stroke="${color}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" ${dash}/>`;
+  const h = pts(history, 0);
+  const last = h[h.length - 1];
+  let body = `<text x="${PAD}" y="${PAD + 22}" font-size="26" font-weight="700" fill="${C.cream}">Revenue growth, year over year</text>`;
+  // Actual / plan divider.
+  body += `<line x1="${r2(last[0])}" x2="${r2(last[0])}" y1="104" y2="300" stroke="${C.sage}" stroke-width="2" stroke-dasharray="4 5"/>`;
+  body += `<line x1="${plotL}" x2="${plotR}" y1="${r2(y(0))}" y2="${r2(y(0))}" stroke="${C.sage}" stroke-width="1.5" opacity="0.6"/>`;
+  body += poly(h, C.cream);
+  body += poly([last, ...pts(base, history.length)], C.brassLight);
+  body += poly([last, ...pts(down, history.length)], C.rustLight, 'stroke-dasharray="10 8"');
+  // Each quarter's point, drawn on its line and tagged with its cell.
+  const dots = [
+    ...history.map((p, i) => [p, h[i], C.cream]),
+    ...base.map((p, i) => [p, [x(history.length + i), y(p.value.v)], C.brassLight]),
+    ...down.map((p, i) => [p, [x(history.length + i), y(p.value.v)], C.rustLight]),
+  ];
+  for (const [p, [px, py], color] of dots) body += `<circle cx="${r2(px)}" cy="${r2(py)}" r="4" fill="${color}" ${mark(p.value, axis, py)}/>`;
+  const first = history[0];
+  body += `<text x="${r2(h[0][0] + 14)}" y="${r2(h[0][1] + 6)}" font-size="24" font-weight="700" fill="${C.cream}">${tNum(first.value).tag} in ${label(first.quarter, "period")}</text>`;
+  body += `<text x="${r2(last[0] - 10)}" y="${r2(last[1] + 40)}" font-size="24" font-weight="700" fill="${C.cream}" text-anchor="end">${tNum(lastActual.value).tag}</text>`;
+  const bEnd = base[base.length - 1];
+  const dEnd = down[down.length - 1];
+  body += `<text x="${r2(plotR + 12)}" y="${r2(y(bEnd.value.v) - 6)}" font-size="24" font-weight="700" fill="${C.brassLight}">Base ${tNum(bEnd.value).tag}</text>`;
+  body += `<text x="${r2(plotR + 12)}" y="${r2(y(dEnd.value.v) + 20)}" font-size="24" font-weight="700" fill="${C.rustLight}">Down ${tNum(dEnd.value).tag}</text>`;
+  // Status pill, bottom right.
+  const status = scored ? "Q3: SCORED" : "Q3: PENDING";
+  body += `<rect x="${W - PAD - 196}" y="${H - PAD - 38}" width="196" height="44" rx="8" fill="${C.cream}"/>`;
+  body += `<text x="${W - PAD - 98}" y="${H - PAD - 7}" font-size="24" font-weight="900" fill="${C.forest}" text-anchor="middle">${label(status, "status")}</text>`;
+  body += `<text x="${PAD}" y="${H - PAD - 7}" font-size="24" font-weight="700" fill="${C.sage}">${label(`${first.quarter} to ${bEnd.quarter}`, "period")}</text>`;
+  const alt = `monday.com operating plan: revenue growth slowed from ${first.value.d} in ${first.quarter} to ${lastActual.value.d} in ${lastActual.quarter}; the plan's Base case reaches ${bEnd.value.d} and the Downside ${dEnd.value.d} by ${bEnd.quarter}. ${scored ? "Q3 2026 results scored." : "Q3 2026 results pending."}`;
+  return { svg: svgDoc(W, H, C.forest, body, alt), alt };
+}
 
-const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-  * { box-sizing: border-box; margin: 0 }
-  body { width: 680px; height: 400px; background: #f5f1e6; font-family: Arial, Helvetica, sans-serif; color: #2a2820;
-         padding: 34px 40px; display: flex; flex-direction: column; gap: 18px }
-  .k { font-size: 30px; font-weight: 700; color: #5b5847; letter-spacing: .01em }
-  .row { display: grid; grid-template-columns: 196px 1fr; align-items: center; gap: 16px }
-  .name { font-size: 34px; font-weight: 700 }
-  .track { position: relative; height: 62px }
-  .fill { height: 100%; border-radius: 6px; display: flex; align-items: center; justify-content: flex-end; padding-right: 14px;
-          font-size: 34px; font-weight: 700; color: #f5f1e6 }
-  .base { background: #1e3a2b } .down { background: #a1462f }
-  .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: baseline; font-size: 30px; font-weight: 700 }
-  .pending { color: #f5f1e6; background: #2a2820; border-radius: 6px; padding: 4px 12px }
-</style></head><body>
-  <p class="k">FY27 revenue, USD m</p>
-  <div class="row"><span class="name">Base</span><div class="track"><div class="fill base" style="width:${bar(base.v)}">${shown(base)}</div></div></div>
-  <div class="row"><span class="name">Downside</span><div class="track"><div class="fill down" style="width:${bar(down.v)}">${shown(down)}</div></div></div>
-  <div class="foot"><span>Gap ${gapX} avg miss</span><span class="pending">${STATUS}</span></div>
-</body></html>`;
-
+const pending = thumb(false);
+const scored = thumb(true);
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 680, height: 400 }, deviceScaleFactor: 1 });
-await page.setContent(html);
-const png = await page.screenshot({ type: "png" });
-// Chromium encodes WebP from a canvas; lower the quality until the file fits.
-let webp;
-for (const q of [0.9, 0.85, 0.8, 0.75, 0.7]) {
-  const dataUrl = await page.evaluate(
-    async ([b64, quality]) => {
-      const img = new Image();
-      img.src = `data:image/png;base64,${b64}`;
-      await img.decode();
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext("2d").drawImage(img, 0, 0);
-      return canvas.toDataURL("image/webp", quality);
-    },
-    [png.toString("base64"), q],
-  );
-  webp = Buffer.from(dataUrl.split(",")[1], "base64");
-  if (webp.length <= MAX_BYTES) break;
-}
+await renderAll(browser, [
+  { name: "monday-operating-plan", svg: pending.svg, out: "public/project-visuals/monday-operating-plan.webp", w: W, h: H, scale: 2, maxBytes: 60 * 1024 },
+  { name: "monday-operating-plan-scored", svg: scored.svg, out: "public/project-visuals/monday-operating-plan-scored.webp", w: W, h: H, scale: 2, maxBytes: 60 * 1024 },
+]);
 await browser.close();
-if (webp.length > MAX_BYTES) throw new Error(`thumbnail is ${webp.length} bytes, over ${MAX_BYTES}`);
-writeFileSync(join(root, OUT), webp);
-console.log(`wrote ${OUT}: 680 x 400, ${webp.length} bytes (Base ${shown(base)}, Downside ${shown(down)}, gap ${gapX})`);
+// Alt text for both variants (the card picks one with the image), merged into the shared file.
+const ALTS = join(root, "src/lib/projectVisualAlts.generated.json");
+const alts = { ...JSON.parse(readFileSync(ALTS, "utf8")), "monday-operating-plan": pending.alt, "monday-operating-plan-scored": scored.alt };
+writeFileSync(ALTS, JSON.stringify(Object.fromEntries(Object.entries(alts).sort()), null, 2) + "\n");
+console.log("wrote src/lib/projectVisualAlts.generated.json (monday.com keys)");

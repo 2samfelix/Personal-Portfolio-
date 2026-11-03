@@ -1,7 +1,9 @@
 {
-  "caterpillar": "Caterpillar: the disclosed Construction Industries dealer-inventory build fell from $1.5B in Q1 2026 to $400M in Q2 2026.",
-  "arm": "Arm: my DCF implies $51.54 a share against a $272.21 market price on Aug 10, 2026.",
-  "msft": "Microsoft and Activision: about $3.64B a year of pre-tax synergies needed for EPS-neutral.",
-  "nike": "Nike: in the base case North America's growth covers Greater China's decline with a $439M cushion by FY2028E.",
-  "fpa-intelligence-engine": "FP&A Intelligence Engine: 739 automated test cases pass; code, not the AI, decides whether a brief is accepted."
+  "arm": "Arm: on one price scale, my DCF implies $51.54 a share (sensitivity range $36.46 to $94.39) against a $272.21 market price on Aug 10, 2026.",
+  "caterpillar": "Caterpillar: Construction Industries sales bridge from 6,190 ($M) in Q2 2025 to 8,346 in Q2 2026: volume +1,755, price +309, currency +74, inter-segment +18.",
+  "fpa-intelligence-engine": "FP&A Intelligence Engine validation lab: 50 fault-injected cases across 10 kinds of fault; 21 caught, 10 caught only under a condition, 19 not caught.",
+  "monday-operating-plan": "monday.com operating plan: revenue growth slowed from 84.0% in Q1 2022 to 21.9% in Q2 2026; the plan's Base case reaches 12.5% and the Downside 5.6% by Q4 2027. Q3 2026 results pending.",
+  "monday-operating-plan-scored": "monday.com operating plan: revenue growth slowed from 84.0% in Q1 2022 to 21.9% in Q2 2026; the plan's Base case reaches 12.5% and the Downside 5.6% by Q4 2027. Q3 2026 results scored.",
+  "msft": "Microsoft and Activision: diluted EPS falls from $9.68 standalone to $9.29 pro forma with no synergies; about $3.64B a year of pre-tax synergies brings it back to EPS-neutral.",
+  "nike": "Nike: North America revenue ($M) from FY2026 to $24,195 (bull), $23,070 (base) or $21,236 (bear) in FY2029E; the base case is $439M above what Greater China's decline requires by FY2028E."
 }
