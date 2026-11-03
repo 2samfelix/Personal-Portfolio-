@@ -1,7 +1,5 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
-
+// "Why Analytics & Strategy?": the three short essays as ruled rows (label beside
+// text from md up, stacked on phones). Static markup: no carousel, no JavaScript.
 type WhyCard = {
   label: string;
   body: string;
@@ -23,120 +21,23 @@ const CARDS: WhyCard[] = [
 ];
 
 export default function WhyAnalyticsStrategy() {
-  const [index, setIndex] = useState(0);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const isProgrammatic = useRef(false);
-  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const goTo = (i: number) => {
-    const clamped = Math.max(0, Math.min(CARDS.length - 1, i));
-    setIndex(clamped);
-    const track = trackRef.current;
-    const child = track?.children[clamped] as HTMLElement | undefined;
-    if (child) {
-      isProgrammatic.current = true;
-      child.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
-      if (resumeTimer.current) clearTimeout(resumeTimer.current);
-      resumeTimer.current = setTimeout(() => {
-        isProgrammatic.current = false;
-      }, 500);
-    }
-  };
-
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    let raf = 0;
-    const onScroll = () => {
-      if (isProgrammatic.current) return;
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const center = track.scrollLeft + track.clientWidth / 2;
-        let closest = 0;
-        let closestDist = Infinity;
-        Array.from(track.children).forEach((child, i) => {
-          const el = child as HTMLElement;
-          const elCenter = el.offsetLeft + el.offsetWidth / 2;
-          const dist = Math.abs(elCenter - center);
-          if (dist < closestDist) {
-            closestDist = dist;
-            closest = i;
-          }
-        });
-        setIndex(closest);
-      });
-    };
-    track.addEventListener("scroll", onScroll, { passive: true });
-    return () => track.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
-    <section id="why" className="border-t border-forest/10 bg-dot-grid">
-      <div className="mx-auto w-full max-w-6xl px-6 pt-6 pb-12 sm:pt-8 sm:pb-16">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-start lg:gap-10">
-          <div className="max-w-md">
-            <h2 className="text-3xl font-black tracking-tight text-charcoal sm:text-4xl">
-              Why Analytics &amp; Strategy?
-            </h2>
-            <p className="mt-3 text-base leading-7 text-charcoal-soft">
-              I&apos;ve seen what happens when a business understands its own
-              data — and when it doesn&apos;t.
-            </p>
-          </div>
-
-          <div>
-            <div className="relative mx-auto w-full lg:max-w-[520px]">
-              <div
-                ref={trackRef}
-                className="flex items-start snap-x snap-mandatory overflow-x-auto scroll-smooth sm:items-stretch sm:gap-3 sm:px-[4%] sm:scroll-pl-[4%] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                {CARDS.map((card) => (
-                  <div
-                    key={card.label}
-                    className="flex w-full shrink-0 snap-center flex-col justify-start rounded-2xl border border-forest/15 bg-white p-5 sm:min-h-[240px] sm:w-[85%] sm:p-7"
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-widest text-brass-ink">{card.label}</p>
-                    <p className="mt-3 text-sm leading-6 text-charcoal-soft">{card.body}</p>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={() => goTo(index - 1)}
-                disabled={index === 0}
-                aria-label="Previous"
-                className="absolute -left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-forest/25 bg-cream text-charcoal shadow-sm transition-opacity hover:bg-forest/10 disabled:pointer-events-none disabled:opacity-30"
-              >
-                &larr;
-              </button>
-              <button
-                onClick={() => goTo(index + 1)}
-                disabled={index === CARDS.length - 1}
-                aria-label="Next"
-                className="tap absolute -right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-forest/25 bg-cream text-charcoal shadow-sm transition-opacity hover:bg-forest/10 disabled:pointer-events-none disabled:opacity-30"
-              >
-                &rarr;
-              </button>
-            </div>
-
-            <div className="mt-4 flex justify-center gap-2 max-sm:gap-[38px] lg:justify-start lg:pl-1">
-              {CARDS.map((card, i) => (
-                <button
-                  key={card.label}
-                  onClick={() => goTo(i)}
-                  aria-label={`Go to card ${i + 1}`}
-                  className={`tap h-1.5 w-1.5 rounded-full transition-colors ${
-                    i === index ? "bg-brass" : "bg-forest/20"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+    <section id="why" className="border-t border-forest/10 bg-cream">
+      <div className="mx-auto w-full max-w-6xl px-6 pb-20 pt-16 sm:pb-28 sm:pt-20">
+        <h2 className="max-w-3xl text-4xl font-black leading-[1.05] tracking-tight text-charcoal sm:text-5xl lg:text-6xl">
+          Why Analytics &amp; Strategy?
+        </h2>
+        <p className="mt-5 max-w-[60ch] text-lg leading-8 text-charcoal-soft sm:text-xl sm:leading-9">
+          I&apos;ve seen what happens when a business understands its own data — and when it doesn&apos;t.
+        </p>
+        <ol className="mt-12 border-b border-forest/20 sm:mt-16">
+          {CARDS.map((card) => (
+            <li key={card.label} className="grid grid-cols-1 gap-3 border-t border-forest/20 py-8 sm:py-10 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-12">
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">{card.label}</h3>
+              <p className="max-w-[65ch] text-base leading-8 text-charcoal-soft sm:text-lg sm:leading-8">{card.body}</p>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );

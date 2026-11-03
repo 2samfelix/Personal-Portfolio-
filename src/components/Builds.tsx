@@ -28,52 +28,55 @@ function BuildCard({ build }: { build: Project }) {
   );
 }
 
-function FeaturedBuildCard({ build }: { build: Project }) {
+/**
+ * The featured tool as a product demo: a large, sharp capture of its strategy map
+ * (scripts/capture-front-office-demo.mjs) that runs wider than the text column from
+ * 1280px, with the description below. The whole block is one link.
+ */
+function FeaturedBuild({ build }: { build: Project }) {
   return (
     <Link
       href={build.link!}
-      className="flex flex-col overflow-hidden rounded-2xl border border-forest/15 bg-white transition-colors hover:border-forest/35"
+      className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-4 focus-visible:ring-offset-cream"
     >
-      <div className="aspect-[1208/335] w-full overflow-hidden border-b border-forest/10 bg-cream">
+      <div className="overflow-hidden rounded-2xl border border-forest/15 bg-white shadow-sm transition-shadow group-hover:shadow-md motion-reduce:transition-none xl:-mx-16">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={build.visual}
+          src={FEATURED_IMAGE}
           alt={`${build.title} preview`}
-          className="h-full w-full object-cover object-top"
+          width={2140}
+          height={1046}
+          loading="lazy"
+          decoding="async"
+          className="block h-auto w-full"
         />
       </div>
-      <div className="flex flex-col gap-3 p-6 sm:p-8">
+      <div className="mt-8 flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
             Interactive Demo
           </span>
-          <span className="text-xs font-medium uppercase tracking-wide text-charcoal-soft">
-            {build.category}
-          </span>
+          <span className="text-xs font-medium uppercase tracking-wide text-charcoal-soft">{build.category}</span>
         </div>
-        <h3 className="text-2xl font-bold tracking-tight text-charcoal">
-          {build.title}
-        </h3>
-        <p className="max-w-2xl text-sm leading-6 text-charcoal-soft">
-          {build.description ?? build.summary}
-        </p>
+        <h3 className="text-3xl font-black tracking-tight text-charcoal sm:text-4xl">{build.title}</h3>
+        <p className="max-w-[65ch] text-base leading-8 text-charcoal-soft sm:text-lg">{build.description ?? build.summary}</p>
         <ul className="flex flex-wrap gap-1.5">
           {build.tools.map((tool) => (
-            <li
-              key={tool}
-              className="rounded-full bg-forest/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-forest"
-            >
+            <li key={tool} className="rounded-full bg-forest/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-forest">
               {tool}
             </li>
           ))}
         </ul>
-        <span className="tap mt-1 inline-block text-sm font-semibold text-forest">
+        <span className="tap inline-block w-fit text-base font-semibold text-forest underline-offset-4 group-hover:underline">
           {build.ctaLabel ?? "Try it →"}
         </span>
       </div>
     </Link>
   );
 }
+
+// The featured tool's large capture; the project list keeps its own small thumbnail.
+const FEATURED_IMAGE = "/project-visuals/front-office-demo.webp";
 
 export default function Builds() {
   if (builds.length === 0) return null;
@@ -83,28 +86,26 @@ export default function Builds() {
 
   return (
     <section id="interactive-tools" className="border-t border-forest/10 bg-cream">
-      <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-40">
-        <h2 className="text-4xl font-black tracking-tight text-charcoal sm:text-5xl">
-          Interactive Tools
-        </h2>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-charcoal-soft">
-          Financial models you can drive yourself — the assumptions exposed
-          and the decision logic stated, not just described.
+      <div className="mx-auto w-full max-w-6xl px-6 py-24 sm:py-32">
+        <h2 className="text-4xl font-black leading-[1.05] tracking-tight text-charcoal sm:text-5xl lg:text-6xl">Interactive Tools</h2>
+        <p className="mt-5 max-w-[60ch] text-lg leading-8 text-charcoal-soft sm:text-xl sm:leading-9">
+          Financial models you can drive yourself — the assumptions exposed and the decision logic stated, not just described.
         </p>
 
-        <div className="mt-14 flex flex-col gap-4">
+        {/* The featured demo, then the two smaller tools as supporting modules below it. */}
+        <div className="mt-14">
           {featured.map((build) => (
-            <FeaturedBuildCard key={build.slug} build={build} />
+            <FeaturedBuild key={build.slug} build={build} />
           ))}
-
-          {rest.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {rest.map((build) => (
-                <BuildCard key={build.slug} build={build} />
-              ))}
-            </div>
-          )}
         </div>
+
+        {rest.length > 0 && (
+          <div className="mt-14 grid grid-cols-1 gap-4 border-t border-forest/15 pt-10 md:grid-cols-2">
+            {rest.map((build) => (
+              <BuildCard key={build.slug} build={build} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
