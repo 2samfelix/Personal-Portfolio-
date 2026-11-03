@@ -25,6 +25,7 @@
     "test:engine-lab": "python3 scripts/test-engine-lab.py",
     "test:monday-results": "python3 scripts/test-monday-results.py",
     "test:thumbnails": "python3 scripts/test-thumbnails.py",
+    "test:skyline": "python3 scripts/test-skyline.py",
     "build:monday-results-fixture": "MONDAY_RESULTS_FIXTURE=1 next build",
     "start:monday-results-fixture": "MONDAY_RESULTS_FIXTURE=1 next start -p 3200",
     "test:monday-results-fixture": "python3 scripts/test-monday-results.py --dist .next-fixture"

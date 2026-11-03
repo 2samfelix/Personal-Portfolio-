@@ -38,7 +38,11 @@ function BuildingShape({ b, cx, ground, tone }: { b: Building; cx: number; groun
     const { y0, y1, w } = b.roof;
     parts.push(`M${r(cx - w / 2)} ${r(ground - y0)} L${r(cx)} ${r(ground - y1)} L${r(cx + w / 2)} ${r(ground - y0)} Z`);
   }
-  const top = b.tiers[b.tiers.length - 1];
+  if (b.spire) {
+    const { y0, y1, w } = b.spire;
+    parts.push(`M${r(cx - w / 2)} ${r(ground - y0)} L${r(cx)} ${r(ground - y1)} L${r(cx + w / 2)} ${r(ground - y0)} Z`);
+  }
+  const top = b.tiers[0];
   return (
     <g data-building={b.id}>
       {parts.map((d, i) => (

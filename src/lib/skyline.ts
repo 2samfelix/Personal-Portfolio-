@@ -25,10 +25,14 @@ export type Building = {
   tiers: Tier[];
   /** Optional pitched or stepped top, drawn above the last tier. */
   roof?: { type: "pyramid"; y0: number; y1: number; w: number };
-  /** Antennas or spires, as lines. */
+  /** A spire: part of the architectural height (CTBUH), drawn as a narrow triangle. */
+  spire?: { y0: number; y1: number; w: number };
+  /** Antennas: not part of the architectural height, drawn as lines to the tip. */
   masts?: Mast[];
   /** Marina City: horizontal balcony scallops on a cylinder. */
   corncob?: boolean;
+  silhouette: string;
+  note?: string;
   sources: string[];
 };
 
