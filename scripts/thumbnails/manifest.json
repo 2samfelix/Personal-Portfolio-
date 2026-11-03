@@ -1,0 +1,44 @@
+{
+  "arm": {
+    "svg": "scripts/thumbnails/arm.svg",
+    "svg_sha256": "a6cb6740b555508ed33877cd3ffd6354878ceea826d4c6f1f6a88f17ff0c2011",
+    "image": "public/project-visuals/arm.webp",
+    "image_sha256": "41fddb3998cd6c150a8c5672ff1650320f0c04a4496807f5f7787074af2c2701"
+  },
+  "caterpillar": {
+    "svg": "scripts/thumbnails/caterpillar.svg",
+    "svg_sha256": "68fbfbb5deb27f38ab38c232c22458ad77edec68a4c1a10432e37a7fcf00db05",
+    "image": "public/project-visuals/caterpillar.webp",
+    "image_sha256": "f192d819bafadc086e1d5901c3703fac95723e6d1692420409cff427774763d3"
+  },
+  "fpa-intelligence-engine": {
+    "svg": "scripts/thumbnails/fpa-intelligence-engine.svg",
+    "svg_sha256": "1f405eed0a8726086524eceedc9c4aaf8f4a2f7af5a0828f20369871439c8f5a",
+    "image": "public/project-visuals/fpa-intelligence-engine.webp",
+    "image_sha256": "7ef79fd51dc4c04da0e88323005c8469228c13bf3d9bf34027c461ff99f86cbb"
+  },
+  "monday-operating-plan": {
+    "svg": "scripts/thumbnails/monday-operating-plan.svg",
+    "svg_sha256": "4c98eba6c9830ac16ed1794b3b4b5fd659bf27c613ec01a8a73ff84bfc1c48d3",
+    "image": "public/project-visuals/monday-operating-plan.webp",
+    "image_sha256": "14b74a27b7223341de5481da6ad686edfef67304f6b910d5ec45941b93e96728"
+  },
+  "monday-operating-plan-scored": {
+    "svg": "scripts/thumbnails/monday-operating-plan-scored.svg",
+    "svg_sha256": "d8799f2a7272f5eba0984d406f1b0e7081a08d92857eb0bec5f92f961aa92ac4",
+    "image": "public/project-visuals/monday-operating-plan-scored.webp",
+    "image_sha256": "5dfc1f3adebd879d795b6932e787efdfdd761718fe411116500c894f46b3742e"
+  },
+  "msft": {
+    "svg": "scripts/thumbnails/msft.svg",
+    "svg_sha256": "857c9f8f68abb0b582aeb2ffcb0cf92582402c6a005c118d1397710c0073cdef",
+    "image": "public/project-visuals/msft.webp",
+    "image_sha256": "8f6425b877b77043c24ce8734ef07f0ff49d2e7c326750e3c500b7db15631f53"
+  },
+  "nike": {
+    "svg": "scripts/thumbnails/nike.svg",
+    "svg_sha256": "14476c9f6ec11f415b262d2ee395485211945f6eb98dfddce3e83777fa5cd582",
+    "image": "public/project-visuals/nike.webp",
+    "image_sha256": "89055c443f2df14cd61a3a32ce23e305c7308d4de101d6a4b3f07a473d9125a5"
+  }
+}

@@ -4,7 +4,6 @@ import ScrollReveal from "@/components/ScrollReveal";
 import WhyAnalyticsStrategy from "@/components/WhyAnalyticsStrategy";
 import WorkGrid from "@/components/WorkGrid";
 import Builds from "@/components/Builds";
-import Philosophy from "@/components/Philosophy";
 import Experience from "@/components/Experience";
 import Expertise from "@/components/Expertise";
 import HowIWork from "@/components/HowIWork";
@@ -25,7 +24,7 @@ export default function Home() {
         <WorkGrid />
         <Builds />
         <Expertise />
-        <Philosophy />
+        {/* Space kept clear between Expertise and Experience (reserved for a skyline). */}
         <Experience />
         <Contact />
       </main>

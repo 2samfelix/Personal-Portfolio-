@@ -2,8 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { CARD_CTA, CARD_LIFT } from "@/components/project/cardLift";
 import { PROJECT_ORDER, flagshipProjects, type Project } from "@/lib/projects";
-import { loadMondayCharts, loadMondayPlan } from "@/lib/mondayPlan";
+import { loadMondayPlan } from "@/lib/mondayPlan";
 import { SCORED_VISUAL, loadMondayResults } from "@/lib/mondayResults";
+import thumbAlts from "@/lib/projectVisualAlts.generated.json";
 
 // The monday card's results line follows the validated results file (src/lib/mondayResults.ts).
 const MONDAY_RESULTS = loadMondayResults();
@@ -80,13 +81,26 @@ const projects = PROJECT_ORDER.map((slug) => flagshipProjects.find((p) => p.slug
   (p): p is Project => !!p,
 );
 
-// The monday card's alt text states its thumbnail's figures, read from the locked workbook.
-const MONDAY_STRIP = loadMondayCharts().strip;
-const MONDAY_ALT = `monday.com operating plan: FY27 revenue ${MONDAY_STRIP.baseRevenue.d} (Base) vs ${MONDAY_STRIP.downRevenue.d} (Downside), USD millions; the gap is ${MONDAY_STRIP.gapX.d} the average 4-quarter backtest miss. ${MONDAY_STATUS}`;
+// The monday card's alt text states its thumbnail's figures (written with the image by
+// scripts/render-monday-thumbnail.mjs) for the thumbnail the status selects.
+const MONDAY_ALT =
+  (MONDAY_RESULTS.state === "scored" ? thumbAlts["monday-operating-plan-scored"] : thumbAlts["monday-operating-plan"]) +
+  (MONDAY_RESULTS.state === "scored" && MONDAY_RESULTS.fixture ? " Test fixture, not real results." : "");
 
 // Card image width: one column below 640px, two to 1023px, three from 1024px
 // (the grid's container is max-w-6xl, 1152px less 48px padding and 64px of gaps).
 const SIZES = "(min-width: 1024px) 347px, (min-width: 640px) calc((100vw - 80px) / 2), calc(100vw - 48px)";
+
+// Each thumbnail's background token (scripts/render-project-thumbnails.mjs, render-monday-thumbnail.mjs),
+// so the frame around a 16:10 image matches it on wide cards.
+const FRAME_BG: Record<string, string> = {
+  "caterpillar-demand-quality": "bg-brass-pale",
+  arm: "bg-mist",
+  "microsoft-activision": "bg-rust-pale",
+  nike: "bg-cream",
+  "fpa-intelligence-engine": "bg-white",
+  "monday-operating-plan": "bg-forest",
+};
 
 /** One project card, fully clickable: the image over the text. The first card's image loads eagerly. */
 function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
@@ -94,7 +108,7 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
   const tags = copy ? project.tools.filter((t) => copy.tags.includes(t)) : project.tools.slice(0, 3);
   return (
     <Link href={`/projects/${project.slug}`} data-reveal-item className={`group flex h-full flex-col overflow-hidden text-left ${CARD_LIFT}`}>
-      <div className="flex h-48 w-full shrink-0 items-center justify-center overflow-hidden border-b border-forest/10 bg-cream">
+      <div className={`flex h-48 w-full shrink-0 items-center justify-center overflow-hidden border-b border-forest/10 ${FRAME_BG[project.slug] ?? "bg-cream"}`}>
         {project.visual && project.visualSize && (
           <Image
             src={project.slug === "monday-operating-plan" && MONDAY_RESULTS.state === "scored" ? SCORED_VISUAL : project.visual}

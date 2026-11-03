@@ -314,7 +314,7 @@ export const flagshipProjects: Project[] = [
     status: "live",
     icon: "06",
     visual: "/project-visuals/monday-operating-plan.webp",
-    visualSize: { width: 680, height: 400 },
+    visualSize: { width: 1360, height: 800 },
     githubUrl: "https://github.com/2samfelix/monday-operating-plan",
   },
 ];
