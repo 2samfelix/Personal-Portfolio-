@@ -10,7 +10,7 @@ type WhyCard = {
 const CARDS: WhyCard[] = [
   {
     label: "01 — My Experience",
-    body: "At Marketstaff, I work inside a real operating business — tracking cash flow, supporting reporting, and working across payroll and financial operations for a portfolio of client companies. That hands-on exposure carried into forecasting, scenario analysis, and valuation work of my own: a three-statement model, an IPO valuation, and an M&A analysis, each built from real public filings. Along the way, numbers stopped being an abstraction and became the clearest way to see what was actually happening in a business.",
+    body: "Working inside a real operating business at Marketstaff showed me how much a company's decisions depend on its numbers. That carried into forecasting, scenario analysis, and valuation work of my own: a three-statement model, an IPO valuation, and an M&A analysis, each built from real public filings. Along the way, numbers stopped being an abstraction and became the clearest way to see what was actually happening in a business.",
   },
   {
     label: "02 — Why This Work",

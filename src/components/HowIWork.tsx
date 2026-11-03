@@ -1,23 +1,14 @@
 import Link from "next/link";
 
-// Each step is proved by one figure from a project page, checked against the
-// project's workbook:
-// - Caterpillar: Analysis!H15:I15 (Dealer Inventory!G10:G11), the Construction
-//   Industries dealer-inventory increase disclosed for Q1 2026 ($1.5B) and
-//   Q2 2026 ($400M). Scoped to Construction Industries because the
-//   company-wide Q1 2026 build was $2.0B.
-// - Microsoft × Activision: Synergy Breakeven!B10, required annual pre-tax
-//   synergies that solve to EPS-neutral ($3,636.67M).
-// - Arm: DCF Valuation!B48 (DCF-implied share price, $51.54) and B49 (market
-//   price on Aug 10, 2026, $272.21).
+// Each step links to the project section that shows it. The figures themselves are
+// on the project cards below, so they are not repeated here.
 const STEPS = [
   {
     number: "01",
     title: "Source the evidence",
     body: "Start from company filings, earnings materials and disclosed operating data.",
     project: "Caterpillar",
-    proof: "disclosed Construction Industries dealer-inventory build, ",
-    figure: "$1.5B → $400M",
+    proof: "reading demand from the company's own disclosures",
     href: "/projects/caterpillar-demand-quality#model-preview",
   },
   {
@@ -25,9 +16,7 @@ const STEPS = [
     title: "Build the model",
     body: "Forecasts, valuation and scenarios built in working Excel formulas.",
     project: "Microsoft × Activision",
-    proof: "",
-    figure: "$3.64B",
-    after: " of annual pre-tax synergies needed for EPS-neutral",
+    proof: "a working accretion/dilution model",
     href: "/projects/microsoft-activision#inside-the-deal-model",
   },
   {
@@ -35,9 +24,7 @@ const STEPS = [
     title: "Make the decision clear",
     body: "Turn the outputs into a view on value, risk and trade-offs.",
     project: "Arm",
-    proof: "DCF-implied ",
-    figure: "$51.54 vs. $272.21",
-    after: " market price (Aug. 10, 2026)",
+    proof: "a fundamentals-only valuation set against the market price",
     href: "/projects/arm#inside-the-valuation",
   },
 ];
@@ -75,8 +62,6 @@ export default function HowIWork() {
               <p className="mt-auto pt-3 text-sm">
                 <Link href={step.href} className={`inline-block text-cream/90 ${LINK}`}>
                   <span className="font-semibold">{step.project}:</span> {step.proof}
-                  <span className="font-semibold tabular-nums text-brass-light">{step.figure}</span>
-                  {step.after}
                 </Link>
               </p>
             </li>
