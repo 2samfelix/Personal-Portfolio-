@@ -4,8 +4,8 @@ type EmploymentPeriod = {
 };
 
 const MARKETSTAFF_PERIODS: EmploymentPeriod[] = [
-  { label: "Summer Intern", dates: "May 2025 – August 2025" },
-  { label: "Full-Time", dates: "June 2026 – Present" },
+  { label: "Accounting and Payroll Intern", dates: "Summer 2025" },
+  { label: "Assistant Accountant", dates: "June 2026 – Present" },
 ];
 
 const MARKETSTAFF_BULLETS: string[] = [
@@ -129,7 +129,7 @@ export default function Experience() {
               <h4 className="text-xl font-bold text-forest">Marketstaff</h4>
               <span className="text-sm text-charcoal-soft">Chicago, IL</span>
             </div>
-            <p className="mt-1 text-base font-medium text-charcoal">Business Analyst &amp; Junior Accountant</p>
+            <p className="mt-1 text-base font-medium text-charcoal">Assistant Accountant</p>
 
             <div className="mt-4 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-x-10">
               {MARKETSTAFF_PERIODS.map((period) => (
