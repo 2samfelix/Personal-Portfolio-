@@ -5,6 +5,7 @@ import WhyAnalyticsStrategy from "@/components/WhyAnalyticsStrategy";
 import WorkGrid from "@/components/WorkGrid";
 import Builds from "@/components/Builds";
 import Experience from "@/components/Experience";
+import Skyline from "@/components/Skyline";
 import Expertise from "@/components/Expertise";
 import HowIWork from "@/components/HowIWork";
 import Contact from "@/components/Contact";
@@ -24,7 +25,12 @@ export default function Home() {
         <WorkGrid />
         <Builds />
         <Expertise />
-        {/* Space kept clear between Expertise and Experience (reserved for a skyline). */}
+        {/* The Chicago skyline, between Expertise and Experience: decorative, no text. */}
+        <div aria-hidden="true" className="bg-cream pt-16 sm:pt-24 print:hidden">
+          <div className="mx-auto w-full max-w-6xl px-6">
+            <Skyline />
+          </div>
+        </div>
         <Experience />
         <Contact />
       </main>
