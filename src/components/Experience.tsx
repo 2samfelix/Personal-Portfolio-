@@ -9,7 +9,7 @@ type EmploymentPeriod = {
 
 const MARKETSTAFF_PERIODS: EmploymentPeriod[] = [
   { label: "Accounting and Payroll Intern", dates: "Summer 2025" },
-  { label: "Assistant Accountant", dates: "June 2026 – Present" },
+  { label: "Accounting & Payroll Associate", dates: "June 2026 – Present" },
 ];
 
 const MARKETSTAFF_BULLETS: string[] = [
@@ -20,11 +20,6 @@ const MARKETSTAFF_BULLETS: string[] = [
   "Support annual compensation administration (merit increases, bonus calculations) and the annual performance-review cycle, employee onboarding/offboarding, benefits open enrollment, and employee payroll/benefits inquiries.",
 ];
 
-// Callouts: figures already stated in the bullets above, restated large. No new numbers.
-const MARKETSTAFF_CALLOUTS = [
-  { figure: "18", label: "clients' payroll processed across monthly, semimonthly and biweekly cycles" },
-  { figure: "~150", label: "employees in the organizational chart and compensation-range catalog I maintain" },
-];
 
 type LeadershipEntry = {
   org: string;
@@ -141,11 +136,11 @@ export default function Experience() {
         </p>
 
         {/* Marketstaff: the anchor entry */}
-        <div className="mt-20 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_17rem] lg:gap-16">
+        <div className="mt-20">
           <div className="relative border-l-2 border-forest/20 pl-8 sm:pl-10">
             <span aria-hidden="true" className="absolute left-0 top-3 h-3 w-3 -translate-x-[calc(50%+1px)] rounded-full bg-brass" />
             <p className="text-sm font-semibold uppercase tracking-widest text-brass-ink">Professional Experience</p>
-            <h3 className="mt-3 text-3xl font-black leading-tight tracking-tight text-charcoal sm:text-4xl">Assistant Accountant</h3>
+            <h3 className="mt-3 text-3xl font-black leading-tight tracking-tight text-charcoal sm:text-4xl">Accounting &amp; Payroll Associate</h3>
             <p className="mt-2 text-lg font-semibold text-forest">
               Marketstaff <span className="font-normal text-charcoal-soft">· Chicago, IL</span>
             </p>
@@ -173,15 +168,6 @@ export default function Experience() {
             </ul>
           </div>
 
-          {/* Callouts: figures from the bullets, set large. */}
-          <div className="grid grid-cols-1 gap-8 self-start sm:grid-cols-2 lg:grid-cols-1 lg:pt-14">
-            {MARKETSTAFF_CALLOUTS.map((c) => (
-              <p key={c.figure} className="border-t border-forest/20 pt-4">
-                <span className="block text-5xl font-black tracking-tight text-forest sm:text-6xl">{c.figure}</span>
-                <span className="mt-2 block max-w-[28ch] text-sm leading-6 text-charcoal-soft">{c.label}</span>
-              </p>
-            ))}
-          </div>
         </div>
 
         {/* Leadership & Activities: secondary entries in a ruled grid */}
