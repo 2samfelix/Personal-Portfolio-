@@ -35,8 +35,8 @@ const ICON: Record<string, (size: number) => ReactNode> = {
 const SKILLS = [
   { id: "excel", name: "Excel", line: "Financial modeling, valuation and scenario analysis" },
   { id: "python", name: "Python", line: "Automation, testing and finance workflows" },
-  { id: "sql", name: "SQL", line: "Project in progress" },
-  { id: "powerbi", name: "Power BI", line: "Project in progress" },
+  { id: "sql", name: "SQL", line: "Querying SEC disclosures and relational financial datasets", inProgress: true },
+  { id: "powerbi", name: "Power BI", line: "Visualizing variance bridges and operational KPIs", inProgress: true },
   { id: "ai", name: "AI / LLM tools", line: "Prototyping and analysis support, with outputs checked by code" },
 ];
 
@@ -224,7 +224,14 @@ export default function Expertise() {
             {SKILLS.map((s) => (
               <li key={s.id} className="flex items-center gap-3 border-t border-forest/15 py-3 first:border-t-0">
                 <span className="shrink-0 text-forest">{ICON[s.id](24)}</span>
-                <h3 className="shrink-0 text-base font-semibold text-charcoal">{s.name}</h3>
+                <h3 className="flex shrink-0 items-center gap-2 text-base font-semibold text-charcoal">
+                  {s.name}
+                  {"inProgress" in s && s.inProgress && (
+                    <span className="rounded-full bg-brass-pale px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
+                      In progress
+                    </span>
+                  )}
+                </h3>
                 <p className="ml-auto text-right text-sm leading-5 text-charcoal-soft">{s.line}</p>
               </li>
             ))}
