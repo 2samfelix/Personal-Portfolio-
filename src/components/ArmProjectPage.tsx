@@ -38,6 +38,7 @@ import {
   formatUsd,
   formatUsdCompact,
 } from "@/components/arm/ArmCharts";
+import { ProjectHeaderBand } from "@/components/project/ProjectHeaderBand";
 import { ProjectHero } from "@/components/project/ProjectHero";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
@@ -139,26 +140,28 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
   return (
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
-        <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
-          &larr; Back to Projects
-        </Link>
+        <ProjectHeaderBand tint="forest">
+          <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
+            &larr; Back to Projects
+          </Link>
 
-        <ProjectHero
-          title="Arm Valuation Gap"
-          question="Do Arm's fundamentals justify a stock price of $272 — more than 5x where three independent valuation methods land?"
-          description="An IPO valuation for Arm Holdings combining comparable company analysis, a DCF, and strategic positioning research."
-          metrics={[
-            {
-              value: "$51.54 → $272.21",
-              label: "DCF-implied fair value (2026) vs. current market price",
-            },
-            { value: "5.3x", label: "Market price as a multiple of the DCF-implied value" },
-          ]}
-          ctas={[
-            { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
-            { label: "Explore the model ↓", href: "#inside-the-valuation", variant: "secondary" },
-          ]}
-        />
+          <ProjectHero
+            title="Arm Valuation Gap"
+            question="Do Arm's fundamentals justify a stock price of $272 — more than 5x where three independent valuation methods land?"
+            description="An IPO valuation for Arm Holdings combining comparable company analysis, a DCF, and strategic positioning research."
+            metrics={[
+              {
+                value: "$51.54 → $272.21",
+                label: "DCF-implied fair value (2026) vs. current market price",
+              },
+              { value: "5.3x", label: "Market price as a multiple of the DCF-implied value" },
+            ]}
+            ctas={[
+              { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
+              { label: "Explore the model ↓", href: "#inside-the-valuation", variant: "secondary" },
+            ]}
+          />
+        </ProjectHeaderBand>
 
         <QuestionApproachFinding
           question={{

@@ -26,6 +26,7 @@ import {
   formatNikeBillions,
   formatNikePercent,
 } from "@/components/nike/NikeCharts";
+import { ProjectHeaderBand } from "@/components/project/ProjectHeaderBand";
 import { ProjectHero } from "@/components/project/ProjectHero";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
@@ -166,26 +167,28 @@ export default function NikeProjectPage({
   return (
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
-        <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
-          &larr; Back to Projects
-        </Link>
+        <ProjectHeaderBand tint="charcoal">
+          <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
+            &larr; Back to Projects
+          </Link>
 
-        <ProjectHero
-          title="Nike North America Recovery"
-          question="How quickly must North America recover to offset continued weakness in Greater China?"
-          description="A driver-based three-statement model and forecast for Nike, stress-tested across bull, base, and bear scenarios."
-          metrics={[
-            {
-              value: "$439M cushion",
-              label: "Base-case North America revenue cushion vs. Greater China's modeled decline, FY2028E",
-            },
-            { value: "$43.7B → $52.2B", label: "FY2029E consolidated revenue, bear → bull range" },
-          ]}
-          ctas={[
-            { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
-            { label: "Explore the model ↓", href: "#inside-the-model", variant: "secondary" },
-          ]}
-        />
+          <ProjectHero
+            title="Nike North America Recovery"
+            question="How quickly must North America recover to offset continued weakness in Greater China?"
+            description="A driver-based three-statement model and forecast for Nike, stress-tested across bull, base, and bear scenarios."
+            metrics={[
+              {
+                value: "$439M cushion",
+                label: "Base-case North America revenue cushion vs. Greater China's modeled decline, FY2028E",
+              },
+              { value: "$43.7B → $52.2B", label: "FY2029E consolidated revenue, bear → bull range" },
+            ]}
+            ctas={[
+              { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
+              { label: "Explore the model ↓", href: "#inside-the-model", variant: "secondary" },
+            ]}
+          />
+        </ProjectHeaderBand>
 
         <QuestionApproachFinding
           question={{

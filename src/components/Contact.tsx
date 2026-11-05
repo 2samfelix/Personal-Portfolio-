@@ -17,7 +17,7 @@ export default function Contact() {
                 Let&apos;s Connect
               </p>
               <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-                Open to analytics and finance roles.
+                Open to finance, analytics and client-facing operations roles.
               </h2>
               <p className="mt-4 max-w-md text-sm leading-6 text-cream/70">
                 I&apos;m looking for opportunities in financial analysis,

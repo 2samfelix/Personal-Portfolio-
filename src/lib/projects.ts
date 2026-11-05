@@ -369,11 +369,11 @@ export function getProjectBySlug(slug: string): Project | undefined {
 /** Home-grid order, also the project pages' Previous/Next order. */
 export const PROJECT_ORDER = [
   "caterpillar-demand-quality",
+  "monday-operating-plan",
+  "fpa-intelligence-engine",
   "arm",
   "microsoft-activision",
   "nike",
-  "fpa-intelligence-engine",
-  "monday-operating-plan",
 ];
 
 /** Previous and next project in PROJECT_ORDER; the first has no previous and the last no next. */
