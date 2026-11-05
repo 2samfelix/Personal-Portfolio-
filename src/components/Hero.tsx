@@ -28,7 +28,7 @@ export default function Hero() {
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-6 pb-4 pt-10 sm:pb-6 sm:pt-14 lg:grid-cols-[1.3fr_0.85fr] lg:items-stretch">
         <div className="flex flex-col justify-center gap-4">
           <span className="text-xs font-semibold uppercase tracking-[0.3em] text-charcoal-soft">
-            Sam Felix &mdash; Financial Analyst
+            Sam Felix &mdash; Finance &amp; Analytics
           </span>
           <h1 className="text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl sm:leading-[1.05]">
             {words(HEADLINE_LEAD)}{" "}
@@ -42,7 +42,7 @@ export default function Hero() {
             decision and find the number that matters.
           </p>
           <p className="text-sm font-semibold text-charcoal">
-            Open to junior FP&amp;A and analyst roles &middot;{" "}
+            Open to finance, analytics and client-facing operations roles &middot;{" "}
             <span className="whitespace-nowrap">Chicago area</span>
           </p>
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Project } from "@/lib/projects";
+import { ProjectHeaderBand } from "@/components/project/ProjectHeaderBand";
 import { ProjectHero } from "@/components/project/ProjectHero";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
@@ -210,30 +211,32 @@ export default function CaterpillarProjectPage({
   return (
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
-        <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
-          &larr; Back to Projects
-        </Link>
+        <ProjectHeaderBand tint="brass">
+          <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
+            &larr; Back to Projects
+          </Link>
 
-        <ProjectHero
-          title="Caterpillar Demand Quality"
-          question="Was Caterpillar's 2026 Construction Industries growth driven by real end-user demand or dealer restocking?"
-          description="An eight-quarter operating analysis using Caterpillar filings, dealer-inventory disclosures, retail sales statistics, and segment bridges to test whether reported growth was becoming more durable."
-          metrics={[
-            {
-              value: "$1.5B → $400M",
-              label: "Construction Industries dealer-inventory build, Q1 → Q2 2026",
-            },
-            { value: "7% → 22%", label: "Retail sales growth to end users" },
-          ]}
-          ctas={[
-            { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
-            ...(pdfDeliverable
-              ? [{ label: "Open case study ↗", href: pdfDeliverable.url, variant: "secondary" as const, external: true }]
-              : []),
-            { label: "Explore the model ↓", href: "#model-preview", variant: "secondary" },
-          ]}
-          wideText
-        />
+          <ProjectHero
+            title="Caterpillar Demand Quality"
+            question="Was Caterpillar's 2026 Construction Industries growth driven by real end-user demand or dealer restocking?"
+            description="An eight-quarter operating analysis using Caterpillar filings, dealer-inventory disclosures, retail sales statistics, and segment bridges to test whether reported growth was becoming more durable."
+            metrics={[
+              {
+                value: "$1.5B → $400M",
+                label: "Construction Industries dealer-inventory build, Q1 → Q2 2026",
+              },
+              { value: "7% → 22%", label: "Retail sales growth to end users" },
+            ]}
+            ctas={[
+              { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
+              ...(pdfDeliverable
+                ? [{ label: "Open case study ↗", href: pdfDeliverable.url, variant: "secondary" as const, external: true }]
+                : []),
+              { label: "Explore the model ↓", href: "#model-preview", variant: "secondary" },
+            ]}
+            wideText
+          />
+        </ProjectHeaderBand>
 
         <QuestionApproachFinding
           question={{

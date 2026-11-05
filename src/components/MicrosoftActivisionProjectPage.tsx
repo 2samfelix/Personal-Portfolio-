@@ -31,6 +31,7 @@ import {
   formatPercent,
   formatUsdM,
 } from "@/components/msft-atvi/MsftAtviCharts";
+import { ProjectHeaderBand } from "@/components/project/ProjectHeaderBand";
 import { ProjectHero } from "@/components/project/ProjectHero";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
@@ -132,26 +133,28 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
   return (
     <main className="bg-cream">
       <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
-        <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
-          &larr; Back to Projects
-        </Link>
+        <ProjectHeaderBand tint="rust">
+          <Link href="/#work" className="tap text-sm font-semibold text-forest hover:text-forest-dark">
+            &larr; Back to Projects
+          </Link>
 
-        <ProjectHero
-          title="Microsoft × Activision Deal Economics"
-          question="Was the deal financially justified, and how much in annual synergies did it take to break even?"
-          description="An accretion/dilution model and strategic analysis of Microsoft's acquisition of Activision Blizzard."
-          metrics={[
-            { value: "-4.07%", label: "Year-1 EPS dilution at zero synergies" },
-            {
-              value: "$3.64B synergy hurdle",
-              label: "Annual pre-tax synergies required for EPS neutrality (~48% of Activision's FY2022 revenue)",
-            },
-          ]}
-          ctas={[
-            { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
-            { label: "Explore the model ↓", href: "#inside-the-deal-model", variant: "secondary" },
-          ]}
-        />
+          <ProjectHero
+            title="Microsoft × Activision Deal Economics"
+            question="Was the deal financially justified, and how much in annual synergies did it take to break even?"
+            description="An accretion/dilution model and strategic analysis of Microsoft's acquisition of Activision Blizzard."
+            metrics={[
+              { value: "-4.07%", label: "Year-1 EPS dilution at zero synergies" },
+              {
+                value: "$3.64B synergy hurdle",
+                label: "Annual pre-tax synergies required for EPS neutrality (~48% of Activision's FY2022 revenue)",
+              },
+            ]}
+            ctas={[
+              { label: "View the analysis ↓", href: "#analysis", variant: "primary" },
+              { label: "Explore the model ↓", href: "#inside-the-deal-model", variant: "secondary" },
+            ]}
+          />
+        </ProjectHeaderBand>
 
         <QuestionApproachFinding
           question={{

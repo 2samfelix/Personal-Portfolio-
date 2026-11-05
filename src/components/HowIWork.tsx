@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-// Each step links to the project section that shows it. The figures themselves are
+// Each step links to the top of the project page that shows it. The figures themselves are
 // on the project cards below, so they are not repeated here.
 const STEPS = [
   {
@@ -9,7 +9,7 @@ const STEPS = [
     body: "Start from company filings, earnings materials and disclosed operating data.",
     project: "Caterpillar",
     proof: "reading demand from the company's own disclosures",
-    href: "/projects/caterpillar-demand-quality#model-preview",
+    href: "/projects/caterpillar-demand-quality",
   },
   {
     number: "02",
@@ -17,7 +17,7 @@ const STEPS = [
     body: "Forecasts, valuation and scenarios built in working Excel formulas.",
     project: "Microsoft × Activision",
     proof: "a working accretion/dilution model",
-    href: "/projects/microsoft-activision#inside-the-deal-model",
+    href: "/projects/microsoft-activision",
   },
   {
     number: "03",
@@ -25,7 +25,7 @@ const STEPS = [
     body: "Turn the outputs into a view on value, risk and trade-offs.",
     project: "Arm",
     proof: "a fundamentals-only valuation set against the market price",
-    href: "/projects/arm#inside-the-valuation",
+    href: "/projects/arm",
   },
 ];
 
