@@ -53,7 +53,7 @@ export default function Hero() {
                 className="flex items-center gap-1.5 rounded-full border border-forest/20 bg-white px-2.5 py-1 sm:rounded-xl sm:px-3 sm:py-1.5"
               >
                 <span className="h-1 w-1 shrink-0 rounded-full bg-brass" />
-                <span className="text-[9px] font-semibold uppercase tracking-normal text-charcoal sm:text-[11px] sm:tracking-wide">
+                <span className="text-[0.5625rem] font-semibold uppercase tracking-normal text-charcoal sm:text-[0.6875rem] sm:tracking-wide">
                   {badge}
                 </span>
               </div>
@@ -84,7 +84,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="min-h-[300px] w-full overflow-hidden rounded-3xl border border-forest/15 lg:min-h-0">
+        <div className="min-h-[18.75rem] w-full overflow-hidden rounded-3xl border border-forest/15 lg:min-h-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/headshot.webp"

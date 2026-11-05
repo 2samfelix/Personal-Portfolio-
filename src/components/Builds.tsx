@@ -24,7 +24,7 @@ function BuildCard({ build }: { build: Project }) {
           {/* Below the capture, not over it, so it never covers the chart's labels. */}
           {build.cardThumb.label && (
             <p className="px-4 pb-3">
-              <span className="inline-block rounded-full bg-charcoal px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
+              <span className="inline-block rounded-full bg-charcoal px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-cream">
                 {build.cardThumb.label}
               </span>
             </p>
@@ -38,7 +38,7 @@ function BuildCard({ build }: { build: Project }) {
             <h4 className="text-sm font-semibold text-charcoal">
               {build.title}
             </h4>
-            <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
+            <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-brass-ink">
               Interactive Demo
             </span>
           </div>
@@ -72,7 +72,7 @@ function FeaturedBuildCard({ build }: { build: Project }) {
       </div>
       <div className="flex flex-col gap-2.5 p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
+          <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-brass-ink">
             Interactive Demo
           </span>
           <span className="text-xs font-medium uppercase tracking-wide text-charcoal-soft">
@@ -89,7 +89,7 @@ function FeaturedBuildCard({ build }: { build: Project }) {
           {build.tools.map((tool) => (
             <li
               key={tool}
-              className="rounded-full bg-forest/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-forest"
+              className="rounded-full bg-forest/10 px-2.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-wide text-forest"
             >
               {tool}
             </li>

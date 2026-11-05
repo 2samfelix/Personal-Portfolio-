@@ -33,7 +33,7 @@ const STEPS = [
 // and focus. Motion is limited to the underline offset, and off with reduced
 // motion. Padding keeps each link at least 44px tall.
 const LINK =
-  "rounded-sm py-2.5 leading-6 underline decoration-brass-light/70 decoration-1 underline-offset-4 transition-[text-decoration-color,text-underline-offset,color] duration-200 ease-out hover:text-cream hover:decoration-brass-light hover:underline-offset-[6px] focus-visible:text-cream focus-visible:decoration-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light focus-visible:ring-offset-2 focus-visible:ring-offset-forest motion-reduce:transition-none motion-reduce:hover:underline-offset-4";
+  "rounded-sm py-2.5 leading-6 underline decoration-brass-light/70 decoration-1 underline-offset-4 transition-[text-decoration-color,text-underline-offset,color] duration-200 ease-out hover:text-cream hover:decoration-brass-light hover:underline-offset-[0.375rem] focus-visible:text-cream focus-visible:decoration-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light focus-visible:ring-offset-2 focus-visible:ring-offset-forest motion-reduce:transition-none motion-reduce:hover:underline-offset-4";
 
 /**
  * "How I work": a forest editorial band above the project grid. Three steps of

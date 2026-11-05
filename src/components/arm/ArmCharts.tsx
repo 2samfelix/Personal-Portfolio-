@@ -99,12 +99,12 @@ export function TwoLineChart({
             <line key={i} x1={PAD_LEFT} x2={LINE_CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
           ))}
           {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
-            <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[10px]">
+            <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[0.625rem]">
               {valueFormatter(v)}
             </text>
           ))}
           {periods.map((label, i) => (
-            <text key={label} x={periodX(i, count)} y={LINE_CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[10px]">
+            <text key={label} x={periodX(i, count)} y={LINE_CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[0.625rem]">
               {label}
             </text>
           ))}
@@ -159,12 +159,12 @@ export function MilestoneChart({
             <line key={i} x1={PAD_LEFT} x2={LINE_CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
           ))}
           {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
-            <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[10px]">
+            <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[0.625rem]">
               {formatUsd(v)}
             </text>
           ))}
           {points.map((p, i) => (
-            <text key={p.label} x={periodX(i, count)} y={LINE_CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[10px]">
+            <text key={p.label} x={periodX(i, count)} y={LINE_CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[0.625rem]">
               {p.label}
             </text>
           ))}
@@ -243,7 +243,7 @@ export function FootballFieldChart({
               return <line key={f} x1={x} x2={x} y1={12} y2={height - 24} stroke="#1e3a2b" strokeOpacity={0.08} />;
             })}
             {[0, 0.5, 1].map((f) => (
-              <text key={f} x={barX + f * plotWidth} y={height - 8} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
+              <text key={f} x={barX + f * plotWidth} y={height - 8} textAnchor="middle" className="fill-charcoal-soft text-[0.625rem]">
                 {formatUsd(f * axisMax)}
               </text>
             ))}
@@ -283,7 +283,7 @@ export function FootballFieldChart({
             })()}
           </svg>
         </ChartScroll>
-        <p className="mt-1 text-center text-[10px] text-charcoal-soft">{FIELD_BREAK_NOTE}</p>
+        <p className="mt-1 text-center text-[0.625rem] text-charcoal-soft">{FIELD_BREAK_NOTE}</p>
       </div>
     </div>
   );
@@ -395,7 +395,7 @@ export function ReturnDecompositionChart({
                 <text x={x + barWidth / 2} y={yTop - 8} textAnchor="middle" fontSize={13} fontWeight={700} className="fill-charcoal">
                   {b.value.toFixed(2)}x
                 </text>
-                <text x={x + barWidth / 2} y={DECOMP_HEIGHT - DECOMP_PAD_BOTTOM + 20} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
+                <text x={x + barWidth / 2} y={DECOMP_HEIGHT - DECOMP_PAD_BOTTOM + 20} textAnchor="middle" className="fill-charcoal-soft text-[0.625rem]">
                   {b.label}
                 </text>
               </g>
@@ -439,12 +439,12 @@ export function DCFHeatmap({
 
   return (
     <div className="mt-2 overflow-x-auto">
-      <table className="w-full min-w-[480px] border-separate border-spacing-1 text-center text-xs max-md:min-w-0 max-md:border-spacing-0.5">
+      <table className="w-full min-w-[30rem] border-separate border-spacing-1 text-center text-xs max-md:min-w-0 max-md:border-spacing-0.5">
         <thead>
           <tr>
-            <th className="p-1 text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft">WACC \ g</th>
+            <th className="p-1 text-[0.625rem] font-semibold uppercase tracking-wide text-charcoal-soft">WACC \ g</th>
             {growthCols.map((g, i) => (
-              <th key={g} className={`p-1 text-[10px] font-semibold uppercase tracking-wide ${i === liveCol ? "text-brass-ink" : "text-charcoal-soft"}`}>
+              <th key={g} className={`p-1 text-[0.625rem] font-semibold uppercase tracking-wide ${i === liveCol ? "text-brass-ink" : "text-charcoal-soft"}`}>
                 {(g * 100).toFixed(1)}%
               </th>
             ))}
@@ -453,13 +453,13 @@ export function DCFHeatmap({
         <tbody>
           {waccRows.map((w, r) => (
             <tr key={w}>
-              <td className={`p-1 text-[10px] font-semibold ${r === liveRow ? "text-brass-ink" : "text-charcoal-soft"}`}>{(w * 100).toFixed(2)}%</td>
+              <td className={`p-1 text-[0.625rem] font-semibold ${r === liveRow ? "text-brass-ink" : "text-charcoal-soft"}`}>{(w * 100).toFixed(2)}%</td>
               {grid[r].map((v, c) => {
                 const isLive = r === liveRow && c === liveCol;
                 return (
                   <td
                     key={c}
-                    className={`rounded-md p-2 font-semibold text-charcoal max-md:px-0.5 max-md:text-[11px] ${isLive ? "ring-2 ring-brass" : ""}`}
+                    className={`rounded-md p-2 font-semibold text-charcoal max-md:px-0.5 max-md:text-[0.6875rem] ${isLive ? "ring-2 ring-brass" : ""}`}
                     style={{ backgroundColor: `rgba(30,58,43,${opacityFor(v)})` }}
                   >
                     {formatUsd(v)}
@@ -470,7 +470,7 @@ export function DCFHeatmap({
           ))}
         </tbody>
       </table>
-      <p className="mt-2 text-[10px] text-charcoal-soft">
+      <p className="mt-2 text-[0.625rem] text-charcoal-soft">
         Rows: WACC. Columns: terminal growth rate. Highlighted cell: the model&apos;s live-computed WACC (9.82%) and its 3.5% terminal growth assumption.
       </p>
     </div>

@@ -9,7 +9,7 @@ export type MenuItem = { href: string; label: string };
 // under reduced motion). 44px minimum tap height; the border width never changes,
 // so the highlight cannot shift layout.
 const PILL =
-  "inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-forest/25 bg-cream px-4 text-[15px] font-semibold leading-5 text-forest transition-[translate,border-color,background-color,color] duration-150 hover:-translate-y-px hover:border-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-cream motion-reduce:transition-none motion-reduce:hover:translate-y-0 aria-[current=location]:border-forest aria-[current=location]:bg-forest aria-[current=location]:text-cream";
+  "inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-forest/25 bg-cream px-4 text-[0.9375rem] font-semibold leading-5 text-forest transition-[translate,border-color,background-color,color] duration-150 hover:-translate-y-px hover:border-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-cream motion-reduce:transition-none motion-reduce:hover:translate-y-0 aria-[current=location]:border-forest aria-[current=location]:bg-forest aria-[current=location]:text-cream";
 
 // A section counts as current while it crosses this band: from just below the
 // site header and menu (sections use scroll-mt-36, 144px) to 45% down the viewport.
@@ -87,7 +87,7 @@ export default function InPageMenu({ items }: { items: MenuItem[] }) {
   }, []);
 
   return (
-    <nav aria-label="On this page" className="sticky top-[77px] z-40 sm:top-[69px] border-b border-forest/10 bg-cream/95 backdrop-blur print:hidden">
+    <nav aria-label="On this page" className="sticky top-[4.8125rem] z-40 sm:top-[4.3125rem] border-b border-forest/10 bg-cream/95 backdrop-blur print:hidden">
       <div className="mx-auto w-full max-w-6xl px-6">
         {/* On narrow screens the row scrolls sideways; its edges fade into the 24px gutters. */}
         <div

@@ -124,11 +124,11 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
       </div>
       <div className="flex flex-1 flex-col gap-3 p-6">
         {/* Two tag lines' height reserved on every card, so titles line up across a row. */}
-        <ul className="flex min-h-[47px] flex-wrap content-start items-start gap-1.5">
+        <ul className="flex min-h-[2.9375rem] flex-wrap content-start items-start gap-1.5">
           {tags.map((tool) => (
             <li
               key={tool}
-              className="rounded-full bg-forest/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-forest"
+              className="rounded-full bg-forest/10 px-2.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-wide text-forest"
             >
               {tool}
             </li>

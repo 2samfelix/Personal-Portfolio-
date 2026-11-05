@@ -120,10 +120,10 @@ const THUMB_HREF: Record<string, string> = {
 };
 
 const SHELL =
-  "reel-card mb-2 block h-[120px] overflow-hidden rounded-md border border-forest/15 bg-white shadow-[0_1px_3px_rgba(42,40,32,0.08)]";
+  "reel-card mb-2 block h-[7.5rem] overflow-hidden rounded-md border border-forest/15 bg-white shadow-[0_1px_3px_rgba(42,40,32,0.08)]";
 const LINK =
   "transition-colors hover:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-mist";
-const CAPTION = "flex h-8 items-center border-t border-forest/10 px-3 text-[11px] font-semibold text-forest";
+const CAPTION = "flex h-8 items-center border-t border-forest/10 px-3 text-[0.6875rem] font-semibold text-forest";
 
 function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
   const tab = hidden ? -1 : undefined;
@@ -133,7 +133,7 @@ function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
         <span className="text-forest">{ICON[card.icon](28)}</span>
         <span className="text-lg font-bold tracking-tight text-charcoal">{card.name}</span>
         {card.inProgress && (
-          <span className="ml-auto rounded-full bg-brass-pale px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
+          <span className="ml-auto rounded-full bg-brass-pale px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-brass-ink">
             In progress
           </span>
         )}
@@ -143,8 +143,8 @@ function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
   if (card.kind === "code") {
     return (
       <Link href="/projects/fpa-intelligence-engine" tabIndex={tab} className={`${SHELL} ${LINK} !bg-forest px-3 py-2.5`}>
-        <span className="block font-mono text-[10px] text-brass-light">brief_validator.py · lines 674–680</span>
-        <pre className="mt-1 overflow-hidden font-mono text-[9px] leading-[1.35] text-cream">
+        <span className="block font-mono text-[0.625rem] text-brass-light">brief_validator.py · lines 674–680</span>
+        <pre className="mt-1 overflow-hidden font-mono text-[0.5625rem] leading-[1.35] text-cream">
           <code>{CODE_LINES}</code>
         </pre>
         <span className="sr-only">FP&amp;A Intelligence Engine: the validator&apos;s checks, in its source code</span>
@@ -162,7 +162,7 @@ function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
           height={800}
           loading="lazy"
           decoding="async"
-          className="block h-[86px] w-full object-cover"
+          className="block h-[5.375rem] w-full object-cover"
           style={{ objectPosition: card.position }}
         />
         <span className={CAPTION}>
@@ -173,7 +173,7 @@ function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
   }
   return (
     <Link href={card.href} tabIndex={tab} className={`${SHELL} ${LINK}`}>
-      <span className="flex h-[86px] items-center justify-center px-2 py-1.5">
+      <span className="flex h-[5.375rem] items-center justify-center px-2 py-1.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={card.src}
@@ -194,7 +194,7 @@ function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
 
 function VisualReel() {
   return (
-    <div className="reel reel-mask relative h-[260px] w-full overflow-hidden md:h-[380px] md:w-[300px]">
+    <div className="reel reel-mask relative h-[16.25rem] w-full overflow-hidden md:h-[23.75rem] md:w-[18.75rem]">
       <div className="reel-track flex flex-col">
         {CARDS.map((c) => (
           <ReelCard key={c.id} card={c} />
@@ -227,7 +227,7 @@ export default function Expertise() {
                 <h3 className="flex shrink-0 items-center gap-2 text-base font-semibold text-charcoal">
                   {s.name}
                   {"inProgress" in s && s.inProgress && (
-                    <span className="rounded-full bg-brass-pale px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
+                    <span className="rounded-full bg-brass-pale px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-brass-ink">
                       In progress
                     </span>
                   )}

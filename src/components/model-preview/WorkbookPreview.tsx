@@ -614,7 +614,7 @@ function FormulaBar({
           <span className="sr-only">Formula:</span>
           {/* Long formulas (e.g. SUMPRODUCT) wrap and scroll inside the bar. */}
           <code
-            className={`min-h-0 min-w-0 flex-1 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[13px] leading-5 text-charcoal [scrollbar-width:thin] ${
+            className={`min-h-0 min-w-0 flex-1 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[0.8125rem] leading-5 text-charcoal [scrollbar-width:thin] ${
               compact ? "max-h-[3.75rem]" : "h-full"
             }`}
           >
@@ -806,7 +806,7 @@ export default function WorkbookPreview({
               {sheet.caption}
             </span>
             {!compact && sheet.sheet && (
-              <span className="shrink-0 font-mono text-[11px] text-charcoal-soft">
+              <span className="shrink-0 font-mono text-[0.6875rem] text-charcoal-soft">
                 {sheet.sheet}!{sheet.ranges?.join(", ")}
               </span>
             )}

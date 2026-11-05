@@ -74,7 +74,7 @@ export default function ModelPreviewTeaser({ doc }: { doc: ModelPreviewDoc }) {
             }
             return (
               <tr key={r}>
-                <th scope="row" className="border-b border-r border-forest/10 bg-cream text-center text-[10px] font-semibold text-charcoal-soft">
+                <th scope="row" className="border-b border-r border-forest/10 bg-cream text-center text-[0.625rem] font-semibold text-charcoal-soft">
                   {(sheetRow(sheet, r) ?? r) + 1}
                 </th>
                 {out}
