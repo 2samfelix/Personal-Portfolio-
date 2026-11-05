@@ -89,7 +89,7 @@ export default function WhyAnalyticsStrategy() {
           </div>
 
           <div>
-            <div className="relative mx-auto w-full lg:max-w-[520px]">
+            <div className="relative mx-auto w-full lg:max-w-[32.5rem]">
               <div
                 ref={trackRef}
                 className="flex items-start snap-x snap-mandatory overflow-x-auto scroll-smooth sm:items-stretch sm:gap-3 sm:px-[4%] sm:scroll-pl-[4%] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -97,7 +97,7 @@ export default function WhyAnalyticsStrategy() {
                 {CARDS.map((card) => (
                   <div
                     key={card.label}
-                    className="flex w-full shrink-0 snap-center flex-col justify-start rounded-2xl border border-forest/15 bg-white p-5 sm:min-h-[240px] sm:w-[85%] sm:p-7"
+                    className="flex w-full shrink-0 snap-center flex-col justify-start rounded-2xl border border-forest/15 bg-white p-5 sm:min-h-[15rem] sm:w-[85%] sm:p-7"
                   >
                     <p className="text-xs font-semibold uppercase tracking-widest text-brass-ink">{card.label}</p>
                     <p className="mt-3 text-sm leading-6 text-charcoal-soft">{card.body}</p>
@@ -123,7 +123,7 @@ export default function WhyAnalyticsStrategy() {
               </button>
             </div>
 
-            <div className="mt-4 flex justify-center gap-2 max-sm:gap-[38px] lg:justify-start lg:pl-1">
+            <div className="mt-4 flex justify-center gap-2 max-sm:gap-[2.375rem] lg:justify-start lg:pl-1">
               {CARDS.map((card, i) => (
                 <button
                   key={card.label}

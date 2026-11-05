@@ -138,7 +138,7 @@ function StatementCard({ statement }: { statement: (typeof BRIEF_STATEMENTS)[num
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-xs font-bold text-charcoal">{statement.id}</span>
         <span
-          className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${TYPE_TAG_CLASS[statement.type]}`}
+          className={`rounded-full px-2.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-wide ${TYPE_TAG_CLASS[statement.type]}`}
         >
           {statement.type}
         </span>
@@ -178,7 +178,7 @@ export default function EngineProjectPage({
             <div>
               <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
                 {project.tools.map((t) => (
-                  <li key={t} className="rounded-full bg-cream/10 px-2.5 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-cream">
+                  <li key={t} className="rounded-full bg-cream/10 px-2.5 py-0.5 text-[0.75rem] font-semibold uppercase tracking-wide text-cream">
                     {t}
                   </li>
                 ))}
@@ -345,7 +345,7 @@ export default function EngineProjectPage({
           </p>
           <figure className="mt-6">
             <div className="overflow-x-auto rounded-xl border border-forest/15 bg-white">
-              <table className={`w-full min-w-[720px] text-left align-top text-xs leading-5 ${STACK_TABLE}`}>
+              <table className={`w-full min-w-[45rem] text-left align-top text-xs leading-5 ${STACK_TABLE}`}>
                 <thead className={STACK_HEAD}>
                   <tr className="border-b border-forest/15">
                     {WORKBOOK_HEADERS.map((header, col) => (
@@ -451,7 +451,7 @@ export default function EngineProjectPage({
         </section>
 
         <section className="mt-12 border-t border-forest/10 pt-8">
-          <p className="text-sm text-charcoal-soft max-sm:leading-[44px]">
+          <p className="text-sm text-charcoal-soft max-sm:leading-[2.75rem]">
             Links:{" "}
             <a href={ENGINE_REPO} target="_blank" rel="noopener noreferrer" className={linkClass}>
               GitHub repo ↗

@@ -637,7 +637,7 @@ export default function FrontOfficeCausalChain({
               >
                 {node.annotation && (
                   <span
-                    className="absolute left-1/2 whitespace-nowrap rounded bg-brass-ink px-1.5 py-0.5 text-[7.5px] font-bold uppercase tracking-wide text-cream"
+                    className="absolute left-1/2 whitespace-nowrap rounded bg-brass-ink px-1.5 py-0.5 text-[0.4688rem] font-bold uppercase tracking-wide text-cream"
                     style={{ bottom: h + 6, transform: "translateX(-50%)" }}
                   >
                     {node.annotation}
@@ -655,14 +655,14 @@ export default function FrontOfficeCausalChain({
                       className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${KIND_DOT_STYLE[node.kind]}`}
                       aria-hidden
                     />
-                    <span className="line-clamp-2 text-[8.5px] font-semibold uppercase leading-[1.15] tracking-wide text-charcoal-soft">
+                    <span className="line-clamp-2 text-[0.5312rem] font-semibold uppercase leading-[1.15] tracking-wide text-charcoal-soft">
                       {node.label}
                     </span>
                   </span>
                   <span className={`font-black leading-none text-charcoal ${node.small ? "text-xs" : "text-sm"}`}>
                     <AnimatedValue target={value} trigger={presetLoadTick} />
                   </span>
-                  {sub && <span className="text-[8px] leading-tight text-charcoal-soft">{sub}</span>}
+                  {sub && <span className="text-[0.5rem] leading-tight text-charcoal-soft">{sub}</span>}
                 </div>
               </div>
             );
@@ -683,7 +683,7 @@ export default function FrontOfficeCausalChain({
             return (
               <div
                 key={`${key}-label`}
-                className={`pointer-events-none absolute max-w-[110px] rounded bg-forest-dark/95 px-1 py-0.5 text-center text-[7.5px] font-semibold leading-tight ${color}`}
+                className={`pointer-events-none absolute max-w-[6.875rem] rounded bg-forest-dark/95 px-1 py-0.5 text-center text-[0.4688rem] font-semibold leading-tight ${color}`}
                 style={{ left: point.x, top: point.y, transform: "translate(-50%, -50%)" }}
               >
                 {edge.label}
@@ -695,7 +695,7 @@ export default function FrontOfficeCausalChain({
 
       {/* Legend + the one disclosed simplification */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-cream/10 pt-3">
-        <div className="flex flex-wrap items-center gap-4 text-[10px] font-semibold uppercase tracking-wide text-cream/80">
+        <div className="flex flex-wrap items-center gap-4 text-[0.625rem] font-semibold uppercase tracking-wide text-cream/80">
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full border-2 border-brass bg-brass" /> Decision Lever
           </span>
@@ -719,7 +719,7 @@ export default function FrontOfficeCausalChain({
             Peaks, Then Reverses
           </span>
         </div>
-        <p className="max-w-md text-[10px] leading-4 text-cream/60">
+        <p className="max-w-md text-[0.625rem] leading-4 text-cream/60">
           National Revenue has no incoming lever edges by design — it&apos;s set league-wide and
           identical for every team, the largest P&amp;L line the six decisions never touch.
         </p>

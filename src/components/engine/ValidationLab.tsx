@@ -327,7 +327,7 @@ function resultOf(c: ValidationLab["cases"][number]): { d: Detection; text: stri
 function CodeList({ codes, empty = "none" }: { codes: string[]; empty?: string }) {
   if (!codes.length) return <span className="block text-xs text-charcoal-soft">{empty}</span>;
   return (
-    <span className="block font-mono text-[11px] leading-5">
+    <span className="block font-mono text-[0.6875rem] leading-5">
       {codes.map((c) => (
         <span key={c} className="block">
           {/* Long codes may break after an underscore, so narrow columns never scroll. */}
@@ -352,7 +352,7 @@ export function LabResultsTable({ lab }: { lab: ValidationLab }) {
   const head = ["Case", "Fault and statement", "Expected", "Actual", "Stage that fired", "Result"];
   return (
     <div className="overflow-x-auto rounded-xl border border-forest/15 bg-white">
-      <table className={`w-full min-w-[960px] text-left align-top text-sm leading-6 ${STACK_TABLE}`}>
+      <table className={`w-full min-w-[60rem] text-left align-top text-sm leading-6 ${STACK_TABLE}`}>
         <thead className={STACK_HEAD}>
           <tr className="border-b border-forest/15">
             {head.map((h) => (

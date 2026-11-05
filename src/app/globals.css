@@ -100,6 +100,16 @@
   }
 }
 
+/* Site scale: from 640px up the root font-size is 80%, so the site renders as it did at
+   80% browser zoom. Type, spacing, containers and the px-free arbitrary sizes are all in
+   rem, so they scale together. Below 640px the root stays at the browser default, so
+   phone text keeps its size. Media queries are unaffected: their rem is always 16px. */
+@media (min-width: 40rem) {
+  html {
+    font-size: 80%;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -208,8 +218,8 @@ body {
   background-color: #ffffff;
   background-image: radial-gradient(
     circle,
-    rgba(30, 58, 43, 0.28) 1.75px,
-    transparent 1.75px
+    rgba(30, 58, 43, 0.28) 0.1094rem,
+    transparent 0.1094rem
   );
-  background-size: 22px 22px;
+  background-size: 1.375rem 1.375rem;
 }

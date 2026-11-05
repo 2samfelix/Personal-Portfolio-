@@ -28,6 +28,6 @@ export const STACK_ROW = "max-md:grid max-md:grid-cols-2 max-md:gap-x-4 max-md:g
 export const STACK_LABEL = "max-md:col-span-2 max-md:block max-md:p-0";
 /** On a value cell: its column name (data-label) above the value. */
 export const STACK_VALUE =
-  "max-md:block max-md:p-0 max-md:text-left max-md:before:block max-md:before:text-[11px] max-md:before:font-normal max-md:before:text-charcoal-soft max-md:before:content-[attr(data-label)]";
+  "max-md:block max-md:p-0 max-md:text-left max-md:before:block max-md:before:text-[0.6875rem] max-md:before:font-normal max-md:before:text-charcoal-soft max-md:before:content-[attr(data-label)]";
 /** On a value cell with long text: full width. */
 export const STACK_WIDE = "max-md:col-span-2";

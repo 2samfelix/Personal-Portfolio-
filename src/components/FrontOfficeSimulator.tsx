@@ -189,9 +189,9 @@ function SliderField({
         step={driver.step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest sm:h-1.5 max-sm:relative max-sm:box-content max-sm:-my-[18px] max-sm:bg-clip-content max-sm:py-[18px]"
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest sm:h-1.5 max-sm:relative max-sm:box-content max-sm:-my-[1.125rem] max-sm:bg-clip-content max-sm:py-[1.125rem]"
       />
-      {delta && <span className="text-[11px] font-semibold text-charcoal-soft">{delta.text}</span>}
+      {delta && <span className="text-[0.6875rem] font-semibold text-charcoal-soft">{delta.text}</span>}
     </label>
   );
 }
@@ -240,7 +240,7 @@ function PayrollAxis({
         <span className="absolute inset-y-0 border-l border-dashed border-charcoal/30" style={{ left: `${floorPct}%` }} />
         <span className="absolute inset-y-0 border-l border-dashed border-charcoal/30" style={{ left: `${capPct}%` }} />
       </div>
-      <div className="relative h-7 text-[9px] font-semibold leading-tight text-charcoal-soft" aria-hidden>
+      <div className="relative h-7 text-[0.5625rem] font-semibold leading-tight text-charcoal-soft" aria-hidden>
         <span className="absolute left-0 top-0">{formatCurrencyCompact(PAYROLL_AXIS_MIN)}</span>
         <span className="absolute top-0 text-center text-forest" style={{ left: `${floorPct}%`, transform: "translateX(-50%)" }}>
           Floor
@@ -254,7 +254,7 @@ function PayrollAxis({
         </span>
         <span className="absolute right-0 top-0">{formatCurrencyCompact(PAYROLL_AXIS_MAX)}</span>
       </div>
-      <p className="text-[10px] leading-4 text-charcoal-soft">
+      <p className="text-[0.625rem] leading-4 text-charcoal-soft">
         The grey zones are enforced by the real NFL salary cap and CBA cash floor — not a slider
         limitation. This plan can never spend below {formatCurrencyCompact(SALARY_FLOOR)} or above{" "}
         {formatCurrencyCompact(SALARY_CAP)}.
@@ -268,11 +268,11 @@ function PayrollAxis({
         step={1_000_000}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/20 accent-forest sm:h-1.5 max-sm:relative max-sm:box-content max-sm:-my-[18px] max-sm:bg-clip-content max-sm:py-[18px]"
+        className="mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/20 accent-forest sm:h-1.5 max-sm:relative max-sm:box-content max-sm:-my-[1.125rem] max-sm:bg-clip-content max-sm:py-[1.125rem]"
       />
-      {delta && <span className="text-[11px] font-semibold text-charcoal-soft">{delta.text}</span>}
+      {delta && <span className="text-[0.6875rem] font-semibold text-charcoal-soft">{delta.text}</span>}
 
-      <p className="border-t border-forest/10 pt-1.5 text-[10px] leading-4 text-charcoal-soft">
+      <p className="border-t border-forest/10 pt-1.5 text-[0.625rem] leading-4 text-charcoal-soft">
         One input among several, not a direct wins dial — Team Strength below also depends on
         Coaching, Facilities, and Scouting &amp; Development spend.
       </p>
@@ -287,7 +287,7 @@ function PayrollAxis({
 // renumbering, or otherwise touching any of those headings themselves.
 function ChapterMark({ roman, label }: { roman: string; label: string }) {
   return (
-    <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-ink">
+    <p className="mb-2 flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-brass-ink">
       <span>{roman}</span>
       <span className="text-brass-ink" aria-hidden>
         &middot;
@@ -312,16 +312,16 @@ function KpiCard({
 }) {
   return (
     <div className="flex flex-col gap-1 rounded-xl border border-forest/15 bg-white p-3">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">{label}</span>
+      <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-charcoal-soft">{label}</span>
       <span className="text-2xl font-black tracking-tight text-charcoal">{value}</span>
       {badge && tone && (
         <span
-          className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}
+          className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}
         >
           {badge}
         </span>
       )}
-      {sub && <span className="text-[11px] text-charcoal-soft">{sub}</span>}
+      {sub && <span className="text-[0.6875rem] text-charcoal-soft">{sub}</span>}
     </div>
   );
 }
@@ -343,7 +343,7 @@ function MandateTarget({
         <span className="block text-xs text-charcoal-soft">{detail}</span>
       </div>
       <span
-        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}
       >
         {met ? "Met" : "Not Met"}
       </span>
@@ -457,7 +457,7 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
           aria-hidden
         />
       </div>
-      <div className="relative mt-1 h-7 text-[9px] font-semibold leading-tight text-charcoal-soft" aria-hidden>
+      <div className="relative mt-1 h-7 text-[0.5625rem] font-semibold leading-tight text-charcoal-soft" aria-hidden>
         <span className="absolute top-0 text-center" style={{ left: `${floorPct}%`, transform: "translateX(-50%)" }}>
           Floor
           <br />
@@ -469,7 +469,7 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
           {CEILING_WINS.toFixed(2)}
         </span>
       </div>
-      <div className={`mt-2 rounded-lg px-3 py-2 text-[11px] leading-4 ${ALERT_STYLE[tone]}`}>
+      <div className={`mt-2 rounded-lg px-3 py-2 text-[0.6875rem] leading-4 ${ALERT_STYLE[tone]}`}>
         The vertical line marks {PLAYOFF_LINE_WINS}{" "}
         wins — the actual 2025 cutline (see
         Assumptions; the live pass/fail below comes from this plan&apos;s real position in the
@@ -482,7 +482,7 @@ function PlayoffLineGauge({ wins, madePlayoffs }: { wins: number; madePlayoffs: 
         score jump discontinuously right at the threshold, not smoothly. That is correct
         behavior, not a rendering glitch.
       </div>
-      <div className="mt-2 rounded-lg bg-brass-pale/40 px-3 py-2 text-[11px] leading-4 text-charcoal-soft">
+      <div className="mt-2 rounded-lg bg-brass-pale/40 px-3 py-2 text-[0.6875rem] leading-4 text-charcoal-soft">
         <span className="font-semibold text-charcoal">
           Every lever at its minimum produces {FLOOR_WINS.toFixed(2)} wins; every lever at its
           maximum produces {CEILING_WINS.toFixed(2)}.
@@ -563,7 +563,7 @@ function DistributionHistogram({
 
   return (
     <div className="overflow-x-auto">
-      <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft sm:hidden">
+      <p className="mb-1.5 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-charcoal-soft sm:hidden">
         <span aria-hidden>&larr;</span> Scroll to see the full chart <span aria-hidden>&rarr;</span>
       </p>
       <svg
@@ -683,10 +683,10 @@ function MonteCarloChartCaption({
     <div className="mt-3 flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-forest/15 bg-white px-4 py-3">
         <div>
-          <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">{statLabel}</span>
+          <span className="block text-[0.6875rem] font-semibold uppercase tracking-wide text-charcoal-soft">{statLabel}</span>
           <span className="text-xl font-bold text-charcoal">{statValue}</span>
         </div>
-        <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}>
+        <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}>
           {badge}
         </span>
       </div>
@@ -699,7 +699,7 @@ function MonteCarloChartCaption({
             type="button"
             onClick={() => setExplainerOpen((o) => !o)}
             aria-expanded={explainerOpen}
-            className="tap text-[11px] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
+            className="tap text-[0.6875rem] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
           >
             {explainerOpen ? "Hide sampling methodology" : "Show sampling methodology"}
           </button>
@@ -1359,7 +1359,7 @@ function StrategyMapChart({ result }: { result: FrontOfficeResult }) {
 
   return (
     <div>
-      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft sm:hidden">
+      <p className="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-charcoal-soft sm:hidden">
         <span aria-hidden>&larr;</span> Scroll to see the full chart <span aria-hidden>&rarr;</span>
       </p>
       <div className="overflow-x-auto rounded-2xl border border-forest/15 bg-white p-4">
@@ -1637,7 +1637,7 @@ function StrategyMapChart({ result }: { result: FrontOfficeResult }) {
         </svg>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-charcoal-soft">
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[0.6875rem] text-charcoal-soft">
         <span className="inline-flex items-center gap-1.5">
           <svg width="10" height="10" aria-hidden>
             <circle cx="5" cy="5" r="4.5" fill="#1e3a2b" />
@@ -1826,7 +1826,7 @@ export default function FrontOfficeSimulator() {
             they can only ever say what the engine actually found. */}
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-xl border-2 border-brass/30 bg-brass-pale/30 p-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brass-ink">
+            <span className="text-[0.625rem] font-semibold uppercase tracking-[0.15em] text-brass-ink">
               FY2026 &mdash; Sourced
             </span>
             <p className="mt-1.5 text-xl font-black tracking-tight text-charcoal sm:text-2xl">
@@ -1839,7 +1839,7 @@ export default function FrontOfficeSimulator() {
             </p>
           </div>
           <div className="rounded-xl border-2 border-brass/30 bg-brass-pale/30 p-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brass-ink">
+            <span className="text-[0.625rem] font-semibold uppercase tracking-[0.15em] text-brass-ink">
               Across the Full Strategy Range
             </span>
             <p className="mt-1.5 text-xl font-black tracking-tight text-charcoal sm:text-2xl">
@@ -1920,7 +1920,7 @@ export default function FrontOfficeSimulator() {
                     {/* Engine-derived, not a second estimate — read straight off
                         preset.result, computed once at module load by calling
                         runFrontOfficeSimulation on this preset's own assumptions. */}
-                    <span className={`text-[11px] font-medium ${active ? "text-cream/80" : "text-charcoal-soft"}`}>
+                    <span className={`text-[0.6875rem] font-medium ${active ? "text-cream/80" : "text-charcoal-soft"}`}>
                       {preset.result.wins.toFixed(2)} Wins · {formatSignedCompact(preset.result.operatingResult)}
                     </span>
                   </button>
@@ -1932,12 +1932,12 @@ export default function FrontOfficeSimulator() {
                     type="button"
                     onClick={() => setExpandedPresetKey(infoOpen ? null : preset.key)}
                     aria-expanded={infoOpen}
-                    className="tap self-start text-[11px] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
+                    className="tap self-start text-[0.6875rem] font-semibold text-forest underline decoration-forest/40 underline-offset-2 hover:decoration-forest"
                   >
                     {infoOpen ? "Hide details" : "What is this?"}
                   </button>
                   {infoOpen && (
-                    <p className="text-[11px] leading-5 text-charcoal-soft">{preset.description}</p>
+                    <p className="text-[0.6875rem] leading-5 text-charcoal-soft">{preset.description}</p>
                   )}
                 </div>
               );
@@ -1950,8 +1950,8 @@ export default function FrontOfficeSimulator() {
               caps back down on very wide screens — the heading/intro/
               presets above stay in the normal column. */}
           <div className="relative left-1/2 mt-4 w-screen -translate-x-1/2">
-            <div className="mx-auto max-w-[1680px] px-6">
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft xl:hidden">
+            <div className="mx-auto max-w-[105rem] px-6">
+              <p className="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-charcoal-soft xl:hidden">
                 <span aria-hidden>&larr;</span> Scroll to see the full diagram <span aria-hidden>&rarr;</span>
               </p>
               <FrontOfficeCausalChain
@@ -2002,7 +2002,7 @@ export default function FrontOfficeSimulator() {
               tone={healthTone(result.franchiseHealth)}
             />
           </div>
-          <p className="mt-1.5 text-[11px] leading-4 text-charcoal-soft">
+          <p className="mt-1.5 text-[0.6875rem] leading-4 text-charcoal-soft">
             Expected wins are a continuous season average, not a predicted final record.
           </p>
 
@@ -2028,14 +2028,14 @@ export default function FrontOfficeSimulator() {
                 The Board&apos;s Verdict
               </h3>
               <span
-                className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[verdict.tone]}`}
+                className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${TONE_CLASS[verdict.tone]}`}
               >
                 {FRONT_OFFICE_MANDATE_BAND_LABEL[verdict.mandateBand]}
               </span>
             </div>
             <p className="mt-2 text-base font-bold leading-6 text-charcoal">{verdict.headline}</p>
             <p className="mt-1.5 text-sm leading-6 text-charcoal-soft">{verdict.detail}</p>
-            <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+            <p className="mt-2 text-[0.6875rem] leading-4 text-charcoal-soft">
               {verdict.quotingProbabilities
                 ? "Quoting the last 1,000-season run for this exact plan."
                 : "Quoting this plan's single-season point estimate — run 1,000 seasons below to see it restated as odds."}
@@ -2066,7 +2066,7 @@ export default function FrontOfficeSimulator() {
                     Cap Readout
                   </span>
                   {capBindState && (
-                    <span className="rounded-full bg-brass-ink px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-cream">
+                    <span className="rounded-full bg-brass-ink px-2 py-0.5 text-[0.5625rem] font-bold uppercase tracking-wide text-cream">
                       {capBindState === "cap" ? "At Cap" : "At Floor"}
                     </span>
                   )}
@@ -2122,7 +2122,7 @@ export default function FrontOfficeSimulator() {
                   {formatSignedCompact(result.operatingResult)}
                 </span>
                 <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${
                     TONE_CLASS[
                       playoffTargetMet && financialTargetMet
                         ? "good"
@@ -2159,7 +2159,7 @@ export default function FrontOfficeSimulator() {
                 <button
                   type="button"
                   onClick={() => setStandingsExpanded((v) => !v)}
-                  className="tap rounded-lg border border-forest/20 px-2.5 py-1 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+                  className="tap rounded-lg border border-forest/20 px-2.5 py-1 text-[0.6875rem] font-semibold text-forest transition-colors hover:bg-forest/5"
                 >
                   {standingsExpanded ? "Show playoff field only" : "Show all 16 teams"}
                 </button>
@@ -2169,7 +2169,7 @@ export default function FrontOfficeSimulator() {
                 fixed, and sourced independently of this model. The Packers&apos; record and seed
                 are this plan&apos;s live output. Seeds are recomputed for the whole field on every
                 plan: each division&apos;s winner (highest wins,
-                <span className="mx-1 rounded-full bg-forest/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-forest">
+                <span className="mx-1 rounded-full bg-forest/10 px-1.5 py-0.5 text-[0.5625rem] font-bold uppercase tracking-wide text-forest">
                   Div
                 </span>
                 below) takes seeds 1-4 by record, then the next three best remaining records take
@@ -2178,11 +2178,11 @@ export default function FrontOfficeSimulator() {
                 incumbent&apos;s win total to take a tie, not the real NFL&apos;s full
                 head-to-head/common-games/strength-of-schedule tiebreaker hierarchy.
               </p>
-              <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft sm:hidden">
+              <p className="mt-3 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-charcoal-soft sm:hidden">
                 <span aria-hidden>&larr;</span> Scroll for the Record column <span aria-hidden>&rarr;</span>
               </p>
               <div className="mt-2 overflow-x-auto rounded-xl border border-forest/15 bg-white sm:mt-3">
-                <table className="w-full min-w-[420px] text-left text-sm">
+                <table className="w-full min-w-[26.25rem] text-left text-sm">
                   <thead>
                     <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
                       <th className="px-4 py-3 font-semibold">Seed</th>
@@ -2209,7 +2209,7 @@ export default function FrontOfficeSimulator() {
                               {row.isDivisionWinner && (
                                 <span
                                   title="Division winner"
-                                  className="rounded-full bg-forest/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-forest"
+                                  className="rounded-full bg-forest/10 px-1.5 py-0.5 text-[0.5625rem] font-bold uppercase tracking-wide text-forest"
                                 >
                                   Div
                                 </span>
@@ -2225,7 +2225,7 @@ export default function FrontOfficeSimulator() {
                 </table>
               </div>
               {!standingsExpanded && standings.length > visibleStandings.length && (
-                <p className="mt-2 text-[11px] text-charcoal-soft">
+                <p className="mt-2 text-[0.6875rem] text-charcoal-soft">
                   Showing the playoff field{result.playoff.seed === null ? " plus the Packers' row" : ""}{" "}
                   — {standings.length - visibleStandings.length} more teams hidden.
                 </p>
@@ -2239,7 +2239,7 @@ export default function FrontOfficeSimulator() {
               <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal-soft">Season P&amp;L</h3>
               <div className="mt-2 flex flex-col gap-4 rounded-xl border border-forest/15 bg-white p-3">
                 <div className="flex flex-col gap-2.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft">
+                  <span className="text-[0.625rem] font-semibold uppercase tracking-wide text-charcoal-soft">
                     Revenue
                   </span>
                   <PnlBar label="National Revenue" value={result.revenue.national} tone="revenue" maxAbs={pnlScale} />
@@ -2261,7 +2261,7 @@ export default function FrontOfficeSimulator() {
                   />
                 </div>
                 <div className="flex flex-col gap-2.5 border-t border-forest/10 pt-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-charcoal-soft">
+                  <span className="text-[0.625rem] font-semibold uppercase tracking-wide text-charcoal-soft">
                     Cost
                   </span>
                   <PnlBar label="Payroll" value={result.cost.payroll} tone="cost" maxAbs={pnlScale} />
@@ -2297,7 +2297,7 @@ export default function FrontOfficeSimulator() {
                   </span>
                 </div>
               </div>
-              <p className="mt-2 text-[10px] leading-4 text-charcoal-soft">
+              <p className="mt-2 text-[0.625rem] leading-4 text-charcoal-soft">
                 Bars are scaled against the larger of this plan&apos;s total revenue or total cost,
                 the same proportional-bar convention Marginal Impact uses below. Fixed Overhead
                 ({formatCurrencyCompact(FIXED_OVERHEAD)} at baseline,{" "}
@@ -2334,7 +2334,7 @@ export default function FrontOfficeSimulator() {
             />
             <KpiCard label="Playoff Result" value="Wild Card Loss" sub={ACTUAL_2025_PLAYOFF_RESULT} />
           </div>
-          <p className="mt-3 text-[11px] text-charcoal-soft">
+          <p className="mt-3 text-[0.6875rem] text-charcoal-soft">
             Source: Packers FY2026 annual financial release (packers.com, July 2026); Sportico;
             Yahoo Sports.
           </p>
@@ -2378,7 +2378,7 @@ export default function FrontOfficeSimulator() {
                 const pct = (Math.abs(row.impact) / maxAbsImpact) * 100;
                 return (
                   <li key={row.key} className="flex items-center gap-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[0.6875rem] font-bold text-forest">
                       {i + 1}
                     </span>
                     <span className="w-32 shrink-0 text-xs font-semibold text-charcoal sm:w-40 sm:text-sm">
@@ -2387,7 +2387,7 @@ export default function FrontOfficeSimulator() {
                     {row.atCeiling ? (
                       <>
                         <span className="h-2 flex-1 overflow-hidden rounded-full bg-mist" />
-                        <span className="w-20 shrink-0 rounded-full bg-brass/15 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-brass-ink">
+                        <span className="w-20 shrink-0 rounded-full bg-brass/15 px-2 py-0.5 text-center text-[0.625rem] font-bold uppercase tracking-wide text-brass-ink">
                           {row.key === "payroll" ? "At Cap" : "At Max"}
                         </span>
                       </>
@@ -2478,7 +2478,7 @@ export default function FrontOfficeSimulator() {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold text-charcoal">Playoff berth</span>
                       <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[playoffTargetMet ? "good" : "bad"]}`}
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${TONE_CLASS[playoffTargetMet ? "good" : "bad"]}`}
                       >
                         {playoffTargetMet ? "Met" : "Not Met"} on paper
                       </span>
@@ -2497,7 +2497,7 @@ export default function FrontOfficeSimulator() {
                         Beat FY2026 operating result
                       </span>
                       <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[financialTargetMet ? "good" : "bad"]}`}
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${TONE_CLASS[financialTargetMet ? "good" : "bad"]}`}
                       >
                         {financialTargetMet ? "Met" : "Not Met"} on paper
                       </span>
@@ -2684,7 +2684,7 @@ export default function FrontOfficeSimulator() {
               <h3 className="text-sm font-semibold text-charcoal">Sourced / Calibrated / Assumed</h3>
               <dl className="mt-1.5 space-y-2.5 text-sm leading-6 text-charcoal-soft">
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-forest">
+                  <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
                     Sourced
                   </dt>
                   <dd>
@@ -2693,7 +2693,7 @@ export default function FrontOfficeSimulator() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-forest">
+                  <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
                     Calibrated
                   </dt>
                   <dd>
@@ -2702,7 +2702,7 @@ export default function FrontOfficeSimulator() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-forest">
+                  <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
                     Assumed
                   </dt>
                   <dd>
@@ -2750,7 +2750,7 @@ export default function FrontOfficeSimulator() {
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-forest/15 bg-white p-4">
               <h3 className="text-sm font-semibold text-charcoal">Roster Quality</h3>
-              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[0.6875rem] leading-5 text-charcoal">
                 rosterQuality = 100 × effectivePayroll / (effectivePayroll + {formatCurrencyCompact(ROSTER_QUALITY_K)})
               </p>
               <p className="mt-2 text-xs leading-5 text-charcoal-soft">
@@ -2762,7 +2762,7 @@ export default function FrontOfficeSimulator() {
 
             <div className="rounded-xl border border-forest/15 bg-white p-4">
               <h3 className="text-sm font-semibold text-charcoal">Development Effect</h3>
-              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[0.6875rem] leading-5 text-charcoal">
                 developmentMultiplier = 1 + {formatPercent(DEVELOPMENT_BOOST_MAX, 0)} × devSpend / (devSpend + {formatCurrencyCompact(DEVELOPMENT_K)})
               </p>
               <p className="mt-2 text-xs leading-5 text-charcoal-soft">
@@ -2774,7 +2774,7 @@ export default function FrontOfficeSimulator() {
 
             <div className="rounded-xl border border-forest/15 bg-white p-4">
               <h3 className="text-sm font-semibold text-charcoal">Coaching Quality</h3>
-              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[0.6875rem] leading-5 text-charcoal">
                 coachingQuality = 100 × coachingSpend / (coachingSpend + {formatCurrencyCompact(COACHING_QUALITY_K)})
               </p>
               <p className="mt-2 text-xs leading-5 text-charcoal-soft">
@@ -2787,7 +2787,7 @@ export default function FrontOfficeSimulator() {
 
             <div className="rounded-xl border border-forest/15 bg-white p-4">
               <h3 className="text-sm font-semibold text-charcoal">Availability</h3>
-              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[0.6875rem] leading-5 text-charcoal">
                 availability = {formatPercent(AVAILABILITY_MIN, 0)} + {formatPercent(AVAILABILITY_MAX - AVAILABILITY_MIN, 0)} × facilitiesSpend / (facilitiesSpend + {formatCurrencyCompact(AVAILABILITY_K)})
               </p>
               <p className="mt-2 text-xs leading-5 text-charcoal-soft">
@@ -2799,7 +2799,7 @@ export default function FrontOfficeSimulator() {
 
             <div className="rounded-xl border border-forest/15 bg-white p-4">
               <h3 className="text-sm font-semibold text-charcoal">Team Strength</h3>
-              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[0.6875rem] leading-5 text-charcoal">
                 teamStrength = ({formatPercent(ROSTER_WEIGHT, 0)} × rosterQuality + {formatPercent(COACHING_WEIGHT, 0)} × coachingQuality) × availability
               </p>
               <p className="mt-2 text-xs leading-5 text-charcoal-soft">
@@ -2810,7 +2810,7 @@ export default function FrontOfficeSimulator() {
 
             <div className="rounded-xl border border-forest/15 bg-white p-4">
               <h3 className="text-sm font-semibold text-charcoal">Fixed Overhead</h3>
-              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[11px] leading-5 text-charcoal">
+              <p className="mt-2 rounded-lg bg-mist/60 px-2.5 py-2 font-mono text-[0.6875rem] leading-5 text-charcoal">
                 fixedOverhead = totalOperatingCost − (payroll + coaching + facilities +
                 development + marketing + gameday)
               </p>

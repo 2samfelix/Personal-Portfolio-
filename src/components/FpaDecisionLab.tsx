@@ -249,7 +249,7 @@ function SliderField({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest sm:h-1.5 max-sm:relative max-sm:box-content max-sm:-my-[18px] max-sm:bg-clip-content max-sm:py-[18px]"
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-forest/15 accent-forest sm:h-1.5 max-sm:relative max-sm:box-content max-sm:-my-[1.125rem] max-sm:bg-clip-content max-sm:py-[1.125rem]"
       />
     </label>
   );
@@ -334,14 +334,14 @@ function InfoTip({ text, label }: { text: string; label: string }) {
         }}
         aria-expanded={open}
         aria-label={label}
-        className="tap max-sm:z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-forest/30 text-[10px] font-bold leading-none text-forest/70 transition-colors hover:bg-forest/10"
+        className="tap max-sm:z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-forest/30 text-[0.625rem] font-bold leading-none text-forest/70 transition-colors hover:bg-forest/10"
       >
         i
       </button>
       {open && (
         <div
           role="note"
-          className="absolute left-0 top-6 z-10 w-64 rounded-lg border border-forest/15 bg-white p-3 text-[11px] font-normal normal-case leading-4 tracking-normal text-charcoal-soft shadow-lg"
+          className="absolute left-0 top-6 z-10 w-64 rounded-lg border border-forest/15 bg-white p-3 text-[0.6875rem] font-normal normal-case leading-4 tracking-normal text-charcoal-soft shadow-lg"
         >
           {text}
         </div>
@@ -498,19 +498,19 @@ function KpiCard({
 }) {
   return (
     <div className="flex flex-col gap-1 rounded-xl border border-forest/15 bg-white p-3">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
+      <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-charcoal-soft">
         {label}
       </span>
       <span className="text-2xl font-black tracking-tight text-charcoal">
         {value}
       </span>
       <span
-        className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}
+        className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${TONE_CLASS[tone]}`}
       >
         {badge}
       </span>
       {vsBase && (
-        <span className={`text-[11px] font-semibold ${VS_BASE_TEXT_CLASS[vsBase.tone]}`}>
+        <span className={`text-[0.6875rem] font-semibold ${VS_BASE_TEXT_CLASS[vsBase.tone]}`}>
           {vsBase.text}
         </span>
       )}
@@ -651,7 +651,7 @@ function ScenarioComparisonTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-forest/15 bg-white">
-      <table className="w-full min-w-[480px] text-left text-sm">
+      <table className="w-full min-w-[30rem] text-left text-sm">
         <thead>
           <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
             <th className="px-4 py-3 font-semibold">Metric</th>
@@ -892,7 +892,7 @@ function GenericForecastChart({
             x={PAD_LEFT - 8}
             y={valueY(v, minValue, maxValue) + 4}
             textAnchor="end"
-            className="fill-charcoal-soft text-[10px]"
+            className="fill-charcoal-soft text-[0.625rem]"
           >
             {valueFormatter(v)}
           </text>
@@ -903,7 +903,7 @@ function GenericForecastChart({
             x={monthX(m)}
             y={CHART_HEIGHT - PAD_BOTTOM + 18}
             textAnchor="middle"
-            className="fill-charcoal-soft text-[10px]"
+            className="fill-charcoal-soft text-[0.625rem]"
           >
             {monthYearLabel(m)}
           </text>
@@ -1080,7 +1080,7 @@ function MrrBridgeChart({ month }: { month: SaaSMonthResult }) {
                 x={x + barWidth / 2}
                 y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 18}
                 textAnchor="middle"
-                className="fill-charcoal-soft text-[10px]"
+                className="fill-charcoal-soft text-[0.625rem]"
               >
                 {step.label}
               </text>
@@ -1156,7 +1156,7 @@ function ChartCaptionBlock<TResult, TAssumptions>({
     <div className="mt-3 flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-forest/15 bg-white px-4 py-3">
         <div>
-          <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">
+          <span className="block text-[0.6875rem] font-semibold uppercase tracking-wide text-charcoal-soft">
             {chart.statLabel} at Month 12
           </span>
           <span className="text-xl font-bold text-charcoal">
@@ -1164,7 +1164,7 @@ function ChartCaptionBlock<TResult, TAssumptions>({
           </span>
         </div>
         <span
-          className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[caption.badge.tone]}`}
+          className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${TONE_CLASS[caption.badge.tone]}`}
         >
           {caption.badge.label}
         </span>
@@ -1714,7 +1714,7 @@ export default function FpaDecisionLab() {
                   setShowLoadList(false);
                   setShareUrl(null);
                 }}
-                className="rounded-lg border border-forest/20 px-2 py-1.5 max-sm:min-h-11 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+                className="rounded-lg border border-forest/20 px-2 py-1.5 max-sm:min-h-11 text-[0.6875rem] font-semibold text-forest transition-colors hover:bg-forest/5"
               >
                 Save
               </button>
@@ -1725,7 +1725,7 @@ export default function FpaDecisionLab() {
                   setShowSaveInput(false);
                   setShareUrl(null);
                 }}
-                className="rounded-lg border border-forest/20 px-2 py-1.5 max-sm:min-h-11 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+                className="rounded-lg border border-forest/20 px-2 py-1.5 max-sm:min-h-11 text-[0.6875rem] font-semibold text-forest transition-colors hover:bg-forest/5"
               >
                 Load
               </button>
@@ -1736,7 +1736,7 @@ export default function FpaDecisionLab() {
                   setShowSaveInput(false);
                   setShowLoadList(false);
                 }}
-                className="rounded-lg border border-forest/20 px-2 py-1.5 max-sm:min-h-11 text-[11px] font-semibold text-forest transition-colors hover:bg-forest/5"
+                className="rounded-lg border border-forest/20 px-2 py-1.5 max-sm:min-h-11 text-[0.6875rem] font-semibold text-forest transition-colors hover:bg-forest/5"
               >
                 Share
               </button>
@@ -1755,7 +1755,7 @@ export default function FpaDecisionLab() {
                   type="button"
                   onClick={saveScenario}
                   disabled={!saveNameDraft.trim()}
-                  className="rounded-md bg-forest px-2 py-1 max-sm:min-h-11 text-[11px] font-semibold text-cream transition-opacity disabled:opacity-40"
+                  className="rounded-md bg-forest px-2 py-1 max-sm:min-h-11 text-[0.6875rem] font-semibold text-cream transition-opacity disabled:opacity-40"
                 >
                   Save Current Assumptions
                 </button>
@@ -1765,7 +1765,7 @@ export default function FpaDecisionLab() {
             {showLoadList && (
               <div className="mb-3 flex flex-col gap-1 rounded-lg border border-forest/15 bg-forest/5 p-2">
                 {savedScenarios.length === 0 ? (
-                  <p className="text-[11px] text-charcoal-soft">No saved scenarios yet.</p>
+                  <p className="text-[0.6875rem] text-charcoal-soft">No saved scenarios yet.</p>
                 ) : (
                   savedScenarios.map((s) => (
                     <div key={s.name} className="flex items-center justify-between gap-2">
@@ -1783,7 +1783,7 @@ export default function FpaDecisionLab() {
                         type="button"
                         onClick={() => deleteScenario(s.name)}
                         aria-label={`Delete ${s.name}`}
-                        className="text-[11px] text-rust hover:underline max-sm:min-h-11 max-sm:min-w-11"
+                        className="text-[0.6875rem] text-rust hover:underline max-sm:min-h-11 max-sm:min-w-11"
                       >
                         Delete
                       </button>
@@ -1795,7 +1795,7 @@ export default function FpaDecisionLab() {
 
             {shareUrl && (
               <div className="mb-3 flex flex-col gap-1.5 rounded-lg border border-forest/15 bg-forest/5 p-2">
-                <p className="text-[10px] leading-4 text-charcoal-soft">
+                <p className="text-[0.625rem] leading-4 text-charcoal-soft">
                   Link copied (if permitted) — opening it recreates this
                   exact scenario:
                 </p>
@@ -1804,7 +1804,7 @@ export default function FpaDecisionLab() {
                   readOnly
                   value={shareUrl}
                   onFocus={(e) => e.target.select()}
-                  className="rounded-md border border-forest/20 bg-white px-2 py-1 max-sm:min-h-11 text-[10px] text-charcoal"
+                  className="rounded-md border border-forest/20 bg-white px-2 py-1 max-sm:min-h-11 text-[0.625rem] text-charcoal"
                 />
               </div>
             )}
@@ -1871,7 +1871,7 @@ export default function FpaDecisionLab() {
                   </div>
                 ))}
               </dl>
-              <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
+              <p className="mt-3 text-[0.6875rem] leading-4 text-charcoal-soft">
                 {customBaseline
                   ? "Starting cash derived from your uploaded CSV. Headcount, employee cost, G&A, and the expansion/contraction rates stay fixed model constants for this demo — not sliders."
                   : "Fixed model constants for this demo — not sliders. Starting Customers and Avg MRR per Customer are drivers above, not fixed facts. Expansion and contraction feed the NRR chart's retention bridge and are held constant so NRR responds only to the churn driver, never inferred from pricing or churn itself."}
@@ -1882,14 +1882,14 @@ export default function FpaDecisionLab() {
               title="Data & Upload"
               badge={
                 customBaseline ? (
-                  <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brass-ink">
+                  <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-wide text-brass-ink">
                     Imported
                   </span>
                 ) : undefined
               }
             >
               <div className="flex flex-col gap-3">
-                <p className="text-[11px] leading-4 text-charcoal-soft">
+                <p className="text-[0.6875rem] leading-4 text-charcoal-soft">
                   Upload your own company&apos;s monthly data to forecast
                   forward from real numbers instead of the sample company.
                   Required columns: {CSV_REQUIRED_COLUMNS.join(", ")}.
@@ -1905,13 +1905,13 @@ export default function FpaDecisionLab() {
                   />
                 </label>
                 {csvFileName && !csvError && (
-                  <p className="text-[11px] font-semibold text-forest">
+                  <p className="text-[0.6875rem] font-semibold text-forest">
                     Loaded {csvFileName} ({csvPreviewRows?.length ?? 0} row
                     {csvPreviewRows?.length === 1 ? "" : "s"})
                   </p>
                 )}
                 {csvError && (
-                  <p className="rounded-lg bg-rust-pale px-2.5 py-2 text-[11px] leading-4 text-rust">
+                  <p className="rounded-lg bg-rust-pale px-2.5 py-2 text-[0.6875rem] leading-4 text-rust">
                     {csvError}
                   </p>
                 )}
@@ -1920,7 +1920,7 @@ export default function FpaDecisionLab() {
                     {csvWarnings.map((w) => (
                       <li
                         key={w}
-                        className="text-[11px] leading-4 text-brass-ink before:mr-1 before:content-['⚠_']"
+                        className="text-[0.6875rem] leading-4 text-brass-ink before:mr-1 before:content-['⚠_']"
                       >
                         {w}
                       </li>
@@ -1929,7 +1929,7 @@ export default function FpaDecisionLab() {
                 )}
                 {csvPreviewRows && csvPreviewRows.length > 0 && (
                   <div className="overflow-x-auto rounded-lg border border-forest/10">
-                    <table className="w-full min-w-[280px] text-left text-[10px]">
+                    <table className="w-full min-w-[17.5rem] text-left text-[0.625rem]">
                       <thead>
                         <tr className="border-b border-forest/10 text-charcoal-soft">
                           <th className="px-2 py-1 font-semibold">Mo</th>
@@ -2055,7 +2055,7 @@ export default function FpaDecisionLab() {
                       </div>
                     ))}
                   </dl>
-                  <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
+                  <p className="mt-3 text-[0.6875rem] leading-4 text-charcoal-soft">
                     Fixed model constants for this demo — not sliders.
                     Utilization ramp speed and headcount growth carry their
                     own signed deltas per scenario (Upside ramps/hires
@@ -2137,7 +2137,7 @@ export default function FpaDecisionLab() {
                       </div>
                     ))}
                   </dl>
-                  <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
+                  <p className="mt-3 text-[0.6875rem] leading-4 text-charcoal-soft">
                     Fixed for this demo — not editable. Cap rate values the
                     portfolio; it never enters the cash-flow math. Occupancy
                     leases up (or slides) from today&apos;s level toward the
@@ -2245,7 +2245,7 @@ export default function FpaDecisionLab() {
                   vsBase={vsBaseFor(activeResult.ltvToCac, scenarioResults.base.ltvToCac, activeScenario)}
                 />
               </div>
-              <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+              <p className="mt-2 text-[0.6875rem] leading-4 text-charcoal-soft">
                 NRR is annualized (monthly retention rate compounded over 12
                 months) to match the 90–110% bands above, which are an
                 annual convention · CAC {formatCurrency(activeResult.cac)}{" "}
@@ -2356,7 +2356,7 @@ export default function FpaDecisionLab() {
                     const pct = (Math.abs(row.impact) / maxAbsImpact) * 100;
                     return (
                       <li key={row.key} className="flex items-center gap-3">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[0.6875rem] font-bold text-forest">
                           {i + 1}
                         </span>
                         <span className="w-32 shrink-0 text-xs font-semibold text-charcoal sm:w-40 sm:text-sm">
@@ -2381,7 +2381,7 @@ export default function FpaDecisionLab() {
                 })()}
               </ul>
               {sensitivityTab === "cash" && (
-                <p className="mt-3 text-[11px] leading-4 text-charcoal-soft">
+                <p className="mt-3 text-[0.6875rem] leading-4 text-charcoal-soft">
                   Runway impact shown in months where both the base and +10%
                   cases have finite runway:{" "}
                   {sensitivity
@@ -2426,7 +2426,7 @@ export default function FpaDecisionLab() {
                   {cfoCommentary.nextAction}
                 </p>
               </div>
-              <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+              <p className="mt-2 text-[0.6875rem] leading-4 text-charcoal-soft">
                 Generated deterministically from live model outputs — not AI-written.
               </p>
             </section>
@@ -2476,7 +2476,7 @@ export default function FpaDecisionLab() {
               {mcResult && (
                 <>
                   {mcStale && (
-                    <p className="mt-3 text-[11px] font-semibold text-brass-ink">
+                    <p className="mt-3 text-[0.6875rem] font-semibold text-brass-ink">
                       Assumptions changed since this run — click Run
                       Simulation to refresh.
                     </p>
@@ -2531,7 +2531,7 @@ export default function FpaDecisionLab() {
                 </>
               )}
 
-              <p className="mt-3 rounded-lg bg-brass-pale px-3 py-2 text-[11px] leading-4 text-brass-ink">
+              <p className="mt-3 rounded-lg bg-brass-pale px-3 py-2 text-[0.6875rem] leading-4 text-brass-ink">
                 Illustrative simulation based on user-defined assumptions,
                 not a forecast guarantee.
               </p>
@@ -2664,7 +2664,7 @@ export default function FpaDecisionLab() {
                       )}
                     />
                   </div>
-                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                  <p className="mt-2 text-[0.6875rem] leading-4 text-charcoal-soft">
                     Achieved utilization ramps toward a destination set by
                     target utilization, adjusted around a{" "}
                     {formatPercent(REFERENCE_CONVERSION, 0)} reference
@@ -2698,7 +2698,7 @@ export default function FpaDecisionLab() {
                     Scenario Comparison
                   </h2>
                   <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white">
-                    <table className="w-full min-w-[480px] text-left text-sm">
+                    <table className="w-full min-w-[30rem] text-left text-sm">
                       <thead>
                         <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
                           <th className="px-4 py-3 font-semibold">Metric</th>
@@ -2808,7 +2808,7 @@ export default function FpaDecisionLab() {
                         const pct = (Math.abs(row.impact) / maxAbsImpact) * 100;
                         return (
                           <li key={row.key} className="flex items-center gap-3">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[0.6875rem] font-bold text-forest">
                               {i + 1}
                             </span>
                             <span className="w-32 shrink-0 text-xs font-semibold text-charcoal sm:w-40 sm:text-sm">
@@ -2883,7 +2883,7 @@ export default function FpaDecisionLab() {
                       {consultingRiskAndAction.nextActionPhrase}
                     </p>
                   </div>
-                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                  <p className="mt-2 text-[0.6875rem] leading-4 text-charcoal-soft">
                     Generated deterministically from live model outputs — not AI-written.
                   </p>
                 </section>
@@ -3046,7 +3046,7 @@ export default function FpaDecisionLab() {
                       )}
                     />
                   </div>
-                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                  <p className="mt-2 text-[0.6875rem] leading-4 text-charcoal-soft">
                     Implied Valuation = annualized NOI ÷ cap rate — cap rate
                     values the asset only, it never enters the cash-flow
                     math. DSCR = annualized NOI ÷ annual debt service.
@@ -3073,7 +3073,7 @@ export default function FpaDecisionLab() {
                     Scenario Comparison
                   </h2>
                   <div className="mt-3 overflow-x-auto rounded-xl border border-forest/15 bg-white">
-                    <table className="w-full min-w-[480px] text-left text-sm">
+                    <table className="w-full min-w-[30rem] text-left text-sm">
                       <thead>
                         <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
                           <th className="px-4 py-3 font-semibold">Metric</th>
@@ -3188,7 +3188,7 @@ export default function FpaDecisionLab() {
                         const pct = (Math.abs(row.impact) / maxAbsImpact) * 100;
                         return (
                           <li key={row.key} className="flex items-center gap-3">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest/10 text-[0.6875rem] font-bold text-forest">
                               {i + 1}
                             </span>
                             <span className="w-32 shrink-0 text-xs font-semibold text-charcoal sm:w-40 sm:text-sm">
@@ -3257,7 +3257,7 @@ export default function FpaDecisionLab() {
                       {realEstateRiskAndAction.nextActionPhrase}
                     </p>
                   </div>
-                  <p className="mt-2 text-[11px] leading-4 text-charcoal-soft">
+                  <p className="mt-2 text-[0.6875rem] leading-4 text-charcoal-soft">
                     Generated deterministically from live model outputs — not AI-written.
                   </p>
                 </section>

@@ -120,10 +120,10 @@ export function EpsBridgeWaterfall({ steps }: { steps: BridgeStep[] }) {
                   <text x={x + barWidth / 2} y={yTop - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="#2a2820">
                     {valueLabel}
                   </text>
-                  <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 16} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
+                  <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 16} textAnchor="middle" className="fill-charcoal-soft text-[0.5625rem]">
                     {step.label}
                   </text>
-                  <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 28} textAnchor="middle" className="fill-charcoal-soft text-[9px]">
+                  <text x={x + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 28} textAnchor="middle" className="fill-charcoal-soft text-[0.5625rem]">
                     {step.sublabel}
                   </text>
                 </g>
@@ -179,12 +179,12 @@ export function EpsPathChart({ labels, values }: { labels: string[]; values: num
             <line x1={PAD_LEFT} x2={CHART_WIDTH - PAD_RIGHT} y1={valueY(0, minValue, maxValue)} y2={valueY(0, minValue, maxValue)} stroke="#2a2820" strokeOpacity={0.4} strokeDasharray="3 3" />
           )}
           {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
-            <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[10px]">
+            <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[0.625rem]">
               {formatPercent(v, 1)}
             </text>
           ))}
           {labels.map((label, i) => (
-            <text key={label} x={periodX(i, count)} y={CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[10px]">
+            <text key={label} x={periodX(i, count)} y={CHART_HEIGHT - PAD_BOTTOM + 18} textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"} className="fill-charcoal-soft text-[0.625rem]">
               {label}
             </text>
           ))}
@@ -250,7 +250,7 @@ export function AmortizationBarChart({ labels, values }: { labels: string[]; val
                 <text x={x + barWidth / 2} y={yTop - 8} textAnchor="middle" fontSize={11} fontWeight={700} className="fill-charcoal">
                   {formatUsdM(v)}
                 </text>
-                <text x={x + barWidth / 2} y={BAR_HEIGHT - BAR_PAD_BOTTOM + 18} textAnchor="middle" className="fill-charcoal-soft text-[10px]">
+                <text x={x + barWidth / 2} y={BAR_HEIGHT - BAR_PAD_BOTTOM + 18} textAnchor="middle" className="fill-charcoal-soft text-[0.625rem]">
                   {labels[i]}
                 </text>
               </g>
@@ -355,7 +355,7 @@ export function SynergyHeatmap({
           />
         </svg>
       </ChartScroll>
-      <p className="mt-2 text-[10px] text-charcoal-soft">
+      <p className="mt-2 text-[0.625rem] text-charcoal-soft">
         Rows: annual pre-tax synergies. Columns: foregone cash yield. Brass outline: base case ($0 synergies, 4.0% yield). Dashed line: where the grid crosses from dilutive (rust) to accretive (forest).
       </p>
     </div>

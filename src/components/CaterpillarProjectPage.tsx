@@ -182,7 +182,7 @@ function ExhibitFigure({
           <img
             src={src}
             alt={alt}
-            className="w-full min-w-[620px] min-[720px]:!mt-0"
+            className="w-full min-w-[38.75rem] min-[720px]:!mt-0"
             style={{ marginTop: -headerOffset }}
           />
         </div>
@@ -328,7 +328,7 @@ export default function CaterpillarProjectPage({
                 <span className="block text-2xl font-black text-charcoal">{stat.value}</span>
                 <span className="mt-1 block text-xs leading-5 text-charcoal-soft">{stat.label}</span>
                 {stat.detail && (
-                  <span className="mt-1 block text-[11px] leading-4 text-charcoal-soft">{stat.detail}</span>
+                  <span className="mt-1 block text-[0.6875rem] leading-4 text-charcoal-soft">{stat.detail}</span>
                 )}
               </div>
             ))}
@@ -383,7 +383,7 @@ export default function CaterpillarProjectPage({
             Q1 2026 vs. Q2 2026 — What Changed
           </h2>
           <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
-            <table className={`w-full min-w-[420px] text-left text-sm ${STACK_TABLE}`}>
+            <table className={`w-full min-w-[26.25rem] text-left text-sm ${STACK_TABLE}`}>
               <thead className={STACK_HEAD}>
                 <tr className="border-b border-forest/15">
                   <th className="px-4 py-3 font-semibold text-charcoal">Construction Industries</th>
@@ -427,7 +427,7 @@ export default function CaterpillarProjectPage({
             accounting identity, so the test supports direction rather than size.
           </p>
           <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
-            <table className={`w-full min-w-[520px] text-left text-sm ${STACK_TABLE}`}>
+            <table className={`w-full min-w-[32.5rem] text-left text-sm ${STACK_TABLE}`}>
               <thead className={STACK_HEAD}>
                 <tr className="border-b border-forest/15">
                   <th className="px-4 py-3 font-semibold text-charcoal">Construction Industries</th>
@@ -585,7 +585,7 @@ export default function CaterpillarProjectPage({
             profit bridges remain only partly itemized.
           </p>
           <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
-            <table className={`w-full min-w-[420px] text-left text-sm ${STACK_TABLE}`}>
+            <table className={`w-full min-w-[26.25rem] text-left text-sm ${STACK_TABLE}`}>
               <thead className={STACK_HEAD}>
                 <tr className="border-b border-forest/15">
                   <th className="px-4 py-3 font-semibold text-charcoal">Construction Industries</th>
@@ -675,7 +675,7 @@ export default function CaterpillarProjectPage({
 
         {/* Compact bottom downloads line */}
         <section className="mt-12 border-t border-forest/10 pt-8">
-          <p className="text-sm text-charcoal-soft max-sm:leading-[44px]">
+          <p className="text-sm text-charcoal-soft max-sm:leading-[2.75rem]">
             Downloads:{" "}
             {pdfDeliverable && (
               <a

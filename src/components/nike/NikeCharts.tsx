@@ -161,7 +161,7 @@ export function MultiSeriesLineChart({
               x={PAD_LEFT - 8}
               y={valueY(v, minValue, maxValue) + 4}
               textAnchor="end"
-              className="fill-charcoal-soft text-[10px]"
+              className="fill-charcoal-soft text-[0.625rem]"
             >
               {valueFormatter(v)}
             </text>
@@ -172,7 +172,7 @@ export function MultiSeriesLineChart({
               x={periodX(i, count)}
               y={CHART_HEIGHT - PAD_BOTTOM + 18}
               textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"}
-              className="fill-charcoal-soft text-[10px]"
+              className="fill-charcoal-soft text-[0.625rem]"
             >
               {label}
             </text>
@@ -273,7 +273,7 @@ export function SegmentTrajectoryChart({
               x={PAD_LEFT - 8}
               y={valueY(v, minValue, maxValue) + 4}
               textAnchor="end"
-              className="fill-charcoal-soft text-[10px]"
+              className="fill-charcoal-soft text-[0.625rem]"
             >
               {formatNikeBillions(v)}
             </text>
@@ -284,7 +284,7 @@ export function SegmentTrajectoryChart({
               x={periodX(i, count)}
               y={CHART_HEIGHT - PAD_BOTTOM + 18}
               textAnchor={i === 0 ? "start" : i === count - 1 ? "end" : "middle"}
-              className="fill-charcoal-soft text-[10px]"
+              className="fill-charcoal-soft text-[0.625rem]"
             >
               {label}
             </text>
@@ -420,7 +420,7 @@ export function MarginBridgeWaterfall({ steps }: { steps: MarginBridgeStep[] }) 
                     {valueLabel}
                   </text>
                   <foreignObject x={x - colWidth / 2 + barWidth / 2} y={BRIDGE_HEIGHT - BRIDGE_PAD_BOTTOM + 6} width={colWidth} height={34}>
-                    <div className="text-center text-[9px] leading-[10px] text-charcoal-soft">{step.label}</div>
+                    <div className="text-center text-[0.5625rem] leading-[0.625rem] text-charcoal-soft">{step.label}</div>
                   </foreignObject>
                 </g>
               );

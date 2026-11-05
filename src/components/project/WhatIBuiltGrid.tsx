@@ -30,7 +30,7 @@ export function WhatIBuiltGrid({
             <>
               <div className="flex items-start justify-between gap-3">
                 <p className="text-base font-bold text-charcoal">{item.title}</p>
-                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
+                <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
                   {item.format}
                 </span>
               </div>

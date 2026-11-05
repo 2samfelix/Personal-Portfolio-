@@ -74,7 +74,7 @@ const TAG_CLASS: Record<string, string> = {
 /** A Sourced / Derived / Assumed label beside a figure, as in the workbook. */
 function Tag({ tag }: { tag: string }) {
   return (
-    <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${TAG_CLASS[tag] ?? TAG_CLASS.Text}`}>
+    <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide ${TAG_CLASS[tag] ?? TAG_CLASS.Text}`}>
       {tag}
     </span>
   );
@@ -91,8 +91,8 @@ function SectionHeading({ id, eyebrow, children }: { id: string; eyebrow?: strin
   );
 }
 
-const TH = "px-4 py-3 text-right text-[13px] font-semibold uppercase tracking-wide text-charcoal-soft";
-const TH_LEFT = "px-4 py-3 text-left text-[13px] font-semibold uppercase tracking-wide text-charcoal-soft";
+const TH = "px-4 py-3 text-right text-[0.8125rem] font-semibold uppercase tracking-wide text-charcoal-soft";
+const TH_LEFT = "px-4 py-3 text-left text-[0.8125rem] font-semibold uppercase tracking-wide text-charcoal-soft";
 const TD = "px-4 py-3 text-right text-base tabular-nums text-charcoal";
 
 function utc(iso: string): string {
@@ -181,7 +181,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
             <div>
               <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
                 {TAGS.map((t) => (
-                  <li key={t} className="rounded-full bg-cream/10 px-2.5 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-cream">
+                  <li key={t} className="rounded-full bg-cream/10 px-2.5 py-0.5 text-[0.75rem] font-semibold uppercase tracking-wide text-cream">
                     {t}
                   </li>
                 ))}
@@ -484,7 +484,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
               <li key={s.what} className="relative flex gap-4 pb-6 md:flex-col md:gap-3 md:pb-0">
                 {/* Connector: vertical on phones, horizontal from md. */}
                 {i < timeline.length - 1 && (
-                  <span aria-hidden="true" className="absolute left-[11px] top-7 bottom-0 w-0.5 bg-forest/20 md:left-7 md:right-[-1rem] md:top-[11px] md:bottom-auto md:h-0.5 md:w-auto" />
+                  <span aria-hidden="true" className="absolute left-[0.6875rem] top-7 bottom-0 w-0.5 bg-forest/20 md:left-7 md:right-[-1rem] md:top-[0.6875rem] md:bottom-auto md:h-0.5 md:w-auto" />
                 )}
                 <span
                   aria-hidden="true"
@@ -694,7 +694,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
               >
                 <div className="flex items-start justify-between gap-3">
                   <p className="min-w-0 break-words text-lg font-bold text-charcoal">{item.title}</p>
-                  <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
+                  <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
                     {item.format}
                   </span>
                 </div>

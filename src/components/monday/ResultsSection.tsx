@@ -16,8 +16,8 @@ import { REPO_URL, loadMondayCharts, loadMondayPlan, loadResultsInputs, type Cel
 import { METRIC_KEYS, Q3_RELEASE, formatValue, loadMondayResults, type MetricKey, type MondayResults, type ScoredRow, type TriggerKey } from "@/lib/mondayResults";
 
 const LABEL = "text-[#7a5a30]";
-const TH = "px-4 py-3 text-right text-[13px] font-semibold uppercase tracking-wide text-charcoal-soft";
-const TH_LEFT = "px-4 py-3 text-left text-[13px] font-semibold uppercase tracking-wide text-charcoal-soft";
+const TH = "px-4 py-3 text-right text-[0.8125rem] font-semibold uppercase tracking-wide text-charcoal-soft";
+const TH_LEFT = "px-4 py-3 text-left text-[0.8125rem] font-semibold uppercase tracking-wide text-charcoal-soft";
 const TD = "px-4 py-3 text-right text-base tabular-nums text-charcoal";
 /** The Actual column before the results. */
 export const PENDING_ACTUAL = "Reported Nov 9, 2026";

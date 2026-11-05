@@ -60,14 +60,14 @@ function TreeBox({
   value: string;
 }) {
   return (
-    <div className="flex min-w-[150px] flex-col items-center gap-1 rounded-xl border border-forest/20 bg-white px-4 py-3 text-center">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-brass-ink">
+    <div className="flex min-w-[9.375rem] flex-col items-center gap-1 rounded-xl border border-forest/20 bg-white px-4 py-3 text-center">
+      <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brass-ink">
         {title}
       </span>
       <span className="text-lg font-black tracking-tight text-charcoal">
         {value}
       </span>
-      <span className="text-[11px] leading-4 text-charcoal-soft">
+      <span className="text-[0.6875rem] leading-4 text-charcoal-soft">
         {formula}
       </span>
     </div>
@@ -76,7 +76,7 @@ function TreeBox({
 
 function Connector() {
   return (
-    <span className="my-1 text-xl font-bold text-forest/60 sm:mx-2 sm:my-0" aria-hidden>
+    <span className="my-1 text-xl font-bold text-forest/80 sm:mx-2 sm:my-0" aria-hidden>
       <span className="sm:hidden">&darr;</span>
       <span className="hidden sm:inline">&rarr;</span>
     </span>
@@ -111,7 +111,7 @@ function TornadoBar({
       <div className="relative h-7 w-full rounded-md bg-mist">
         <div className="absolute inset-y-0 left-1/2 w-px bg-forest/30" />
         <div
-          className={`absolute inset-y-0 flex items-center justify-end rounded-l-md pr-1.5 text-[10px] font-semibold text-cream ${
+          className={`absolute inset-y-0 flex items-center justify-end rounded-l-md pr-1.5 text-[0.625rem] font-semibold text-cream ${
             downDelta >= 0 ? "bg-forest" : "bg-rust"
           }`}
           style={{
@@ -123,7 +123,7 @@ function TornadoBar({
           {downWidth > 8 ? "-5%" : ""}
         </div>
         <div
-          className={`absolute inset-y-0 left-1/2 flex items-center rounded-r-md pl-1.5 text-[10px] font-semibold text-cream ${
+          className={`absolute inset-y-0 left-1/2 flex items-center rounded-r-md pl-1.5 text-[0.625rem] font-semibold text-cream ${
             upDelta >= 0 ? "bg-forest" : "bg-rust"
           }`}
           style={{
@@ -203,7 +203,7 @@ export default function DriverSensitivitySimulator() {
             <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
               Inputs
             </h2>
-            <span className="rounded-full bg-forest/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-forest">
+            <span className="rounded-full bg-forest/10 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
               Illustrative sample data
             </span>
           </div>
@@ -314,7 +314,7 @@ export default function DriverSensitivitySimulator() {
             Sensitivity Table
           </h2>
           <div className="mt-4 overflow-x-auto rounded-xl border border-forest/15 bg-white">
-            <table className="w-full min-w-[560px] text-left text-sm">
+            <table className="w-full min-w-[35rem] text-left text-sm">
               <thead>
                 <tr className="border-b border-forest/10 text-xs uppercase tracking-wide text-charcoal-soft">
                   <th className="px-4 py-3 font-semibold">Driver</th>

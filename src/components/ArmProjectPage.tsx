@@ -92,10 +92,10 @@ function ChartCaption({
     <div className="mt-3 flex flex-col gap-3 lg:mt-0">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-forest/15 bg-white px-4 py-3">
         <div>
-          <span className="block text-[11px] font-semibold uppercase tracking-wide text-charcoal-soft">{statLabel}</span>
+          <span className="block text-[0.6875rem] font-semibold uppercase tracking-wide text-charcoal-soft">{statLabel}</span>
           <span className="text-xl font-bold text-charcoal">{statValue}</span>
         </div>
-        <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONE_CLASS[badgeTone]}`}>
+        <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide ${TONE_CLASS[badgeTone]}`}>
           {badgeLabel}
         </span>
         <span className="ml-auto text-sm font-semibold text-charcoal-soft">{deltaText}</span>

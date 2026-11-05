@@ -112,13 +112,13 @@ const CREDENTIALS: Credential[] = [
 function CredentialStatusPill({ status }: { status: CredentialStatus }) {
   if (status === "Completed") {
     return (
-      <span className="inline-flex w-fit shrink-0 items-center rounded-full bg-brass-light px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-forest">
+      <span className="inline-flex w-fit shrink-0 items-center rounded-full bg-brass-light px-2.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
         Completed
       </span>
     );
   }
   return (
-    <span className="inline-flex w-fit shrink-0 items-center rounded-full border border-cream/40 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-cream">
+    <span className="inline-flex w-fit shrink-0 items-center rounded-full border border-cream/40 px-2.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-wide text-cream">
       In Progress
     </span>
   );
@@ -168,8 +168,22 @@ export default function Experience() {
             <span aria-hidden="true" className="absolute left-0 top-3 h-3 w-3 -translate-x-[calc(50%+1px)] rounded-full bg-brass" />
             <p className="text-sm font-semibold uppercase tracking-widest text-brass-ink">Professional Experience</p>
             <h3 className="mt-3 text-3xl font-black leading-tight tracking-tight text-charcoal sm:text-4xl">Accounting &amp; Payroll Associate</h3>
-            <p className="mt-2 text-lg font-semibold text-forest">
-              Marketstaff <span className="font-normal text-charcoal-soft">· Chicago, IL</span>
+            <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-lg font-semibold text-forest">
+              {/* The supplied logo with its white background made transparent, otherwise
+                  untouched; shown 40px tall, well below its intrinsic height. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logos/marketstaff.png"
+                alt="Marketstaff logo: MARKET in blue above STAFF in orange"
+                width={1411}
+                height={536}
+                loading="lazy"
+                decoding="async"
+                className="block h-10 w-auto"
+              />
+              <span>
+                Marketstaff <span className="font-normal text-charcoal-soft">· Chicago, IL</span>
+              </span>
             </p>
 
             {/* The two periods on the timeline rule. */}
@@ -241,7 +255,7 @@ export default function Experience() {
             <div className="mt-8 border-t border-cream/20 pt-5">
               <h4 className="text-lg font-semibold leading-7 text-cream">Syracuse University — Martin J. Whitman School of Management</h4>
               <p className="mt-2 text-base text-cream/90">B.S. in Finance &amp; Management — Dual Major</p>
-              <p className="mt-3 text-sm font-semibold uppercase tracking-wide text-brass-light">Syracuse, NY · Degree expected Winter 2026</p>
+              <p className="mt-3 text-sm font-semibold uppercase tracking-wide text-brass-light">Syracuse, NY · 2026</p>
             </div>
           </div>
 
