@@ -255,7 +255,7 @@ export default function Experience() {
             <div className="mt-8 border-t border-cream/20 pt-5">
               <h4 className="text-lg font-semibold leading-7 text-cream">Syracuse University — Martin J. Whitman School of Management</h4>
               <p className="mt-2 text-base text-cream/90">B.S. in Finance &amp; Management — Dual Major</p>
-              <p className="mt-3 text-sm font-semibold uppercase tracking-wide text-brass-light">Syracuse, NY · Degree expected Winter 2026</p>
+              <p className="mt-3 text-sm font-semibold uppercase tracking-wide text-brass-light">Syracuse, NY · 2026</p>
             </div>
           </div>
 
