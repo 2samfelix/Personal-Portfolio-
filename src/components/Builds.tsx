@@ -32,14 +32,20 @@ function FeaturedBuildCard({ build }: { build: Project }) {
   return (
     <Link
       href={build.link!}
-      className="flex flex-col overflow-hidden rounded-2xl border border-forest/15 bg-white transition-colors hover:border-forest/35"
+      className="flex flex-col overflow-hidden rounded-2xl border border-forest/15 bg-white transition-colors hover:border-forest/35 xl:-mx-16"
     >
-      <div className="aspect-[1208/335] w-full overflow-hidden border-b border-forest/10 bg-cream">
+      {/* The full strategy map at 2x (scripts/capture-front-office-demo.mjs), at its own aspect;
+          from 1280px the card runs 64px wider than the column on each side. */}
+      <div className="w-full overflow-hidden border-b border-forest/10 bg-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={build.visual}
+          src="/project-visuals/front-office-demo.webp"
           alt={`${build.title} preview`}
-          className="h-full w-full object-cover object-top"
+          width={2140}
+          height={1046}
+          loading="lazy"
+          decoding="async"
+          className="block h-auto w-full"
         />
       </div>
       <div className="flex flex-col gap-3 p-6 sm:p-8">
