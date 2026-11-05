@@ -1,191 +1,179 @@
-// "Core Expertise": a vertical reel of real work on the left, a short skills list on the
-// right. Server-rendered; the reel advances one card about every 3.5 seconds with CSS
-// only (globals.css .reel-*, plus the keyframes generated below for this card count),
-// pauses on hover and focus, and stands still (and scrolls) under reduced motion,
-// below 640px and in print.
+// "Core Expertise": a slim vertical reel of real work beside a five-row skills list.
+// Server-rendered. The reel scrolls up slowly and continuously with CSS only (globals.css
+// .reel-*): the cards are listed twice, so moving the track up by half of its height
+// loops without a seam. It pauses on hover and focus; under reduced motion and in print
+// it stands still and shows the first three cards.
 //
-// Every card is real: workbook screenshots (public/expertise, Playwright captures of the
-// built site), project thumbnails (public/project-visuals, drawn from source data and
-// checked by test:thumbnails), a verbatim snippet of the engine's code, and tool cards
-// that carry a name and no data. The one logo is Python's, from the simple-icons package
-// (CC0-1.0); the other tools are plain text labels.
+// Every card is real: crops of the workbook previews (public/expertise/cards, cut from
+// the Playwright captures by scripts/crop-expertise-cards.mjs), project thumbnails
+// (public/project-visuals, drawn from source data and checked by test:thumbnails),
+// seven verbatim lines of the engine's validator, and tool cards that carry a name and
+// no data. Icons: Python's mark from simple-icons (CC0-1.0); everything else is a generic
+// lucide glyph (ISC). No logo is drawn here.
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { ChartColumn, Database, Sparkles, Table } from "lucide-react";
 import { siPython } from "simple-icons";
 import thumbAlts from "@/lib/projectVisualAlts.generated.json";
 
-const SKILLS = [
-  { name: "Excel", line: "Financial modeling, valuation and scenario analysis" },
-  { name: "Python", line: "Automation, testing and finance workflows" },
-  { name: "SQL", line: "Project in progress" },
-  { name: "Power BI", line: "Project in progress" },
-  { name: "AI / LLM tools", line: "Prototyping and analysis support, with outputs checked by code" },
-];
-
-// fpa_engine/brief_validator.py, lines 204-211, at fpa-intelligence-engine main (c91e254).
-const CODE_SNIPPET = `def matches_fact(token: NumberToken, fact: PacketFact) -> bool:
-    """The token renders this fact: within its written rounding of the value, or equal to the canonical value
-    rounded to the fact's display step (so "~510 bps" matches 509.07 shown at a 10 bps step)."""
-    expressed = _expressed_with_step(fact, token.unit)
-    if expressed is None:
-        return False
-    value, step = expressed
-    return _close(token, value) or abs(token.value - abs(round_to_step(value, step))) <= EPSILON`;
-
-type Card =
-  | { kind: "image"; id: string; src: string; width: number; height: number; alt: string; caption: string; href: string; bg: string }
-  | { kind: "code"; id: string; caption: string; href: string }
-  | { kind: "tool"; id: string; name: string; note: string; inProgress?: boolean; python?: boolean };
-
-const shot = (id: string, alt: string, caption: string, href: string): Card => ({
-  kind: "image",
-  id,
-  src: `/expertise/${id}.webp`,
-  width: 1056,
-  height: 792,
-  alt,
-  caption,
-  href,
-  bg: "#ffffff",
-});
-
-// A project card thumbnail, letterboxed into the 4:3 frame on its own background colour.
-const thumb = (slug: keyof typeof thumbAlts, caption: string, bg: string, width = 1280): Card => ({
-  kind: "image",
-  id: `thumb-${slug}`,
-  src: `/project-visuals/${slug}.webp`,
-  width,
-  height: 800,
-  alt: thumbAlts[slug],
-  caption,
-  href: `/projects/${slug}`,
-  bg,
-});
-
-const CARDS: Card[] = [
-  shot(
-    "arm-dcf",
-    "Arm valuation workbook preview, From WACC to share price: a 9.8% WACC leads to a DCF-implied share price of $51.54 against a $272.21 current market price.",
-    "Arm Holdings: inside the valuation",
-    "/projects/arm",
-  ),
-  { kind: "tool", id: "tool-excel", name: "Excel", note: "Financial modeling, valuation and scenario analysis" },
-  thumb("caterpillar", "Caterpillar demand quality", "#ecdfc1"),
-  { kind: "code", id: "code-validator", caption: "FP&A Intelligence Engine: brief_validator.py", href: "/projects/fpa-intelligence-engine" },
-  shot(
-    "msft-deal-model",
-    "Microsoft × Activision deal model preview: the accretion/dilution bridge, with pro forma EPS of $9.29 against $9.68 standalone, a 4.07% dilution.",
-    "Microsoft × Activision: inside the deal model",
-    "/projects/microsoft-activision",
-  ),
-  { kind: "tool", id: "tool-python", name: "Python", note: "Automation, testing and finance workflows", python: true },
-  thumb("monday-operating-plan", "monday.com Operating Plan", "#1e392c", 1360),
-  shot(
-    "cat-dealer-inventory",
-    "Caterpillar operating workbook preview, Analysis sheet: the CI dealer inventory change row shows 1,500 in Q1 2026 and 400 in Q2 2026 ($mm), with the Q2 cell linked to the Dealer Inventory sheet.",
-    "Caterpillar: model preview",
-    "/projects/caterpillar-demand-quality",
-  ),
-  { kind: "tool", id: "tool-sql", name: "SQL", note: "Project in progress", inProgress: true },
-  thumb("fpa-intelligence-engine", "FP&A Intelligence Engine: validation lab", "#ffffff"),
-  shot(
-    "nike-offset",
-    "Nike model preview, Does North America offset Greater China: Greater China loses about $1.34B of revenue by FY2028E, North America needs 3.22% annual growth, the base case has 4.25%, a $439M cushion.",
-    "Nike: scenario dashboard",
-    "/projects/nike",
-  ),
-  { kind: "tool", id: "tool-powerbi", name: "Power BI", note: "Project in progress", inProgress: true },
-  shot(
-    "engine-trace",
-    "FP&A Intelligence Engine trace: statement B1 of the accepted brief with the four sourced facts and the reconciliation it cites.",
-    "FP&A Intelligence Engine: trace a statement",
-    "/projects/fpa-intelligence-engine",
-  ),
-  thumb("nike", "Nike: North America scenarios", "#f6f1e7"),
-  shot(
-    "ai-accepted-brief",
-    "The start of the engine's accepted Caterpillar Q2 2026 brief: statement B1, a fact linked to four facts and one reconciliation.",
-    "FP&A Intelligence Engine: accepted brief",
-    "/projects/fpa-intelligence-engine",
-  ),
-];
-
-const STEP_SECONDS = 3.5;
-const MOVE_SECONDS = 0.6;
-
-/** Keyframes that hold each card at the top of the reel, then move up one slot. Every
- *  card has the same height, and the track holds the cards twice, so one slot is
- *  100% / (2 × count) of the track and the loop ends exactly where it began. */
-function reelKeyframes(count: number): string {
-  const frames: string[] = [];
-  const hold = ((STEP_SECONDS - MOVE_SECONDS) / STEP_SECONDS) * (100 / count);
-  for (let i = 0; i < count; i++) {
-    const start = (i * 100) / count;
-    const y = (-100 * i) / (2 * count);
-    frames.push(`${start.toFixed(4)}%,${(start + hold).toFixed(4)}%{transform:translateY(${y.toFixed(4)}%)}`);
-  }
-  frames.push(`100%{transform:translateY(-50%)}`);
+function PythonMark({ size }: { size: number }) {
   return (
-    `@keyframes reel-step{${frames.join("")}}` +
-    `@media screen and (prefers-reduced-motion:no-preference) and (min-width:640px){` +
-    `.reel-track{animation:reel-step ${count * STEP_SECONDS}s ease-in-out infinite}}`
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="currentColor">
+      <path d={siPython.path} />
+    </svg>
   );
 }
 
-const FRAME = "block aspect-[4/3] w-full overflow-hidden";
-// One line and a fixed height from 640px, where the reel moves and every card must be the
-// same height; below that the reel stands still and long captions wrap.
-const CAPTION =
-  "flex min-h-12 items-center justify-between gap-3 border-t border-forest/10 px-4 py-2 text-sm font-semibold text-forest sm:h-12 sm:py-0";
+const ICON: Record<string, (size: number) => ReactNode> = {
+  excel: (s) => <Table size={s} strokeWidth={1.75} aria-hidden="true" />,
+  python: (s) => <PythonMark size={s} />,
+  sql: (s) => <Database size={s} strokeWidth={1.75} aria-hidden="true" />,
+  powerbi: (s) => <ChartColumn size={s} strokeWidth={1.75} aria-hidden="true" />,
+  ai: (s) => <Sparkles size={s} strokeWidth={1.75} aria-hidden="true" />,
+};
+
+const SKILLS = [
+  { id: "excel", name: "Excel", line: "Financial modeling, valuation and scenario analysis" },
+  { id: "python", name: "Python", line: "Automation, testing and finance workflows" },
+  { id: "sql", name: "SQL", line: "Project in progress" },
+  { id: "powerbi", name: "Power BI", line: "Project in progress" },
+  { id: "ai", name: "AI / LLM tools", line: "Prototyping and analysis support, with outputs checked by code" },
+];
+
+// fpa_engine/brief_validator.py, lines 674-680 (validate_statements), at
+// fpa-intelligence-engine main (c91e254), shown without their shared 4-space indent.
+const CODE_LINES = `for s in statements:
+    if _check_references(s, ctx, errors):
+        _check_kind(s, ctx, errors)
+        _check_prose(s, ctx, errors)
+        _check_assumptions(s, ctx, errors)
+        _check_voice(s, ctx, errors)
+        _check_numbers(s, ctx, errors)`;
+
+type Card =
+  | { kind: "sheet"; id: string; src: string; width: number; height: number; alt: string; caption: string; href: string }
+  | { kind: "thumb"; id: string; slug: keyof typeof thumbAlts; width: number; caption: string; position: string }
+  | { kind: "code"; id: string }
+  | { kind: "tool"; id: string; icon: string; name: string; inProgress?: boolean };
+
+// Thumbnails are cropped to a wide band through the chart (object-position picks it).
+// Mixed so that no two cards of a kind sit next to each other, the loop's seam included.
+const CARDS: Card[] = [
+  {
+    kind: "sheet",
+    id: "arm",
+    src: "/expertise/cards/arm-dcf.webp",
+    width: 558,
+    height: 149,
+    alt: "Arm DCF Valuation rows: implied equity value $54,842, diluted shares 1,064.1, implied share price $51.54, current market price $272.21, DCF implied value vs. current price −81.1%.",
+    caption: "Arm · DCF implied price vs. market",
+    href: "/projects/arm",
+  },
+  { kind: "thumb", id: "t-cat", slug: "caterpillar", width: 1280, caption: "Caterpillar · CI sales bridge", position: "50% 30%" },
+  { kind: "tool", id: "excel", icon: "excel", name: "Excel" },
+  {
+    kind: "sheet",
+    id: "msft",
+    src: "/expertise/cards/msft-deal-model.webp",
+    width: 476,
+    height: 140,
+    alt: "Microsoft × Activision accretion/dilution rows: pro forma net income $69,382, diluted shares 7,472.0, pro forma diluted EPS $9.29, standalone diluted EPS $9.68, EPS accretion (dilution) (4.1%).",
+    caption: "Microsoft × Activision · EPS bridge",
+    href: "/projects/microsoft-activision",
+  },
+  { kind: "thumb", id: "t-monday", slug: "monday-operating-plan", width: 1360, caption: "monday.com · revenue growth", position: "50% 45%" },
+  { kind: "code", id: "code" },
+  {
+    kind: "sheet",
+    id: "nike",
+    src: "/expertise/cards/nike-offset.webp",
+    width: 570,
+    height: 152,
+    alt: "Nike Scenario Dashboard rows: base-case FY2028E North America revenue $22,290, base-case North America annualized growth 4.25%, cushion over the required revenue $439.",
+    caption: "Nike · does North America offset China?",
+    href: "/projects/nike",
+  },
+  { kind: "tool", id: "python", icon: "python", name: "Python" },
+  { kind: "thumb", id: "t-engine", slug: "fpa-intelligence-engine", width: 1280, caption: "FP&A Engine · detection map", position: "50% 40%" },
+  {
+    kind: "sheet",
+    id: "trace",
+    src: "/expertise/cards/engine-trace.webp",
+    width: 462,
+    height: 150,
+    alt: "FP&A Intelligence Engine trace, fact S01: CI segment sales $8,346M, Q2 2026, scope CI, benchmark cell Construction Industries!I5, source 2Q 2026 Earnings Release.",
+    caption: "FP&A Engine · a sourced fact",
+    href: "/projects/fpa-intelligence-engine",
+  },
+  { kind: "tool", id: "sql", icon: "sql", name: "SQL", inProgress: true },
+  { kind: "thumb", id: "t-nike", slug: "nike", width: 1280, caption: "Nike · North America scenarios", position: "50% 55%" },
+  { kind: "tool", id: "powerbi", icon: "powerbi", name: "Power BI", inProgress: true },
+  { kind: "thumb", id: "t-msft", slug: "msft", width: 1280, caption: "Microsoft × Activision · diluted EPS", position: "50% 35%" },
+];
+
+const THUMB_HREF: Record<string, string> = {
+  caterpillar: "/projects/caterpillar-demand-quality",
+  "monday-operating-plan": "/projects/monday-operating-plan",
+  "fpa-intelligence-engine": "/projects/fpa-intelligence-engine",
+  nike: "/projects/nike",
+  msft: "/projects/microsoft-activision",
+};
+
+const SHELL =
+  "reel-card mb-2 block h-[120px] overflow-hidden rounded-md border border-forest/15 bg-white shadow-[0_1px_3px_rgba(42,40,32,0.08)]";
+const LINK =
+  "transition-colors hover:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-mist";
+const CAPTION = "flex h-8 items-center border-t border-forest/10 px-3 text-[11px] font-semibold text-forest";
 
 function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
-  const shell = "reel-card mb-4 block overflow-hidden rounded-2xl border border-forest/15 bg-white";
+  const tab = hidden ? -1 : undefined;
   if (card.kind === "tool") {
     return (
-      <div className={shell}>
-        <div className={`${FRAME} flex flex-col items-center justify-center gap-4 bg-cream px-6 text-center`}>
-          {card.python && (
-            <svg viewBox="0 0 24 24" width={56} height={56} aria-hidden="true" fill={`#${siPython.hex}`}>
-              <path d={siPython.path} />
-            </svg>
-          )}
-          <span className="text-3xl font-black tracking-tight text-charcoal">{card.name}</span>
-          {card.inProgress && (
-            <span className="rounded-full bg-charcoal px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cream">
-              In progress
-            </span>
-          )}
-        </div>
-        <span className={`${CAPTION} !font-medium !text-charcoal-soft`}>
-          <span className="min-w-0 sm:truncate">{card.inProgress ? `${card.name}: project in progress` : card.note}</span>
-        </span>
+      <div className={`${SHELL} flex items-center gap-3 px-5`}>
+        <span className="text-forest">{ICON[card.icon](28)}</span>
+        <span className="text-lg font-bold tracking-tight text-charcoal">{card.name}</span>
+        {card.inProgress && (
+          <span className="ml-auto rounded-full bg-brass-pale px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
+            In progress
+          </span>
+        )}
       </div>
     );
   }
-  const linkClass = `${shell} group transition-colors hover:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-mist`;
-  const caption = (
-    <span className={CAPTION}>
-      <span className="min-w-0 sm:truncate">{card.caption}</span>
-      <span aria-hidden="true">&rarr;</span>
-    </span>
-  );
   if (card.kind === "code") {
     return (
-      <Link href={card.href} tabIndex={hidden ? -1 : undefined} className={linkClass}>
-        <span className={`${FRAME} bg-forest-dark p-3 sm:p-4`}>
-          <span className="block font-mono text-[10px] font-semibold text-brass-light sm:text-[11px]">
-            fpa_engine/brief_validator.py
-          </span>
-          <pre className="mt-1.5 whitespace-pre-wrap break-words font-mono text-[9px] leading-[1.4] text-cream sm:mt-2 sm:text-[10.5px] sm:leading-[1.45]">
-            <code>{CODE_SNIPPET}</code>
-          </pre>
+      <Link href="/projects/fpa-intelligence-engine" tabIndex={tab} className={`${SHELL} ${LINK} !bg-forest px-3 py-2.5`}>
+        <span className="block font-mono text-[10px] text-brass-light">brief_validator.py · lines 674–680</span>
+        <pre className="mt-1 overflow-hidden font-mono text-[9px] leading-[1.35] text-cream">
+          <code>{CODE_LINES}</code>
+        </pre>
+        <span className="sr-only">FP&amp;A Intelligence Engine: the validator&apos;s checks, in its source code</span>
+      </Link>
+    );
+  }
+  if (card.kind === "thumb") {
+    return (
+      <Link href={THUMB_HREF[card.slug]} tabIndex={tab} className={`${SHELL} ${LINK}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/project-visuals/${card.slug}.webp`}
+          alt={hidden ? "" : thumbAlts[card.slug]}
+          width={card.width}
+          height={800}
+          loading="lazy"
+          decoding="async"
+          className="block h-[86px] w-full object-cover"
+          style={{ objectPosition: card.position }}
+        />
+        <span className={CAPTION}>
+          <span className="truncate">{card.caption}</span>
         </span>
-        {caption}
       </Link>
     );
   }
   return (
-    <Link href={card.href} tabIndex={hidden ? -1 : undefined} className={linkClass}>
-      <span className={`${FRAME} flex items-center`} style={{ backgroundColor: card.bg }}>
+    <Link href={card.href} tabIndex={tab} className={`${SHELL} ${LINK}`}>
+      <span className="flex h-[86px] items-center justify-center px-2 py-1.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={card.src}
@@ -194,24 +182,25 @@ function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
           height={card.height}
           loading="lazy"
           decoding="async"
-          className="block h-full w-full object-contain"
+          className="block h-auto max-h-full w-auto max-w-full"
         />
       </span>
-      {caption}
+      <span className={CAPTION}>
+        <span className="truncate">{card.caption}</span>
+      </span>
     </Link>
   );
 }
 
 function VisualReel() {
   return (
-    <div className="reel reel-mask relative mx-auto h-[520px] w-full max-w-md overflow-hidden pt-12">
-      <style>{reelKeyframes(CARDS.length)}</style>
+    <div className="reel reel-mask relative h-[260px] w-full overflow-hidden md:h-[380px] md:w-[300px]">
       <div className="reel-track flex flex-col">
         {CARDS.map((c) => (
           <ReelCard key={c.id} card={c} />
         ))}
         {/* The second copy only completes the loop: hidden from assistive technology and
-            the tab order, and not rendered when the reel stands still. */}
+            the tab order, and not shown when the reel stands still. */}
         <div className="reel-dup" aria-hidden="true" inert>
           {CARDS.map((c) => (
             <ReelCard key={c.id} card={c} hidden />
@@ -225,22 +214,21 @@ function VisualReel() {
 export default function Expertise() {
   return (
     <section id="expertise" className="border-t border-forest/10 bg-mist">
-      <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-40">
-        <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-center">
-          <VisualReel />
-          <div>
-            {/* A darker brass than the site's: brass on mist is 3.72:1; this is 4.70:1 (AA). */}
-            <p className="text-sm font-semibold uppercase tracking-widest text-[#826136]">Core Expertise</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">I build and test financial models.</h2>
-            <ul className="mt-8 flex flex-col divide-y divide-forest/10">
-              {SKILLS.map((s) => (
-                <li key={s.name} className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:gap-4">
-                  <h3 className="shrink-0 text-base font-semibold text-charcoal sm:w-36">{s.name}</h3>
-                  <p className="text-sm leading-6 text-charcoal-soft">{s.line}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <div className="mx-auto grid w-full max-w-5xl grid-cols-1 items-center gap-8 px-6 py-12 md:grid-cols-[300px_minmax(0,1fr)] md:gap-12 md:py-20 lg:gap-20">
+        <VisualReel />
+        <div>
+          {/* A darker brass than the site's: brass on mist is 3.72:1; this is 4.70:1 (AA). */}
+          <p className="text-sm font-semibold uppercase tracking-widest text-[#826136]">Core Expertise</p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">I build and test financial models.</h2>
+          <ul className="mt-6">
+            {SKILLS.map((s) => (
+              <li key={s.id} className="flex items-center gap-3 border-t border-forest/15 py-3 first:border-t-0">
+                <span className="shrink-0 text-forest">{ICON[s.id](24)}</span>
+                <h3 className="shrink-0 text-base font-semibold text-charcoal">{s.name}</h3>
+                <p className="ml-auto text-right text-sm leading-5 text-charcoal-soft">{s.line}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>

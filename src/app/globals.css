@@ -49,11 +49,21 @@
   }
 }
 
-/* Core Expertise reel: one card at a time moves up, about every 3.5 seconds, pausing
-   while the pointer or keyboard focus is inside. The stepping keyframes are generated in
-   Expertise.tsx for its card count and apply only on screens 640px and wider with no
-   reduced-motion preference. Otherwise (and in print) it stands still: the looping copy
-   is not shown and the reel scrolls, so every card can be reached. */
+/* Core Expertise reel: the cards scroll up slowly and continuously. The track lists the
+   cards twice, so moving it up by half of its height loops without a seam. It pauses
+   while the pointer or keyboard focus is inside. Under reduced motion and in print it
+   stands still and shows the first three cards, with no fade and no looping copy. */
+@keyframes reel-scroll-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+.reel-track {
+  animation: reel-scroll-up 52s linear infinite;
+}
 .reel:hover .reel-track,
 .reel:focus-within .reel-track {
   animation-play-state: paused;
@@ -62,28 +72,31 @@
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    black 8%,
-    black 92%,
+    black 12%,
+    black 88%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    black 8%,
-    black 92%,
+    black 12%,
+    black 88%,
     transparent 100%
   );
 }
 
-@media (prefers-reduced-motion: reduce), (max-width: 639.98px), print {
+@media (prefers-reduced-motion: reduce), print {
   .reel-track {
     animation: none;
   }
-  .reel-dup {
+  .reel-dup,
+  .reel-track > .reel-card:nth-child(n + 4) {
     display: none;
   }
   .reel {
-    overflow-y: auto;
+    height: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 }
 
