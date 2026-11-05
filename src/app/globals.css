@@ -49,21 +49,11 @@
   }
 }
 
-/* Core Expertise reel (restored from 4d89fd5^): cards scroll up slowly in a loop,
-   pausing while the pointer or keyboard focus is inside. Under reduced motion, below
-   640px and in print it stands still: the looping copy is not shown and the reel
-   scrolls, so every card can be reached. */
-@keyframes reel-scroll-up {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-50%);
-  }
-}
-.reel-track {
-  animation: reel-scroll-up 55s linear infinite;
-}
+/* Core Expertise reel: one card at a time moves up, about every 3.5 seconds, pausing
+   while the pointer or keyboard focus is inside. The stepping keyframes are generated in
+   Expertise.tsx for its card count and apply only on screens 640px and wider with no
+   reduced-motion preference. Otherwise (and in print) it stands still: the looping copy
+   is not shown and the reel scrolls, so every card can be reached. */
 .reel:hover .reel-track,
 .reel:focus-within .reel-track {
   animation-play-state: paused;
@@ -72,15 +62,15 @@
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    black 14%,
-    black 86%,
+    black 8%,
+    black 92%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    black 14%,
-    black 86%,
+    black 8%,
+    black 92%,
     transparent 100%
   );
 }

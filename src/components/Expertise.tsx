@@ -1,120 +1,220 @@
-// "Core Expertise": the layout of the Oct 25 version (4d89fd5^, a vertical reel of cards
-// beside the skills list) with the six skills and proof lines from 4ec43db^, unchanged.
-// Server-rendered; the reel moves with CSS only (globals.css .reel-*), pauses on hover
-// and focus, and stays still (and scrollable) under reduced motion and below 640px.
+// "Core Expertise": a vertical reel of real work on the left, a short skills list on the
+// right. Server-rendered; the reel advances one card about every 3.5 seconds with CSS
+// only (globals.css .reel-*, plus the keyframes generated below for this card count),
+// pauses on hover and focus, and stands still (and scrolls) under reduced motion,
+// below 640px and in print.
+//
+// Every card is real: workbook screenshots (public/expertise, Playwright captures of the
+// built site), project thumbnails (public/project-visuals, drawn from source data and
+// checked by test:thumbnails), a verbatim snippet of the engine's code, and tool cards
+// that carry a name and no data. The one logo is Python's, from the simple-icons package
+// (CC0-1.0); the other tools are plain text labels.
 import Link from "next/link";
+import { siPython } from "simple-icons";
+import thumbAlts from "@/lib/projectVisualAlts.generated.json";
 
-// Each skill points at real work, with one figure checked against its source:
-// - Arm: DCF Valuation!B48 ($51.54, implied share price) and B49 ($272.21,
-//   "Current Market Price (Aug 10, 2026)").
-// - Microsoft x Activision: Synergy Breakeven!B10 ($3,636.67M, required annual
-//   pre-tax synergies, "Solves to EPS-neutral").
-// - Nike: Scenario Dashboard!B42 ($439.45M cushion, base case, FY2028E), read
-//   after a LibreOffice recalculation (the saved workbook has no cached values).
-// - Caterpillar: Analysis!H15:I15 (CI dealer inventory change, $1,500M in
-//   Q1 2026 and $400M in Q2 2026), quoted from the 10-Qs on Dealer Inventory.
-// - 1,205 formula cells across the four preview workbooks (Caterpillar 234,
-//   Arm 307, Microsoft x Activision 363, Nike 301), counted in the workbook XML;
-//   739 automated test cases in fpa-intelligence-engine (pytest's count), all passing
-//   at the engine's main (c91e254).
-// - Run 1 of 5 of the engine evaluation, the only run recorded on the site; it was
-//   accepted on the first attempt, before the Oct 30, 2026 benchmark corrections.
-// Images are Playwright captures of the built site (public/expertise).
 const SKILLS = [
-  {
-    id: "dcf",
-    name: "DCF valuation",
-    proof: "My fundamentals-only DCF implies $51.54 a share for Arm, against a $272.21 market price on Aug 10, 2026.",
-    image: "/expertise/arm-dcf.webp",
-    alt: "Arm valuation workbook preview, From WACC to share price: a 9.8% WACC leads to a DCF-implied share price of $51.54 against a $272.21 current market price.",
-    caption: "Arm Holdings: inside the valuation",
-    href: "/projects/arm#inside-the-valuation",
-  },
-  {
-    id: "mna",
-    name: "M&A accretion / dilution",
-    proof: "My model puts the annual pre-tax synergies Microsoft needs for the Activision deal to be EPS-neutral at $3.64B.",
-    image: "/expertise/msft-deal-model.webp",
-    alt: "Microsoft × Activision deal model preview: the accretion/dilution bridge, with pro forma EPS of $9.29 against $9.68 standalone, a 4.07% dilution.",
-    caption: "Microsoft × Activision Blizzard: inside the deal model",
-    href: "/projects/microsoft-activision#inside-the-deal-model",
-  },
-  {
-    id: "three-statement",
-    name: "Three-statement and scenario modeling",
-    proof: "In my Nike base case, North America's growth covers Greater China's modeled decline by FY2028E with a $439M cushion.",
-    image: "/expertise/nike-offset.webp",
-    alt: "Nike model preview, Does North America offset Greater China: Greater China loses about $1.34B of revenue by FY2028E, North America needs 3.22% annual growth, the base case has 4.25%, a $439M cushion.",
-    caption: "Nike: inside the model, scenario dashboard",
-    href: "/projects/nike#inside-the-model",
-  },
-  {
-    id: "demand",
-    name: "Demand and inventory analysis",
-    proof: "Caterpillar's disclosed Construction Industries dealer-inventory build fell from $1.5B in Q1 2026 to $400M in Q2 2026.",
-    image: "/expertise/cat-dealer-inventory.webp",
-    alt: "Caterpillar operating workbook preview, Analysis sheet: the CI dealer inventory change row shows 1,500 in Q1 2026 and 400 in Q2 2026 ($mm), with the Q2 cell linked to the Dealer Inventory sheet.",
-    caption: "Caterpillar demand quality: model preview",
-    href: "/projects/caterpillar-demand-quality#model-preview",
-  },
-  {
-    id: "excel-python",
-    name: "Excel and Python",
-    proof: "About 1,200 live formulas across four workbooks, and the FP&A Intelligence Engine with 739 automated test cases passing.",
-    image: "/expertise/engine-trace.webp",
-    alt: "FP&A Intelligence Engine trace: statement B1 of the accepted brief with the four sourced facts and the reconciliation it cites.",
-    caption: "FP&A Intelligence Engine: trace a statement",
-    href: "/projects/fpa-intelligence-engine#trace-a-statement",
-  },
-  {
-    id: "ai",
-    name: "AI / LLM tools",
-    proof: "An AI-written brief on a Caterpillar Q2 2026 benchmark, accepted by deterministic checks on the first attempt (run 1, the run recorded on the site).",
-    image: "/expertise/ai-accepted-brief.webp",
-    alt: "The start of the engine's accepted Caterpillar Q2 2026 brief: statement B1, a fact linked to four facts and one reconciliation.",
-    caption: "FP&A Intelligence Engine: accepted brief, run 1 of 5",
-    href: "/projects/fpa-intelligence-engine#trace-a-statement",
-  },
+  { name: "Excel", line: "Financial modeling, valuation and scenario analysis" },
+  { name: "Python", line: "Automation, testing and finance workflows" },
+  { name: "SQL", line: "Project in progress" },
+  { name: "Power BI", line: "Project in progress" },
+  { name: "AI / LLM tools", line: "Prototyping and analysis support, with outputs checked by code" },
 ];
 
-/** One reel card: the real screenshot, its caption, linking to the project section. */
-function ReelCard({ skill, hidden = false }: { skill: (typeof SKILLS)[number]; hidden?: boolean }) {
+// fpa_engine/brief_validator.py, lines 204-211, at fpa-intelligence-engine main (c91e254).
+const CODE_SNIPPET = `def matches_fact(token: NumberToken, fact: PacketFact) -> bool:
+    """The token renders this fact: within its written rounding of the value, or equal to the canonical value
+    rounded to the fact's display step (so "~510 bps" matches 509.07 shown at a 10 bps step)."""
+    expressed = _expressed_with_step(fact, token.unit)
+    if expressed is None:
+        return False
+    value, step = expressed
+    return _close(token, value) or abs(token.value - abs(round_to_step(value, step))) <= EPSILON`;
+
+type Card =
+  | { kind: "image"; id: string; src: string; width: number; height: number; alt: string; caption: string; href: string; bg: string }
+  | { kind: "code"; id: string; caption: string; href: string }
+  | { kind: "tool"; id: string; name: string; note: string; inProgress?: boolean; python?: boolean };
+
+const shot = (id: string, alt: string, caption: string, href: string): Card => ({
+  kind: "image",
+  id,
+  src: `/expertise/${id}.webp`,
+  width: 1056,
+  height: 792,
+  alt,
+  caption,
+  href,
+  bg: "#ffffff",
+});
+
+// A project card thumbnail, letterboxed into the 4:3 frame on its own background colour.
+const thumb = (slug: keyof typeof thumbAlts, caption: string, bg: string, width = 1280): Card => ({
+  kind: "image",
+  id: `thumb-${slug}`,
+  src: `/project-visuals/${slug}.webp`,
+  width,
+  height: 800,
+  alt: thumbAlts[slug],
+  caption,
+  href: `/projects/${slug}`,
+  bg,
+});
+
+const CARDS: Card[] = [
+  shot(
+    "arm-dcf",
+    "Arm valuation workbook preview, From WACC to share price: a 9.8% WACC leads to a DCF-implied share price of $51.54 against a $272.21 current market price.",
+    "Arm Holdings: inside the valuation",
+    "/projects/arm",
+  ),
+  { kind: "tool", id: "tool-excel", name: "Excel", note: "Financial modeling, valuation and scenario analysis" },
+  thumb("caterpillar", "Caterpillar demand quality", "#ecdfc1"),
+  { kind: "code", id: "code-validator", caption: "FP&A Intelligence Engine: brief_validator.py", href: "/projects/fpa-intelligence-engine" },
+  shot(
+    "msft-deal-model",
+    "Microsoft × Activision deal model preview: the accretion/dilution bridge, with pro forma EPS of $9.29 against $9.68 standalone, a 4.07% dilution.",
+    "Microsoft × Activision: inside the deal model",
+    "/projects/microsoft-activision",
+  ),
+  { kind: "tool", id: "tool-python", name: "Python", note: "Automation, testing and finance workflows", python: true },
+  thumb("monday-operating-plan", "monday.com Operating Plan", "#1e392c", 1360),
+  shot(
+    "cat-dealer-inventory",
+    "Caterpillar operating workbook preview, Analysis sheet: the CI dealer inventory change row shows 1,500 in Q1 2026 and 400 in Q2 2026 ($mm), with the Q2 cell linked to the Dealer Inventory sheet.",
+    "Caterpillar: model preview",
+    "/projects/caterpillar-demand-quality",
+  ),
+  { kind: "tool", id: "tool-sql", name: "SQL", note: "Project in progress", inProgress: true },
+  thumb("fpa-intelligence-engine", "FP&A Intelligence Engine: validation lab", "#ffffff"),
+  shot(
+    "nike-offset",
+    "Nike model preview, Does North America offset Greater China: Greater China loses about $1.34B of revenue by FY2028E, North America needs 3.22% annual growth, the base case has 4.25%, a $439M cushion.",
+    "Nike: scenario dashboard",
+    "/projects/nike",
+  ),
+  { kind: "tool", id: "tool-powerbi", name: "Power BI", note: "Project in progress", inProgress: true },
+  shot(
+    "engine-trace",
+    "FP&A Intelligence Engine trace: statement B1 of the accepted brief with the four sourced facts and the reconciliation it cites.",
+    "FP&A Intelligence Engine: trace a statement",
+    "/projects/fpa-intelligence-engine",
+  ),
+  thumb("nike", "Nike: North America scenarios", "#f6f1e7"),
+  shot(
+    "ai-accepted-brief",
+    "The start of the engine's accepted Caterpillar Q2 2026 brief: statement B1, a fact linked to four facts and one reconciliation.",
+    "FP&A Intelligence Engine: accepted brief",
+    "/projects/fpa-intelligence-engine",
+  ),
+];
+
+const STEP_SECONDS = 3.5;
+const MOVE_SECONDS = 0.6;
+
+/** Keyframes that hold each card at the top of the reel, then move up one slot. Every
+ *  card has the same height, and the track holds the cards twice, so one slot is
+ *  100% / (2 × count) of the track and the loop ends exactly where it began. */
+function reelKeyframes(count: number): string {
+  const frames: string[] = [];
+  const hold = ((STEP_SECONDS - MOVE_SECONDS) / STEP_SECONDS) * (100 / count);
+  for (let i = 0; i < count; i++) {
+    const start = (i * 100) / count;
+    const y = (-100 * i) / (2 * count);
+    frames.push(`${start.toFixed(4)}%,${(start + hold).toFixed(4)}%{transform:translateY(${y.toFixed(4)}%)}`);
+  }
+  frames.push(`100%{transform:translateY(-50%)}`);
   return (
-    <Link
-      href={skill.href}
-      tabIndex={hidden ? -1 : undefined}
-      className="group mb-4 block overflow-hidden rounded-2xl border border-forest/15 bg-white transition-colors hover:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-mist"
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={skill.image}
-        alt={hidden ? "" : skill.alt}
-        width={1056}
-        height={792}
-        loading="lazy"
-        decoding="async"
-        className="block aspect-[4/3] h-auto w-full object-cover object-left-top"
-      />
-      <span className="flex min-h-11 items-center justify-between gap-3 border-t border-forest/10 px-4 py-2.5 text-sm font-semibold text-forest">
-        <span className="min-w-0">{skill.caption}</span>
-        <span aria-hidden="true">&rarr;</span>
+    `@keyframes reel-step{${frames.join("")}}` +
+    `@media screen and (prefers-reduced-motion:no-preference) and (min-width:640px){` +
+    `.reel-track{animation:reel-step ${count * STEP_SECONDS}s ease-in-out infinite}}`
+  );
+}
+
+const FRAME = "block aspect-[4/3] w-full overflow-hidden";
+// One line and a fixed height from 640px, where the reel moves and every card must be the
+// same height; below that the reel stands still and long captions wrap.
+const CAPTION =
+  "flex min-h-12 items-center justify-between gap-3 border-t border-forest/10 px-4 py-2 text-sm font-semibold text-forest sm:h-12 sm:py-0";
+
+function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
+  const shell = "reel-card mb-4 block overflow-hidden rounded-2xl border border-forest/15 bg-white";
+  if (card.kind === "tool") {
+    return (
+      <div className={shell}>
+        <div className={`${FRAME} flex flex-col items-center justify-center gap-4 bg-cream px-6 text-center`}>
+          {card.python && (
+            <svg viewBox="0 0 24 24" width={56} height={56} aria-hidden="true" fill={`#${siPython.hex}`}>
+              <path d={siPython.path} />
+            </svg>
+          )}
+          <span className="text-3xl font-black tracking-tight text-charcoal">{card.name}</span>
+          {card.inProgress && (
+            <span className="rounded-full bg-charcoal px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cream">
+              In progress
+            </span>
+          )}
+        </div>
+        <span className={`${CAPTION} !font-medium !text-charcoal-soft`}>
+          <span className="min-w-0 sm:truncate">{card.inProgress ? `${card.name}: project in progress` : card.note}</span>
+        </span>
+      </div>
+    );
+  }
+  const linkClass = `${shell} group transition-colors hover:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-mist`;
+  const caption = (
+    <span className={CAPTION}>
+      <span className="min-w-0 sm:truncate">{card.caption}</span>
+      <span aria-hidden="true">&rarr;</span>
+    </span>
+  );
+  if (card.kind === "code") {
+    return (
+      <Link href={card.href} tabIndex={hidden ? -1 : undefined} className={linkClass}>
+        <span className={`${FRAME} bg-forest-dark p-3 sm:p-4`}>
+          <span className="block font-mono text-[10px] font-semibold text-brass-light sm:text-[11px]">
+            fpa_engine/brief_validator.py
+          </span>
+          <pre className="mt-1.5 whitespace-pre-wrap break-words font-mono text-[9px] leading-[1.4] text-cream sm:mt-2 sm:text-[10.5px] sm:leading-[1.45]">
+            <code>{CODE_SNIPPET}</code>
+          </pre>
+        </span>
+        {caption}
+      </Link>
+    );
+  }
+  return (
+    <Link href={card.href} tabIndex={hidden ? -1 : undefined} className={linkClass}>
+      <span className={`${FRAME} flex items-center`} style={{ backgroundColor: card.bg }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={card.src}
+          alt={hidden ? "" : card.alt}
+          width={card.width}
+          height={card.height}
+          loading="lazy"
+          decoding="async"
+          className="block h-full w-full object-contain"
+        />
       </span>
+      {caption}
     </Link>
   );
 }
 
 function VisualReel() {
   return (
-    <div className="reel reel-mask relative mx-auto h-[520px] w-full max-w-md overflow-hidden">
+    <div className="reel reel-mask relative mx-auto h-[520px] w-full max-w-md overflow-hidden pt-12">
+      <style>{reelKeyframes(CARDS.length)}</style>
       <div className="reel-track flex flex-col">
-        {SKILLS.map((s) => (
-          <ReelCard key={s.id} skill={s} />
+        {CARDS.map((c) => (
+          <ReelCard key={c.id} card={c} />
         ))}
         {/* The second copy only completes the loop: hidden from assistive technology and
             the tab order, and not rendered when the reel stands still. */}
         <div className="reel-dup" aria-hidden="true" inert>
-          {SKILLS.map((s) => (
-            <ReelCard key={s.id} skill={s} hidden />
+          {CARDS.map((c) => (
+            <ReelCard key={c.id} card={c} hidden />
           ))}
         </div>
       </div>
@@ -134,9 +234,9 @@ export default function Expertise() {
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">I build and test financial models.</h2>
             <ul className="mt-8 flex flex-col divide-y divide-forest/10">
               {SKILLS.map((s) => (
-                <li key={s.id} className="py-4 first:pt-0 last:pb-0">
-                  <h3 className="text-base font-semibold text-charcoal">{s.name}</h3>
-                  <p className="mt-1 text-sm leading-6 text-charcoal-soft">{s.proof}</p>
+                <li key={s.name} className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:gap-4">
+                  <h3 className="shrink-0 text-base font-semibold text-charcoal sm:w-36">{s.name}</h3>
+                  <p className="text-sm leading-6 text-charcoal-soft">{s.line}</p>
                 </li>
               ))}
             </ul>
