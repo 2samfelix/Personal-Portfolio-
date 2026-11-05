@@ -28,6 +28,9 @@ type LeadershipEntry = {
   dates?: string;
   location: string;
   bullets: string[];
+  /** The organization's logo as supplied (public/logos): margins trimmed, otherwise
+   *  untouched. Shown 40px tall, below its intrinsic height, never scaled up. */
+  logo?: { src: string; width: number; height: number; alt: string };
 };
 
 const LEADERSHIP: LeadershipEntry[] = [
@@ -36,6 +39,12 @@ const LEADERSHIP: LeadershipEntry[] = [
     role: "Secretary & Assistant Treasurer",
     dates: "Fall 2025 – Spring 2026",
     location: "Syracuse, NY",
+    logo: {
+      src: "/logos/su-running-club.png",
+      width: 175,
+      height: 118,
+      alt: "Syracuse University Running Club logo: orange SU letters crossed by a navy Run Club banner",
+    },
     bullets: [
       "Helped organize and track funds for meets, travel, uniforms, entry fees, and other club operating costs.",
       "Supported day-to-day club administration and organization.",
@@ -46,6 +55,12 @@ const LEADERSHIP: LeadershipEntry[] = [
     role: "Member",
     dates: "2023 – 2025",
     location: "Syracuse, NY",
+    logo: {
+      src: "/logos/su-investment-club.png",
+      width: 172,
+      height: 172,
+      alt: "Syracuse University Investment Club logo: navy SUIC letters with a gold bar",
+    },
     bullets: [
       "Attended weekly investment and market-analysis meetings.",
       "Participated in the club's stock-pitch competition.",
@@ -55,11 +70,23 @@ const LEADERSHIP: LeadershipEntry[] = [
     org: "Franklin Supply Chain Club",
     dates: "2023 – 2025",
     location: "Syracuse University",
+    logo: {
+      src: "/logos/franklin-supply-chain-club.png",
+      width: 107,
+      height: 107,
+      alt: "Franklin Supply Chain Club logo: black and yellow arrows pointing up and to the right in a yellow frame",
+    },
     bullets: [],
   },
   {
     org: "Delta Tau Delta fraternity",
     location: "Syracuse University",
+    logo: {
+      src: "/logos/delta-tau-delta.png",
+      width: 320,
+      height: 144,
+      alt: "Delta Tau Delta logo: purple and gold Greek letters ΔΤΔ above a purple Delta Tau Delta banner",
+    },
     bullets: [],
   },
 ];
@@ -176,6 +203,18 @@ export default function Experience() {
           <ul className="mt-10 grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {LEADERSHIP.map((entry) => (
               <li key={entry.org} className="border-t border-forest/20 pt-5">
+                {entry.logo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={entry.logo.src}
+                    alt={entry.logo.alt}
+                    width={entry.logo.width}
+                    height={entry.logo.height}
+                    loading="lazy"
+                    decoding="async"
+                    className="mb-4 block h-10 w-auto"
+                  />
+                )}
                 {entry.dates && <p className="text-xl font-light tracking-tight text-charcoal-soft">{entry.dates}</p>}
                 <h4 className="mt-2 text-base font-semibold leading-6 text-charcoal">{entry.org}</h4>
                 <p className="mt-1 text-sm text-charcoal-soft">{entry.role ? `${entry.role} · ${entry.location}` : entry.location}</p>

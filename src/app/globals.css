@@ -49,10 +49,10 @@
   }
 }
 
-/* Core Expertise reel (restored from 4d89fd5^): cards scroll up slowly in a loop,
-   pausing while the pointer or keyboard focus is inside. Under reduced motion, below
-   640px and in print it stands still: the looping copy is not shown and the reel
-   scrolls, so every card can be reached. */
+/* Core Expertise reel: the cards scroll up slowly and continuously. The track lists the
+   cards twice, so moving it up by half of its height loops without a seam. It pauses
+   while the pointer or keyboard focus is inside. Under reduced motion and in print it
+   stands still and shows the first three cards, with no fade and no looping copy. */
 @keyframes reel-scroll-up {
   from {
     transform: translateY(0);
@@ -62,7 +62,7 @@
   }
 }
 .reel-track {
-  animation: reel-scroll-up 55s linear infinite;
+  animation: reel-scroll-up 52s linear infinite;
 }
 .reel:hover .reel-track,
 .reel:focus-within .reel-track {
@@ -72,28 +72,31 @@
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    black 14%,
-    black 86%,
+    black 12%,
+    black 88%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    black 14%,
-    black 86%,
+    black 12%,
+    black 88%,
     transparent 100%
   );
 }
 
-@media (prefers-reduced-motion: reduce), (max-width: 639.98px), print {
+@media (prefers-reduced-motion: reduce), print {
   .reel-track {
     animation: none;
   }
-  .reel-dup {
+  .reel-dup,
+  .reel-track > .reel-card:nth-child(n + 4) {
     display: none;
   }
   .reel {
-    overflow-y: auto;
+    height: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 }
 
