@@ -44,6 +44,9 @@ export type Project = {
   headlineStat?: string;
   githubUrl?: string;
   caseStudy?: CaseStudy;
+  /** A smaller tool card's thumbnail: a capture of the built tool by
+   *  scripts/capture-tool-thumbnails.mjs, 1200 x 750 WebP. */
+  cardThumb?: { src: string; alt: string; label?: string };
 };
 
 export const flagshipProjects: Project[] = [
@@ -331,6 +334,10 @@ export const builds: Project[] = [
     status: "live",
     icon: "🧭",
     link: "/tools/fpa-decision-lab",
+    cardThumb: {
+      src: "/tool-visuals/fpa-decision-lab.webp",
+      alt: "FP&A Decision Lab, MRR Growth chart in its default SaaS case: 12 months of monthly recurring revenue, with the Base case rising to about $240K, the Upside case above it and the Downside case declining.",
+    },
   },
   {
     slug: "front-office-simulator",
@@ -359,6 +366,11 @@ export const builds: Project[] = [
     status: "live",
     icon: "📉",
     link: "/tools/driver-sensitivity-simulator",
+    cardThumb: {
+      src: "/tool-visuals/driver-sensitivity-simulator.webp",
+      alt: "Driver Sensitivity Simulator tornado chart on illustrative sample data: a ±5% move changes EBITDA by $525K for Price, $305K for COGS % of revenue, $221K for Volume and $160K for operating expenses.",
+      label: "Illustrative sample data",
+    },
   },
 ];
 

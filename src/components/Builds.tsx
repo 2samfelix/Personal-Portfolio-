@@ -5,24 +5,50 @@ function BuildCard({ build }: { build: Project }) {
   return (
     <Link
       href={build.link!}
-      className="flex items-start gap-3 rounded-xl border border-forest/15 bg-white p-4 transition-colors hover:border-forest/35"
+      className="flex flex-col overflow-hidden rounded-xl border border-forest/15 bg-white transition-colors hover:border-forest/35"
     >
-      <span className="text-base">{build.icon}</span>
-      <div>
-        <div className="flex items-center gap-2">
-          <h4 className="text-sm font-semibold text-charcoal">
-            {build.title}
-          </h4>
-          <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
-            Interactive Demo
+      {build.cardThumb && (
+        <div className="border-b border-forest/10 bg-cream">
+          {/* A capture of the built tool (scripts/capture-tool-thumbnails.mjs); the
+              explicit size reserves its 16:10 box before it loads. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={build.cardThumb.src}
+            alt={build.cardThumb.alt}
+            width={1200}
+            height={750}
+            loading="lazy"
+            decoding="async"
+            className="block aspect-[16/10] h-auto w-full"
+          />
+          {/* Below the capture, not over it, so it never covers the chart's labels. */}
+          {build.cardThumb.label && (
+            <p className="px-4 pb-3">
+              <span className="inline-block rounded-full bg-charcoal px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
+                {build.cardThumb.label}
+              </span>
+            </p>
+          )}
+        </div>
+      )}
+      <div className="flex items-start gap-3 p-4">
+        <span className="text-base">{build.icon}</span>
+        <div>
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-charcoal">
+              {build.title}
+            </h4>
+            <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
+              Interactive Demo
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-charcoal-soft">
+            {build.summary}
+          </p>
+          <span className="mt-2 inline-block text-xs font-semibold text-forest">
+            Try it &rarr;
           </span>
         </div>
-        <p className="mt-1 text-xs leading-5 text-charcoal-soft">
-          {build.summary}
-        </p>
-        <span className="mt-2 inline-block text-xs font-semibold text-forest">
-          Try it &rarr;
-        </span>
       </div>
     </Link>
   );
