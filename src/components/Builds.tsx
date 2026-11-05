@@ -10,16 +10,16 @@ function BuildCard({ build }: { build: Project }) {
       {build.cardThumb && (
         <div className="border-b border-forest/10 bg-cream">
           {/* A capture of the built tool (scripts/capture-tool-thumbnails.mjs); the
-              explicit size reserves its 16:10 box before it loads. */}
+              explicit size reserves its 16:7 box before it loads. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={build.cardThumb.src}
             alt={build.cardThumb.alt}
             width={1200}
-            height={750}
+            height={525}
             loading="lazy"
             decoding="async"
-            className="block aspect-[16/10] h-auto w-full"
+            className="block aspect-[16/7] h-auto w-full"
           />
           {/* Below the capture, not over it, so it never covers the chart's labels. */}
           {build.cardThumb.label && (
@@ -58,17 +58,19 @@ function FeaturedBuildCard({ build }: { build: Project }) {
   return (
     <Link
       href={build.link!}
-      className="flex flex-col overflow-hidden rounded-2xl border border-forest/15 bg-white transition-colors hover:border-forest/35"
+      className="flex flex-col overflow-hidden rounded-2xl border border-forest/15 bg-white transition-colors hover:border-forest/35 lg:flex-row"
     >
-      <div className="aspect-[1208/335] w-full overflow-hidden border-b border-forest/10 bg-cream">
+      {/* Stacked: the whole wide chart. Side by side (lg): a 40% column as tall as the text,
+          the chart cropped around "You are here" and the strategy points to its right. */}
+      <div className="aspect-[1208/335] w-full shrink-0 overflow-hidden border-b border-forest/10 bg-cream lg:aspect-auto lg:w-2/5 lg:border-b-0 lg:border-r">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={build.visual}
           alt={`${build.title} preview`}
-          className="h-full w-full object-cover object-top"
+          className="h-full w-full object-cover object-top lg:object-[72%_center]"
         />
       </div>
-      <div className="flex flex-col gap-3 p-6 sm:p-8">
+      <div className="flex flex-col gap-2.5 p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-ink">
             Interactive Demo
@@ -77,7 +79,7 @@ function FeaturedBuildCard({ build }: { build: Project }) {
             {build.category}
           </span>
         </div>
-        <h3 className="text-2xl font-bold tracking-tight text-charcoal">
+        <h3 className="text-xl font-bold tracking-tight text-charcoal">
           {build.title}
         </h3>
         <p className="max-w-2xl text-sm leading-6 text-charcoal-soft">
@@ -93,7 +95,7 @@ function FeaturedBuildCard({ build }: { build: Project }) {
             </li>
           ))}
         </ul>
-        <span className="tap mt-1 inline-block text-sm font-semibold text-forest">
+        <span className="tap inline-block text-sm font-semibold text-forest">
           {build.ctaLabel ?? "Try it →"}
         </span>
       </div>
@@ -109,16 +111,17 @@ export default function Builds() {
 
   return (
     <section id="interactive-tools" className="border-t border-forest/10 bg-cream">
-      <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-40">
-        <h2 className="text-4xl font-black tracking-tight text-charcoal sm:text-5xl">
+      {/* A sub-section of Projects: a sub-heading's size and tighter padding. */}
+      <div className="mx-auto w-full max-w-6xl px-6 py-14 sm:py-16">
+        <h2 className="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">
           Interactive Tools
         </h2>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-charcoal-soft">
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft sm:text-base sm:leading-7">
           Financial models you can drive yourself — the assumptions exposed
           and the decision logic stated, not just described.
         </p>
 
-        <div className="mt-14 flex flex-col gap-4">
+        <div className="mt-8 flex flex-col gap-4">
           {featured.map((build) => (
             <FeaturedBuildCard key={build.slug} build={build} />
           ))}

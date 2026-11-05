@@ -45,7 +45,7 @@ export type Project = {
   githubUrl?: string;
   caseStudy?: CaseStudy;
   /** A smaller tool card's thumbnail: a capture of the built tool by
-   *  scripts/capture-tool-thumbnails.mjs, 1200 x 750 WebP. */
+   *  scripts/capture-tool-thumbnails.mjs, 1200 x 525 WebP. */
   cardThumb?: { src: string; alt: string; label?: string };
 };
 
@@ -337,6 +337,8 @@ export const builds: Project[] = [
     cardThumb: {
       src: "/tool-visuals/fpa-decision-lab.webp",
       alt: "FP&A Decision Lab, MRR Growth chart in its default SaaS case: 12 months of monthly recurring revenue, with the Base case rising to about $240K, the Upside case above it and the Downside case declining.",
+      // The tool states it runs on "illustrative sample data for a fictional company".
+      label: "Illustrative sample data",
     },
   },
   {
