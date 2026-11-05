@@ -8,7 +8,7 @@
 // chart (Base / Upside / Downside, with its legend) and the Driver Sensitivity
 // Simulator's tornado bars (with their legend). Nothing is redrawn. The crop is centred
 // on a canvas of the chart's own background so both images share one size and aspect
-// ratio (1200 x 750, 16:10), then written as WebP to public/tool-visuals/.
+// ratio (1200 x 525, 16:7), then written as WebP to public/tool-visuals/.
 import { chromium } from "playwright";
 import sharp from "sharp";
 import { mkdirSync } from "node:fs";
@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const BASE = process.argv[2] ?? "http://localhost:3100";
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "tool-visuals");
 const W = 1200;
-const H = 750;
+const H = 525;
 const PAD_X = 16; // CSS px of the chart's own background kept around the crop
 const PAD_Y = 4; // less above and below, where the heading and the next block sit close
 
@@ -35,7 +35,7 @@ const JOBS = [
     path: "/tools/driver-sensitivity-simulator",
     heading: "Tornado Sensitivity",
     children: [2, 3], // the bars and their legend
-    viewport: 560, // a narrower page, so the wide bars come closer to 16:10
+    viewport: 680, // the width at which the bars come closest to 16:7
   },
 ];
 

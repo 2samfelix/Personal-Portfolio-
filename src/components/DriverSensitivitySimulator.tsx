@@ -115,7 +115,8 @@ function TornadoBar({
             downDelta >= 0 ? "bg-forest" : "bg-rust"
           }`}
           style={{
-            right: `${50 - Math.min(downWidth, 50)}%`,
+            // The -5% bar grows leftward from the centre line, on its own side.
+            right: "50%",
             width: `${Math.min(downWidth, 50)}%`,
           }}
         >
