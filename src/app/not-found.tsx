@@ -3,6 +3,7 @@ import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import Skyline from "@/components/Skyline";
 
 export const metadata: Metadata = pageMetadata({
   title: "Page not found — Sam Felix",
@@ -38,6 +39,10 @@ export default function NotFound() {
               Go to the home page
             </Link>
           </div>
+        </div>
+        {/* Decorative skyline below the message, clear of all text. */}
+        <div aria-hidden="true" className="mx-auto w-full max-w-6xl px-6 pb-10 print:hidden">
+          <Skyline />
         </div>
       </main>
       <Footer />
