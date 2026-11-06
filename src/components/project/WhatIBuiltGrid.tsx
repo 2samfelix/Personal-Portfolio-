@@ -1,3 +1,4 @@
+import { AccentBand } from "./AccentBand";
 import { CARD_CTA, CARD_LIFT } from "./cardLift";
 
 export type DeliverableCard = {
@@ -17,12 +18,15 @@ export type DeliverableCard = {
 export function WhatIBuiltGrid({
   heading = "What I Built",
   items,
+  slug,
 }: {
   heading?: string;
   items: DeliverableCard[];
+  /** The project's slug: sets the band behind the block to its accent tint (AccentBand). */
+  slug?: string;
 }) {
   return (
-    <div className="mt-16">
+    <AccentBand slug={slug ?? ""} className="mt-12">
       <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">{heading}</h2>
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
@@ -57,6 +61,6 @@ export function WhatIBuiltGrid({
           );
         })}
       </div>
-    </div>
+    </AccentBand>
   );
 }

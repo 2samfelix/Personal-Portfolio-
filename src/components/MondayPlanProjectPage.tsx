@@ -33,6 +33,7 @@ import {
 } from "@/components/project/layout";
 import { BreakevenChart, BridgeChart, GrowthChart, QuarterlyCharts, RangeChart, WorkbookNumber as N } from "@/components/monday/MondayCharts";
 import InPageMenu from "@/components/monday/InPageMenu";
+import { AccentBand } from "@/components/project/AccentBand";
 import ResultsCountdown from "@/components/monday/ResultsCountdown";
 import ResultsSection from "@/components/monday/ResultsSection";
 import { formatValue, loadMondayResults } from "@/lib/mondayResults";
@@ -52,13 +53,13 @@ const TAGS = ["Strategic FP&A", "Scenario analysis", "Cash / FCF"];
 const LABEL = "text-[#7a5a30]";
 
 const MENU = [
+  { href: "#downloads", label: "Downloads" },
   { href: "#plan", label: "The plan" },
   { href: "#scenarios", label: "Scenarios" },
   { href: "#triggers", label: "Triggers" },
   { href: "#q3-test", label: "Locked test" },
   { href: "#results", label: "Results" },
   { href: "#inside-the-model", label: "Inside the model" },
-  { href: "#downloads", label: "Downloads" },
 ];
 
 // Sections clear the site header (69-77px) and the in-page menu when jumped to.
@@ -259,6 +260,83 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
             )}
           </div>
         </section>
+
+        {/* Downloads, repository: right after the key numbers, on the project's accent band. */}
+        <AccentBand slug="monday-operating-plan" className="mt-12">
+          <section id="downloads" aria-labelledby="downloads-heading" className={SECTION}>
+            <SectionHeading id="downloads-heading" eyebrow="Downloads">Files and sources</SectionHeading>
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  title: "Operating plan workbook",
+                  format: "XLSX",
+                  description: `monday_plan.xlsx, 18 sheets, live formulas: a copy of the locked file hosted on this site. SHA-256 ${PLAN_SHA256.slice(0, 12)}…`,
+                  href: PLAN_DOWNLOAD_PATH,
+                  cta: "Download workbook ↓",
+                  download: "monday_plan.xlsx",
+                },
+                {
+                  title: "Management memo (PDF)",
+                  format: "PDF",
+                  description: "One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.",
+                  sha256: MEMO_SHA256,
+                  href: MEMO_DOWNLOAD_PATH,
+                  cta: "Download memo ↓",
+                  download: "monday-operating-plan-memo.pdf",
+                },
+                {
+                  title: `GitHub Release ${planRelease.tag}`,
+                  format: "AUTHORITATIVE",
+                  description: "The authoritative copy of the operating plan, with its SHA-256 and the commit it points to.",
+                  href: planRelease.url,
+                  cta: "Open Release ↗",
+                },
+                {
+                  title: `GitHub Release ${q3Release.tag}`,
+                  format: "AUTHORITATIVE",
+                  description: scored
+                    ? "The authoritative copy of the Q3 2026 forecast, scored on November 9 (see Results above)."
+                    : "The authoritative copy of the Q3 2026 forecast to be scored on November 9.",
+                  href: q3Release.url,
+                  cta: "Open Release ↗",
+                },
+                {
+                  title: "Repository",
+                  format: "REPOSITORY",
+                  description: "All five workbooks, the design brief and the method change log.",
+                  href: REPO_URL,
+                  cta: "View GitHub ↗",
+                },
+                {
+                  title: "README",
+                  format: "README",
+                  description: "How the pre-registration and locks work, the scoring plan, labels, limits and data sources.",
+                  href: README_URL,
+                  cta: "Read README ↗",
+                },
+              ].map((item) => (
+                <a
+                  key={item.title}
+                  href={item.href}
+                  {...(item.download ? { download: item.download } : { target: "_blank", rel: "noopener noreferrer" })}
+                  className={`group flex flex-col p-6 ${CARD_LIFT}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 break-words text-lg font-bold text-charcoal">{item.title}</p>
+                    <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
+                      {item.format}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-base leading-7 text-charcoal-soft">{item.description}</p>
+                  {item.sha256 && (
+                    <p className="mt-2 break-all font-mono text-xs leading-5 text-charcoal-soft">SHA-256 {item.sha256}</p>
+                  )}
+                  <span className={`mt-auto pt-4 ${CARD_CTA}`}>{item.cta}</span>
+                </a>
+              ))}
+            </div>
+          </section>
+        </AccentBand>
 
         {/* Plan: 60-second summary and the management question */}
         <section id="plan" aria-labelledby="summary-heading" className={`mt-16 ${SECTION}`}>
@@ -631,81 +709,6 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
             Labels in the workbook: <span className="font-semibold text-[#1d3f8a]">blue</span> = Sourced (copied from a filing, with a Row ID),
             black = Derived (a formula), <span className="font-semibold text-[#8a3d0c]">orange on peach</span> = Assumed (a judgement with rationale and sensitivity).
           </p>
-        </section>
-
-        {/* Downloads, repository */}
-        <section id="downloads" aria-labelledby="downloads-heading" className={`mt-20 ${SECTION}`}>
-          <SectionHeading id="downloads-heading" eyebrow="Downloads">Files and sources</SectionHeading>
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                title: "Operating plan workbook",
-                format: "XLSX",
-                description: `monday_plan.xlsx, 18 sheets, live formulas: a copy of the locked file hosted on this site. SHA-256 ${PLAN_SHA256.slice(0, 12)}…`,
-                href: PLAN_DOWNLOAD_PATH,
-                cta: "Download workbook ↓",
-                download: "monday_plan.xlsx",
-              },
-              {
-                title: "Management memo (PDF)",
-                format: "PDF",
-                description: "One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.",
-                sha256: MEMO_SHA256,
-                href: MEMO_DOWNLOAD_PATH,
-                cta: "Download memo ↓",
-                download: "monday-operating-plan-memo.pdf",
-              },
-              {
-                title: `GitHub Release ${planRelease.tag}`,
-                format: "AUTHORITATIVE",
-                description: "The authoritative copy of the operating plan, with its SHA-256 and the commit it points to.",
-                href: planRelease.url,
-                cta: "Open Release ↗",
-              },
-              {
-                title: `GitHub Release ${q3Release.tag}`,
-                format: "AUTHORITATIVE",
-                description: scored
-                  ? "The authoritative copy of the Q3 2026 forecast, scored on November 9 (see Results above)."
-                  : "The authoritative copy of the Q3 2026 forecast to be scored on November 9.",
-                href: q3Release.url,
-                cta: "Open Release ↗",
-              },
-              {
-                title: "Repository",
-                format: "REPOSITORY",
-                description: "All five workbooks, the design brief and the method change log.",
-                href: REPO_URL,
-                cta: "View GitHub ↗",
-              },
-              {
-                title: "README",
-                format: "README",
-                description: "How the pre-registration and locks work, the scoring plan, labels, limits and data sources.",
-                href: README_URL,
-                cta: "Read README ↗",
-              },
-            ].map((item) => (
-              <a
-                key={item.title}
-                href={item.href}
-                {...(item.download ? { download: item.download } : { target: "_blank", rel: "noopener noreferrer" })}
-                className={`group flex flex-col p-6 ${CARD_LIFT}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 break-words text-lg font-bold text-charcoal">{item.title}</p>
-                  <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
-                    {item.format}
-                  </span>
-                </div>
-                <p className="mt-2 text-base leading-7 text-charcoal-soft">{item.description}</p>
-                {item.sha256 && (
-                  <p className="mt-2 break-all font-mono text-xs leading-5 text-charcoal-soft">SHA-256 {item.sha256}</p>
-                )}
-                <span className={`mt-auto pt-4 ${CARD_CTA}`}>{item.cta}</span>
-              </a>
-            ))}
-          </div>
         </section>
 
         {/* Limits */}

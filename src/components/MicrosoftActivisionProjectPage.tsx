@@ -171,6 +171,49 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
           }}
         />
 
+        {/* What I Built: right after the question, approach and finding, on the project's accent band. */}
+        <WhatIBuiltGrid
+          slug="microsoft-activision"
+          items={[
+            {
+              title: "M&A Model",
+              format: "XLSX",
+              description: DELIVERABLE_DETAIL["M&A Model"],
+              href: maModelDeliverable?.url,
+              ctaLabel: "Download model ↗",
+            },
+            {
+              title: "Full Report",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Full Report"],
+              href: fullReportDeliverable?.url,
+              ctaLabel: "Open report ↗",
+            },
+            {
+              title: "Executive Summary",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Executive Summary"],
+              href: executiveSummaryDeliverable?.url,
+              ctaLabel: "Open summary ↗",
+            },
+            {
+              title: "Presentation Deck",
+              format: "PPTX",
+              description: DELIVERABLE_DETAIL["Presentation Deck"],
+              href: presentationDeckDeliverable?.url,
+              ctaLabel: "Open deck ↗",
+            },
+            {
+              title: "GitHub Project",
+              format: "REPOSITORY",
+              description:
+                "Source documentation, the full M&A model, and the written report, all in the public repository for this analysis.",
+              href: project.githubUrl,
+              ctaLabel: "View GitHub ↗",
+            },
+          ]}
+        />
+
         {/* Headline chart */}
         <div id="analysis" className="mt-16 scroll-mt-8">
           <ChartSection label="EPS Bridge: Microsoft Standalone to Pro Forma (Year 1, No Synergies)" first>
@@ -256,47 +299,6 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
             GAAP line. This model includes it deliberately, because it is economically real. (Accretion Dilution!B18, B15, B26, B27.)
           </p>
         </section>
-
-        <WhatIBuiltGrid
-          items={[
-            {
-              title: "M&A Model",
-              format: "XLSX",
-              description: DELIVERABLE_DETAIL["M&A Model"],
-              href: maModelDeliverable?.url,
-              ctaLabel: "Download model ↗",
-            },
-            {
-              title: "Full Report",
-              format: "PDF",
-              description: DELIVERABLE_DETAIL["Full Report"],
-              href: fullReportDeliverable?.url,
-              ctaLabel: "Open report ↗",
-            },
-            {
-              title: "Executive Summary",
-              format: "PDF",
-              description: DELIVERABLE_DETAIL["Executive Summary"],
-              href: executiveSummaryDeliverable?.url,
-              ctaLabel: "Open summary ↗",
-            },
-            {
-              title: "Presentation Deck",
-              format: "PPTX",
-              description: DELIVERABLE_DETAIL["Presentation Deck"],
-              href: presentationDeckDeliverable?.url,
-              ctaLabel: "Open deck ↗",
-            },
-            {
-              title: "GitHub Project",
-              format: "REPOSITORY",
-              description:
-                "Source documentation, the full M&A model, and the written report, all in the public repository for this analysis.",
-              href: project.githubUrl,
-              ctaLabel: "View GitHub ↗",
-            },
-          ]}
-        />
 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">
