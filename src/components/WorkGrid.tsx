@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CARD_CTA, CARD_LIFT } from "@/components/project/cardLift";
+import ProjectCarousel from "@/components/ProjectCarousel";
 import { PROJECT_ORDER, flagshipProjects, type Project } from "@/lib/projects";
 import { loadMondayPlan } from "@/lib/mondayPlan";
 import { SCORED_VISUAL, loadMondayResults } from "@/lib/mondayResults";
@@ -87,9 +88,10 @@ const MONDAY_ALT =
   (MONDAY_RESULTS.state === "scored" ? thumbAlts["monday-operating-plan-scored"] : thumbAlts["monday-operating-plan"]) +
   (MONDAY_RESULTS.state === "scored" && MONDAY_RESULTS.fixture ? " Test fixture, not real results." : "");
 
-// Card image width: one column below 640px, two to 1023px, three from 1024px
-// (the grid's container is max-w-6xl, 1152px less 48px padding and 64px of gaps).
-const SIZES = "(min-width: 1024px) 347px, (min-width: 640px) calc((100vw - 80px) / 2), calc(100vw - 48px)";
+// Card image width: a carousel card (85vw, at most 30rem) below 768px, two columns to
+// 1023px, three from 1024px (the grid's container is max-w-6xl, 1152px less 48px padding
+// and 64px of gaps).
+const SIZES = "(min-width: 1024px) 347px, (min-width: 768px) calc((100vw - 80px) / 2), min(85vw, 480px)";
 
 // Each thumbnail's content box in its own pixels (the chart without the render's empty
 // margin), measured from the images in public/project-visuals, with 12px kept around it.
@@ -200,15 +202,13 @@ export default function WorkGrid() {
 
         {/* Scroll-reveal hook: ScrollReveal.tsx reveals the cards one by one.
             Six cards: three columns from 1024px (3 + 3), two from 640px, one below. */}
-        {/* From 640px every row is as tall as the tallest card, so all cards match and
-            each "View project" sits at the bottom. */}
-        <div data-reveal-group className="mt-8 grid grid-cols-1 gap-5 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
+        {/* Below 768px a swipe carousel, one card at a time; from 768px the grid, every
+            row as tall as the tallest card so each "View project" sits at the bottom. */}
+        <ProjectCarousel label="Projects">
           {projects.map((project, i) => (
-            <div key={project.slug} className="min-w-0">
-              <ProjectCard project={project} eager={i === 0} />
-            </div>
+            <ProjectCard key={project.slug} project={project} eager={i === 0} />
           ))}
-        </div>
+        </ProjectCarousel>
       </div>
     </section>
   );
