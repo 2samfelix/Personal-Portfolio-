@@ -91,6 +91,19 @@ const MONDAY_ALT =
 // (the grid's container is max-w-6xl, 1152px less 48px padding and 64px of gaps).
 const SIZES = "(min-width: 1024px) 347px, (min-width: 640px) calc((100vw - 80px) / 2), calc(100vw - 48px)";
 
+// Each thumbnail's content box in its own pixels (the chart without the render's empty
+// margin), measured from the images in public/project-visuals, with 12px kept around it.
+// The card shows that box, scaled to the frame's height and centred: the margin is cropped
+// away, nothing is stretched, and the image files are untouched.
+const CONTENT_BOX: Record<string, { w: number; h: number; top: number; height: number; cx: number }> = {
+  "caterpillar-demand-quality": { w: 1280, h: 800, top: 61, height: 689, cx: 628.5 },
+  arm: { w: 1280, h: 800, top: 61, height: 694, cx: 640.5 },
+  "microsoft-activision": { w: 1280, h: 800, top: 61, height: 718, cx: 628.5 },
+  nike: { w: 1280, h: 800, top: 61, height: 684, cx: 655.5 },
+  "fpa-intelligence-engine": { w: 1280, h: 800, top: 62, height: 682, cx: 638 },
+  "monday-operating-plan": { w: 1360, h: 800, top: 62, height: 694, cx: 708.5 },
+};
+
 // Each thumbnail's background token (scripts/render-project-thumbnails.mjs, render-monday-thumbnail.mjs),
 // so the frame around a 16:10 image matches it on wide cards.
 const FRAME_BG: Record<string, string> = {
@@ -108,8 +121,10 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
   const tags = copy ? project.tools.filter((t) => copy.tags.includes(t)) : project.tools.slice(0, 3);
   return (
     <Link href={`/projects/${project.slug}`} data-reveal-item className={`group flex h-full flex-col overflow-hidden text-left ${CARD_LIFT}`}>
-      <div className={`flex h-48 w-full shrink-0 items-center justify-center overflow-hidden border-b border-forest/10 ${FRAME_BG[project.slug] ?? "bg-cream"}`}>
-        {project.visual && project.visualSize && (
+      <div className={`relative h-40 w-full shrink-0 overflow-hidden border-b border-forest/10 ${FRAME_BG[project.slug] ?? "bg-cream"}`}>
+        {project.visual && project.visualSize && (() => {
+          const box = CONTENT_BOX[project.slug];
+          return (
           <Image
             src={project.slug === "monday-operating-plan" && MONDAY_RESULTS.state === "scored" ? SCORED_VISUAL : project.visual}
             alt={project.slug === "monday-operating-plan" ? MONDAY_ALT : (project.visualAlt ?? `${project.title} preview`)}
@@ -118,13 +133,25 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
             sizes={SIZES}
             loading={eager ? "eager" : "lazy"}
             fetchPriority={eager ? "high" : undefined}
-            className="h-full w-full object-contain"
+            className={box ? "absolute left-1/2 max-w-none" : "h-full w-full object-contain"}
+            style={
+              box
+                ? {
+                    height: `${(box.h / box.height) * 100}%`,
+                    width: "auto",
+                    top: `${(-box.top / box.height) * 100}%`,
+                    transform: `translateX(${(-box.cx / box.w) * 100}%)`,
+                  }
+                : undefined
+            }
           />
-        )}
+          );
+        })()}
       </div>
-      <div className="flex flex-1 flex-col gap-3 p-6">
-        {/* Two tag lines' height reserved on every card, so titles line up across a row. */}
-        <ul className="flex min-h-[2.9375rem] flex-wrap content-start items-start gap-1.5">
+      <div className="flex flex-1 flex-col p-5">
+        {/* One row of tags: the row is one tag tall and clips its overflow, so a tag that
+            does not fit wraps out of sight whole, and titles line up across a row. */}
+        <ul className="flex h-[1.3125rem] flex-wrap content-start items-start gap-1.5 overflow-hidden">
           {tags.map((tool) => (
             <li
               key={tool}
@@ -134,11 +161,11 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
             </li>
           ))}
         </ul>
-        <h3 className="text-xl font-bold tracking-tight text-charcoal">{project.title}</h3>
+        <h3 className="mt-3 text-lg font-bold tracking-tight text-charcoal">{project.title}</h3>
         {copy ? (
           <>
-            <p className="text-sm font-medium leading-6 text-charcoal">{copy.question}</p>
-            <p className="text-sm leading-6 text-charcoal-soft">
+            <p className="mt-1.5 text-sm font-medium leading-5 text-charcoal">{copy.question}</p>
+            <p className="mt-1.5 text-sm leading-5 text-charcoal-soft">
               {copy.answer.map((part, i) =>
                 typeof part === "string" ? (
                   part
@@ -151,9 +178,9 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
             </p>
           </>
         ) : (
-          <p className="text-sm leading-6 text-charcoal-soft">{project.description ?? project.summary}</p>
+          <p className="mt-1.5 text-sm leading-5 text-charcoal-soft">{project.description ?? project.summary}</p>
         )}
-        <span className={`mt-auto pt-4 ${CARD_CTA}`}>View project &rarr;</span>
+        <span className={`mt-auto pt-3 ${CARD_CTA}`}>View project &rarr;</span>
       </div>
     </Link>
   );
@@ -162,18 +189,20 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
 export default function WorkGrid() {
   return (
     <section id="work" className="border-t border-forest/10 bg-dot-grid">
-      <div className="mx-auto w-full max-w-6xl px-6 py-28 sm:py-40">
-        <h2 className="text-4xl font-black tracking-tight text-charcoal sm:text-5xl">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
+        <h2 className="text-3xl font-black tracking-tight text-charcoal sm:text-4xl">
           Projects
         </h2>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-charcoal-soft">
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-charcoal-soft sm:text-base sm:leading-7">
           A growing collection of finance, analytics, and strategy projects —
           each built around a real business question.
         </p>
 
         {/* Scroll-reveal hook: ScrollReveal.tsx reveals the cards one by one.
             Six cards: three columns from 1024px (3 + 3), two from 640px, one below. */}
-        <div data-reveal-group className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {/* From 640px every row is as tall as the tallest card, so all cards match and
+            each "View project" sits at the bottom. */}
+        <div data-reveal-group className="mt-8 grid grid-cols-1 gap-5 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project, i) => (
             <div key={project.slug} className="min-w-0">
               <ProjectCard project={project} eager={i === 0} />

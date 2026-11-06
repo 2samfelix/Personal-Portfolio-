@@ -205,6 +205,42 @@ export default function NikeProjectPage({
           }}
         />
 
+        {/* What I Built: right after the question, approach and finding, on the project's accent band. */}
+        <WhatIBuiltGrid
+          slug="nike"
+          items={[
+            {
+              title: "Financial Model",
+              format: "XLSX",
+              description: DELIVERABLE_DETAIL["Financial Model"],
+              href: financialModelDeliverable?.url,
+              ctaLabel: "Download model ↗",
+            },
+            {
+              title: "Full Report",
+              format: "DOCX",
+              description: DELIVERABLE_DETAIL["Full Report"],
+              href: fullReportDeliverable?.url,
+              ctaLabel: "Open report ↗",
+            },
+            {
+              title: "Executive Summary",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Executive Summary"],
+              href: executiveSummaryDeliverable?.url,
+              ctaLabel: "Open summary ↗",
+            },
+            {
+              title: "GitHub Project",
+              format: "REPOSITORY",
+              description:
+                "Source documentation, the full model, and the written report, all in the public repository for this analysis.",
+              href: project.githubUrl,
+              ctaLabel: "View GitHub ↗",
+            },
+          ]}
+        />
+
         {/* Headline chart */}
         <div id="analysis" className="mt-16 scroll-mt-8">
           <ChartSection label="North America vs. Greater China Revenue, FY2024A–FY2029E" first>
@@ -255,40 +291,6 @@ export default function NikeProjectPage({
             layout={{ zoom: PREVIEW_ZOOM, formulaBarHeights: PREVIEW_BAR_HEIGHTS, gridHeights: PREVIEW_GRID_HEIGHTS, captions: true, captionLines: 2 }}
           />
         </section>
-
-        <WhatIBuiltGrid
-          items={[
-            {
-              title: "Financial Model",
-              format: "XLSX",
-              description: DELIVERABLE_DETAIL["Financial Model"],
-              href: financialModelDeliverable?.url,
-              ctaLabel: "Download model ↗",
-            },
-            {
-              title: "Full Report",
-              format: "DOCX",
-              description: DELIVERABLE_DETAIL["Full Report"],
-              href: fullReportDeliverable?.url,
-              ctaLabel: "Open report ↗",
-            },
-            {
-              title: "Executive Summary",
-              format: "PDF",
-              description: DELIVERABLE_DETAIL["Executive Summary"],
-              href: executiveSummaryDeliverable?.url,
-              ctaLabel: "Open summary ↗",
-            },
-            {
-              title: "GitHub Project",
-              format: "REPOSITORY",
-              description:
-                "Source documentation, the full model, and the written report, all in the public repository for this analysis.",
-              href: project.githubUrl,
-              ctaLabel: "View GitHub ↗",
-            },
-          ]}
-        />
 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">

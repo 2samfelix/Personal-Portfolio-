@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccentBand } from "@/components/project/AccentBand";
 import type { Project } from "@/lib/projects";
 import EngineTrace, { type TraceHeaders } from "@/components/engine/EngineTrace";
 import { DetectionMap, LabProvenance, LabResultsTable, LabStatTiles, PipelineDiagram } from "@/components/engine/ValidationLab";
@@ -235,6 +236,26 @@ export default function EngineProjectPage({
           </a>
         </p>
 
+        {/* What I built (the repo and its documents): right after the introduction, on the project's accent band. */}
+        <AccentBand slug="fpa-intelligence-engine" className="mt-12">
+          <section aria-label="Links">
+            <p className="text-sm text-charcoal-soft max-sm:leading-[2.75rem]">
+              Links:{" "}
+              <a href={ENGINE_REPO} target="_blank" rel="noopener noreferrer" className={linkClass}>
+                GitHub repo ↗
+              </a>
+              {" · "}
+              <a href={STATUS_DOC} target="_blank" rel="noopener noreferrer" className={linkClass}>
+                Project status doc ↗
+              </a>
+              {" · "}
+              <Link href={CATERPILLAR_PAGE} className={linkClass}>
+                Caterpillar case study &rarr;
+              </Link>
+            </p>
+          </section>
+        </AccentBand>
+
         <section className="mt-16 border-t border-forest/10 pt-12">
           <SectionHeading>The problem</SectionHeading>
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
@@ -447,23 +468,6 @@ export default function EngineProjectPage({
           <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
             Re-run the live evaluation against the corrected benchmark, review the entries still flagged, extract
             evidence from raw filings with its own validator, and add automated testing on every change.
-          </p>
-        </section>
-
-        <section className="mt-12 border-t border-forest/10 pt-8">
-          <p className="text-sm text-charcoal-soft max-sm:leading-[2.75rem]">
-            Links:{" "}
-            <a href={ENGINE_REPO} target="_blank" rel="noopener noreferrer" className={linkClass}>
-              GitHub repo ↗
-            </a>
-            {" · "}
-            <a href={STATUS_DOC} target="_blank" rel="noopener noreferrer" className={linkClass}>
-              Project status doc ↗
-            </a>
-            {" · "}
-            <Link href={CATERPILLAR_PAGE} className={linkClass}>
-              Caterpillar case study &rarr;
-            </Link>
           </p>
         </section>
 

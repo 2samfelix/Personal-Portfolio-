@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccentBand } from "@/components/project/AccentBand";
 import type { Project } from "@/lib/projects";
 
 const formatIcon: Record<string, string> = {
@@ -57,6 +58,54 @@ export default function ProjectPage({
             </span>
           </div>
         </div>
+
+        {/* Deliverables: right after the header, on the project's accent band (none for a project without a tint). */}
+        {cs && (
+          <AccentBand slug={project.slug} className="mt-12">
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
+                Deliverables
+              </h2>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {cs.deliverables.map((d) => (
+                  <a
+                    key={d.label}
+                    href={d.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-forest/15 bg-white p-4 transition-colors hover:border-forest/35"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="text-xl">{formatIcon[d.format]}</span>
+                      <span>
+                        <span className="block text-sm font-semibold text-charcoal">
+                          {d.label}
+                        </span>
+                        <span className="block text-xs uppercase tracking-wide text-charcoal-soft">
+                          {d.format}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-sm font-semibold text-forest">
+                      {d.format === "PDF" ? "Open →" : "Download →"}
+                    </span>
+                  </a>
+                ))}
+              </div>
+
+              {project.githubUrl && (
+                <a
+                  href={project.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
+                >
+                  View GitHub Repository &#8599;
+                </a>
+              )}
+            </section>
+          </AccentBand>
+        )}
 
         {/* Large visual */}
         {project.visual && (
@@ -137,50 +186,6 @@ export default function ProjectPage({
                   </li>
                 ))}
               </ul>
-            </section>
-
-            {/* Deliverables */}
-            <section className="mt-12 border-t border-forest/10 pt-12">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-brass-ink">
-                Deliverables
-              </h2>
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {cs.deliverables.map((d) => (
-                  <a
-                    key={d.label}
-                    href={d.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-3 rounded-xl border border-forest/15 bg-white p-4 transition-colors hover:border-forest/35"
-                  >
-                    <span className="flex items-center gap-3">
-                      <span className="text-xl">{formatIcon[d.format]}</span>
-                      <span>
-                        <span className="block text-sm font-semibold text-charcoal">
-                          {d.label}
-                        </span>
-                        <span className="block text-xs uppercase tracking-wide text-charcoal-soft">
-                          {d.format}
-                        </span>
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-sm font-semibold text-forest">
-                      {d.format === "PDF" ? "Open →" : "Download →"}
-                    </span>
-                  </a>
-                ))}
-              </div>
-
-              {project.githubUrl && (
-                <a
-                  href={project.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-forest-dark"
-                >
-                  View GitHub Repository &#8599;
-                </a>
-              )}
             </section>
 
             {/* Takeaway */}

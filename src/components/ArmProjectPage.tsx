@@ -178,6 +178,49 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
           }}
         />
 
+        {/* What I Built: right after the question, approach and finding, on the project's accent band. */}
+        <WhatIBuiltGrid
+          slug="arm"
+          items={[
+            {
+              title: "Valuation Model",
+              format: "XLSX",
+              description: DELIVERABLE_DETAIL["Valuation Model"],
+              href: valuationModelDeliverable?.url,
+              ctaLabel: "Download model ↗",
+            },
+            {
+              title: "Full Report",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Full Report"],
+              href: fullReportDeliverable?.url,
+              ctaLabel: "Open report ↗",
+            },
+            {
+              title: "Executive Summary",
+              format: "PDF",
+              description: DELIVERABLE_DETAIL["Executive Summary"],
+              href: executiveSummaryDeliverable?.url,
+              ctaLabel: "Open summary ↗",
+            },
+            {
+              title: "Strategy Deck",
+              format: "PPTX",
+              description: DELIVERABLE_DETAIL["Strategy Deck"],
+              href: strategyDeckDeliverable?.url,
+              ctaLabel: "Open deck ↗",
+            },
+            {
+              title: "GitHub Project",
+              format: "REPOSITORY",
+              description:
+                "Source documentation, the full valuation model, and the written report, all in the public repository for this analysis.",
+              href: project.githubUrl,
+              ctaLabel: "View GitHub ↗",
+            },
+          ]}
+        />
+
         {/* Headline chart */}
         <div id="analysis" className="mt-16 scroll-mt-8">
           <ChartSection label="Valuation Football Field: IPO Price vs. Comp-Implied Range vs. Market" first>
@@ -226,47 +269,6 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
             layout={{ zoom: PREVIEW_ZOOM, formulaBarHeights: PREVIEW_BAR_HEIGHTS, gridHeights: PREVIEW_GRID_HEIGHTS, captions: true }}
           />
         </section>
-
-        <WhatIBuiltGrid
-          items={[
-            {
-              title: "Valuation Model",
-              format: "XLSX",
-              description: DELIVERABLE_DETAIL["Valuation Model"],
-              href: valuationModelDeliverable?.url,
-              ctaLabel: "Download model ↗",
-            },
-            {
-              title: "Full Report",
-              format: "PDF",
-              description: DELIVERABLE_DETAIL["Full Report"],
-              href: fullReportDeliverable?.url,
-              ctaLabel: "Open report ↗",
-            },
-            {
-              title: "Executive Summary",
-              format: "PDF",
-              description: DELIVERABLE_DETAIL["Executive Summary"],
-              href: executiveSummaryDeliverable?.url,
-              ctaLabel: "Open summary ↗",
-            },
-            {
-              title: "Strategy Deck",
-              format: "PPTX",
-              description: DELIVERABLE_DETAIL["Strategy Deck"],
-              href: strategyDeckDeliverable?.url,
-              ctaLabel: "Open deck ↗",
-            },
-            {
-              title: "GitHub Project",
-              format: "REPOSITORY",
-              description:
-                "Source documentation, the full valuation model, and the written report, all in the public repository for this analysis.",
-              href: project.githubUrl,
-              ctaLabel: "View GitHub ↗",
-            },
-          ]}
-        />
 
         {/* Overview */}
         <section className="mt-12 border-t border-forest/10 pt-12">
