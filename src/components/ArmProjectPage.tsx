@@ -18,6 +18,8 @@ import {
   DCF_LIVE_WACC_ROW,
   DCF_FY2031_REVENUE,
   DCF_TERMINAL_EV_REVENUE,
+  DCF_EXIT_MULTIPLE,
+  DCF_EXIT_MULTIPLE_TV,
   DCF_TERMINAL_VALUE,
   DCF_WACC_ROWS,
   FOOTBALL_FIELD,
@@ -147,7 +149,7 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
 
           <ProjectHero
             title="Arm Valuation Gap"
-            question="Do Arm's fundamentals justify a stock price of $272 — more than 5x where three independent valuation methods land?"
+            question="Do Arm's fundamentals justify a stock price of $272 — more than 5x where three valuation methods land?"
             description="An IPO valuation for Arm Holdings combining comparable company analysis, a DCF, and strategic positioning research."
             metrics={[
               {
@@ -166,11 +168,11 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
         <QuestionApproachFinding
           question={{
             label: "01 — The Question",
-            body: "Do Arm's fundamentals justify a stock price of $272 — more than 5x where three independent valuation methods land?",
+            body: "Do Arm's fundamentals justify a stock price of $272 — more than 5x where three valuation methods land?",
           }}
           approach={{
             label: "02 — The Approach",
-            body: "I ran three independent valuation methods — a comparable company analysis at the IPO pricing date, the actual IPO transaction, and a DCF built entirely from today's fundamentals — then decomposed Arm's total shareholder return since IPO into EPS growth versus P/E multiple expansion.",
+            body: "I ran three valuation methods — a comparable company analysis at the IPO pricing date, the actual IPO transaction, and a DCF built entirely from today's fundamentals — then decomposed Arm's total shareholder return since IPO into EPS growth versus P/E multiple expansion.",
           }}
           finding={{
             label: "03 — The Finding",
@@ -235,8 +237,8 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
               deltaText={`Market is ${(CURRENT_MARKET_PRICE / 51.54).toFixed(1)}x this`}
               badgeLabel="Cluster holds"
               badgeTone="neutral"
-              alertLead="Five fundamentals-based methods cluster within $17 of each other."
-              alertText={`Full peer median ($35.00, IPO Valuation!E16), core IP/EDA average ($43.41, IPO Valuation!E17), peer 75th percentile ($45.22, CCA!L27 / IPO Valuation!B18), the actual IPO price ($51.00), and a 2026 fundamentals-only DCF ($51.54, DCF Valuation!B48) all land between $35 and $52. The market price, $272.21, sits ${(CURRENT_MARKET_PRICE / 51.54).toFixed(1)}x above the DCF figure and outside every comp-based range in this analysis.`}
+              alertLead="Five reference points from three methods:"
+              alertText={`full peer median ($35.00, IPO Valuation!E16), core IP/EDA average ($43.41, IPO Valuation!E17), peer 75th percentile ($45.22, CCA!L27 / IPO Valuation!B18), the actual IPO price ($51.00), and a 2026 fundamentals-only DCF ($51.54, DCF Valuation!B48) all land between $35 and $52, within $17 of each other. The market price, $272.21, sits ${(CURRENT_MARKET_PRICE / 51.54).toFixed(1)}x above the DCF figure and outside every comp-based range in this analysis.`}
               explainer="Each comp-based method applies its own EV/Revenue multiple to Arm's FY2023A revenue, then backs into an implied share price using the IPO-date share count and net cash position."
             />
           </ChartSection>
@@ -359,7 +361,7 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
                   { key: "royalty", label: "Royalty", stroke: "#1e3a2b", swatchClass: "bg-forest", values: ROYALTY_REVENUE },
                 ]}
                 ariaLabel="License and other revenue vs royalty revenue, FY2023A through FY2026A"
-                valueFormatter={(v) => `$${v.toFixed(0)}mm`}
+                valueFormatter={(v) => `$${v.toLocaleString("en-US")}mm`}
               />
               <ChartCaption
                 statLabel="Royalty Revenue, FY2026A"
@@ -399,8 +401,8 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
                 badgeLabel="Terminal value drives the result"
                 badgeTone="bad"
                 alertLead="No fundamentals-based terminal assumption gets near today's price."
-                alertText={`The $51.54 DCF value rests on a perpetuity terminal value of ${formatUsdCompact(DCF_TERMINAL_VALUE)} on FY2031E revenue of ${formatUsdCompact(DCF_FY2031_REVENUE)} — an implied terminal EV/Revenue of about ${DCF_TERMINAL_EV_REVENUE.toFixed(1)}x, for a business the market currently prices at ${CURRENT_EV_REVENUE.toFixed(1)}x (Post-IPO Performance!C55). Three independent methods — a 2023 comp analysis, the actual transaction, and this 2026 fundamentals-only DCF — all land between $43 and $52. The distance to $272 is the market capitalizing a narrative, not a modeling error.`}
-                explainer="The workbook also carries an exit-multiple cross-check (DCF Valuation!B38), but its formula multiplies 20x by FY2030E revenue rather than FY2031E, the final explicit forecast year — producing a terminal value roughly 3x the perpetuity figure through a column-reference error, not genuine corroboration. It's excluded from this page."
+                alertText={`The $51.54 DCF value rests on a perpetuity terminal value of ${formatUsdCompact(DCF_TERMINAL_VALUE)} on FY2031E revenue of ${formatUsdCompact(DCF_FY2031_REVENUE)} — an implied terminal EV/Revenue of about ${DCF_TERMINAL_EV_REVENUE.toFixed(1)}x, for a business the market currently prices at ${CURRENT_EV_REVENUE.toFixed(1)}x (Post-IPO Performance!C55). Three methods — a 2023 comp analysis, the actual transaction, and this 2026 fundamentals-only DCF — all land between $35 and $52. The distance to $272 is the market capitalizing a narrative, not a modeling error.`}
+                explainer={`The workbook also carries an exit-multiple cross-check (20x FY2031E revenue, DCF Valuation!C38, with the 20x input in B38). It implies a terminal value of about $${Math.round(DCF_EXIT_MULTIPLE_TV / 1000)}B, roughly ${(DCF_EXIT_MULTIPLE_TV / DCF_TERMINAL_VALUE).toFixed(1)}x the ${formatUsdCompact(DCF_TERMINAL_VALUE)} perpetuity value, because ${DCF_EXIT_MULTIPLE}x is far above the ${DCF_TERMINAL_EV_REVENUE.toFixed(1)}x EV/Revenue the perpetuity method implies. The two terminal methods do not agree, which shows how much of the DCF depends on terminal value assumptions. It is shown for context and is not used in the $51.54.`}
               />
             </ChartSection>
           </div>
