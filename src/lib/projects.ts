@@ -114,7 +114,7 @@ export const flagshipProjects: Project[] = [
     description:
       "An IPO valuation for Arm Holdings combining comparable company analysis, a DCF, and strategic positioning research.",
     summary:
-      "Three independent valuation methods converge on ~$51 fair value for Arm — the market prices it at $272.",
+      "Three valuation methods converge on ~$51 fair value for Arm — the market prices it at $272.",
     tools: ["Excel", "Valuation", "DCF", "CCA", "Strategy"],
     year: "2026",
     status: "live",
@@ -125,13 +125,13 @@ export const flagshipProjects: Project[] = [
     githubUrl: "https://github.com/2samfelix/arm-ipo-valuation-strategy-analysis",
     caseStudy: {
       question:
-        "Do Arm's fundamentals justify a stock price of $272 — more than 5x where three independent valuation methods land?",
+        "Do Arm's fundamentals justify a stock price of $272 — more than 5x where three valuation methods land?",
       overview:
         "A full investment-banking-style analysis of Arm Holdings' September 2023 IPO, covering equity valuation at the offering, a forward-looking DCF cross-check, and a strategic read on how the market has re-rated the business since. Built to simulate how an analyst would approach a live deal — real SEC filings, real valuation techniques, and a thesis question answered with actual numbers.",
       dataSources:
         "Arm's SEC filings — the F-1/424B4 IPO prospectus and FY2024–FY2026 Form 20-F — sourced from SEC EDGAR.",
       approach:
-        "Comparable company analysis at the IPO pricing date, a valuation-evolution bridge decomposing total shareholder return into EPS growth vs. P/E multiple expansion, and a discounted cash flow cross-check built independently of both the IPO price and the market's later re-rating.",
+        "Comparable company analysis at the IPO pricing date, a valuation-evolution bridge decomposing total shareholder return into EPS growth vs. P/E multiple expansion, and a discounted cash flow cross-check built from today's fundamentals rather than the IPO price or the market's later re-rating.",
       assumptions: [
         "Every input is color-coded (assumption vs. formula vs. cross-sheet link) with sources cited next to each figure",
         "The DCF's sensitivity table is centered on the model's own live-computed WACC, not a static assumption",
@@ -141,15 +141,15 @@ export const flagshipProjects: Project[] = [
         "Arm priced at ~18.7x FY2023 EV/Revenue, ~49% above the six-peer median of 12.6x; the closest comp-based range was $43–45 per ADS vs. the $51 IPO price.",
         "Arm's 5.34x total shareholder return since IPO decomposes into 1.67x from EPS growth and 3.20x from P/E multiple expansion — cross-confirmed by a matching 3.11x expansion in EV/Revenue.",
         "A DCF built entirely from today's fundamentals implies a fair value of ~$51.54 — almost exactly the original $51.00 IPO price — despite the stock trading at $272.21.",
-        "Three independent methods (2023 CCA, the actual IPO, and a 2026 fundamentals-only DCF) all cluster in the $43–52 range, while the market prices Arm at roughly 5x that.",
+        "Three methods (2023 CCA, the actual IPO, and a 2026 fundamentals-only DCF) give five reference points between $35 and $52, while the market prices Arm at roughly 5x that.",
       ],
       takeaway:
-        "The original 11–15% IPO premium looks conservative in hindsight, not aggressive — the market has re-rated Arm to a materially richer multiple than any fundamentals-based method, at IPO or today, would support on its own.",
+        "The original IPO premium (the $51 price was about 13–18% above the closest comp-implied range) looks conservative in hindsight, not aggressive — the market has re-rated Arm to a materially richer multiple than any fundamentals-based method, at IPO or today, would support on its own.",
       deliverables: [
         {
           label: "Valuation Model",
           format: "XLSX",
-          url: "https://raw.githubusercontent.com/2samfelix/arm-ipo-valuation-strategy-analysis/24f1d107753f59a08eaccc8f581057eea4beab5a/Sam_Felix_Arm_IPO_Valuation_Strategy_Analysis%20%287%29.xlsx",
+          url: "https://raw.githubusercontent.com/2samfelix/arm-ipo-valuation-strategy-analysis/d1aacab6255c9aa78afb7b13666cb3ddd70e2c93/Sam_Felix_Arm_IPO_Valuation_Strategy_Analysis%20%287%29.xlsx",
         },
         {
           label: "Full Report",

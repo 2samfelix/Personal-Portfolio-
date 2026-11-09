@@ -85,14 +85,11 @@ export const DCF_FY2031_REVENUE = 10554.615868329; // DCF Valuation!G17
 export const DCF_TERMINAL_EV_REVENUE = DCF_TERMINAL_VALUE / DCF_FY2031_REVENUE; // ~6.07x
 export const CURRENT_EV_REVENUE = 58.1393252331138; // Post-IPO Performance!C55
 
-// Data-quality note (flagged, not charted or cited as a confirming
-// cross-check, per instruction): DCF Valuation!B38's "exit-multiple"
-// cross-check is labeled as 20x x FY2031E revenue but its formula actually
-// references F17 (FY2030E revenue, $9,506.14mm), not G17 (FY2031E revenue,
-// $10,554.62mm) — 20 x 9,506.14 = 190,122.87, matching the cell's cached
-// value exactly. That produces a terminal value roughly 3x the perpetuity
-// figure purely because it's pointed at the wrong column, not because it's
-// a genuine independent confirmation. Left out of the page entirely.
+// The workbook's exit-multiple cross-check: DCF Valuation!C38 = B38 * G17, 20x FY2031E
+// revenue (it referenced F17, FY2030E revenue, until source commit d1aacab). Shown on
+// the page for context only; it is not part of the $51.54 DCF value.
+export const DCF_EXIT_MULTIPLE = 20; // DCF Valuation!B38
+export const DCF_EXIT_MULTIPLE_TV = 211092.31736658; // DCF Valuation!C38 (= 20 x 10,554.62)
 
 // Verbatim from DCF Valuation!A63:A66 ("Limitations — Read Before Using
 // This Section").

@@ -1,7 +1,7 @@
 // Chart primitives for the Arm project page, matching the visual language
 // established for Nike (src/components/nike/NikeCharts.tsx) — same
-// palette, tight non-zero-based axes on line charts, point markers, real
-// period labels. Written locally rather than imported from the Nike chart
+// palette, point markers, real period labels. The line charts' y-axes start
+// at zero and step in round values ($0, $1,000mm, …; $0, $100, …). Written locally rather than imported from the Nike chart
 // file, for the same reason that file gives for not importing from
 // FpaDecisionLab: these are a different page's private components, and a
 // valuation project needs chart types (a football field, a heatmap) a
@@ -28,14 +28,17 @@ function valueY(value: number, minValue: number, maxValue: number) {
   return PAD_TOP + innerHeight * (1 - ratio);
 }
 
+/** A zero-based axis in round steps: the smallest step of 1, 2, 2.5 or 5 x 10^n that
+ *  covers the data in three intervals (e.g. 0 / 1,000 / 2,000 / 3,000). Every tick is
+ *  labelled. Computed at build time from the data, so nothing moves on load. */
 function gridAndAxes(values: number[]) {
-  const dataMin = Math.min(...values);
-  const dataMax = Math.max(...values);
-  const pad = (dataMax - dataMin) * 0.15 || Math.abs(dataMax) * 0.15 || 1;
-  const minValue = dataMin - pad;
-  const maxValue = dataMax + pad;
-  const gridFracs = [0, 0.25, 0.5, 0.75, 1];
-  return { minValue, maxValue, gridValues: gridFracs.map((f) => minValue + (maxValue - minValue) * f) };
+  const dataMax = Math.max(...values, 0);
+  const rough = dataMax / 3 || 1;
+  const pow = 10 ** Math.floor(Math.log10(rough));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((st) => st >= rough) ?? 10 * pow;
+  const maxValue = Math.ceil(dataMax / step) * step;
+  const gridValues = Array.from({ length: Math.round(maxValue / step) + 1 }, (_, i) => i * step);
+  return { minValue: 0, maxValue, gridValues };
 }
 
 export function formatUsd(value: number): string {
@@ -98,7 +101,7 @@ export function TwoLineChart({
           {gridValues.map((v, i) => (
             <line key={i} x1={PAD_LEFT} x2={LINE_CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
           ))}
-          {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
+          {gridValues.map((v, i) => (
             <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[0.625rem]">
               {valueFormatter(v)}
             </text>
@@ -158,9 +161,9 @@ export function MilestoneChart({
           {gridValues.map((v, i) => (
             <line key={i} x1={PAD_LEFT} x2={LINE_CHART_WIDTH - PAD_RIGHT} y1={valueY(v, minValue, maxValue)} y2={valueY(v, minValue, maxValue)} stroke="#1e3a2b" strokeOpacity={0.08} />
           ))}
-          {[gridValues[0], gridValues[2], gridValues[4]].map((v, i) => (
+          {gridValues.map((v, i) => (
             <text key={i} x={PAD_LEFT - 8} y={valueY(v, minValue, maxValue) + 4} textAnchor="end" className="fill-charcoal-soft text-[0.625rem]">
-              {formatUsd(v)}
+              {`$${v.toLocaleString("en-US")}`}
             </text>
           ))}
           {points.map((p, i) => (

@@ -76,9 +76,9 @@ PROJECTS: dict[str, dict] = {
         "output": "public/arm/model-preview.json",
         "source": {
             "repo": "2samfelix/arm-ipo-valuation-strategy-analysis",
-            "commit": "24f1d107753f59a08eaccc8f581057eea4beab5a",
+            "commit": "d1aacab6255c9aa78afb7b13666cb3ddd70e2c93",
             "path": "Sam_Felix_Arm_IPO_Valuation_Strategy_Analysis (7).xlsx",
-            "sha256": "ce1574355f5bc59bdffd4a6ead199e24a455d2e327649c9c5a22485c7413d47e",
+            "sha256": "4f8582467566e4416251601bd64b5c4ab51c122e7be3785b9f36b18a0d44ab1e",
         },
         "views": [
             {
