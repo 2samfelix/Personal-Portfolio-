@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "status": "scored",
+  "source": {
+    "document": "monday.com Ltd. Form 6-K, Exhibit 99.1 press release \"monday.com Announces Third Quarter 2026 Results\" (accession 0001178913-26-005085, filed November 9, 2026)",
+    "url": "https://www.sec.gov/Archives/edgar/data/1845338/000117891326005085/exhibit_99-1.htm",
+    "retrieved_at": "2026-11-10T18:38:00Z"
+  },
+  "actuals": {
+    "revenue_usd_m": 377.5,
+    "non_gaap_operating_income_usd_m": 89.4,
+    "non_gaap_operating_margin": 0.237,
+    "net_dollar_retention": 1.08,
+    "customers_over_50k_arr": 5038
+  },
+  "triggers": {
+    "t2_revenue_beat_vs_guidance_mid": 0.023,
+    "t3_net_adds_customers_over_50k": 204
+  },
+  "notes": [
+    "Non-GAAP operating income was $89.4M, $16.6M above the top of the call's $62.9M to $72.8M range: non-GAAP R&D, sales and marketing, and G&A spending were all lower than the plan assumed, R&D by the most ($70.0M against $84.1M).",
+    "Adjusted free cash flow had no call. Restructuring payments in the quarter were $47.2M, against the $16.25M of severance cash the plan assumed."
+  ]
+}
