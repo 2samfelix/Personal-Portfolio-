@@ -181,35 +181,43 @@ export function scoreSummary(r: Scored): { headline: string; line: string } {
 
 const CHIP_LABEL: Record<ScoredRow["position"], string> = { inside: "In range", above: "Above range", below: "Below range" };
 
-function ScoreStrip({ ranges, r }: { ranges: Range[]; r: Scored }) {
+/** Id of the "What I got wrong" block; a missed chip links to it. */
+const WRONG_ID = "what-i-got-wrong";
+
+function ScoreStrip({ ranges, r, wrongHref }: { ranges: Range[]; r: Scored; wrongHref: string | null }) {
   const chips = r.rows.map((row, i) => ({ row, m: ranges[i] })).filter(({ row }) => row.scored);
   return (
     <ul aria-label="Score of the four scored metrics" className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" data-score-strip="">
       {chips.map(({ row, m }) => {
         const hit = row.position === "inside";
         const Icon = hit ? Check : row.position === "above" ? ArrowUp : ArrowDown;
+        // A miss links to "What I got wrong", where it is explained.
+        const href = hit ? null : wrongHref;
+        const Box = href ? "a" : "div";
         return (
-          <li
-            key={row.key}
-            className={`flex flex-col gap-2 rounded-2xl bg-white p-5 ${hit ? "border border-forest/25" : "border-2 border-rust"}`}
-            data-chip={row.key}
-            data-chip-result={row.position}
-          >
-            <p className="text-base font-semibold leading-6 text-charcoal">{m.metric}</p>
-            <p className="text-3xl font-black tabular-nums tracking-tight text-charcoal">
-              <Actual k={row.key} v={row.actual} />
-            </p>
-            <p className="text-sm leading-6 text-charcoal-soft">
-              Locked range <span className="whitespace-nowrap tabular-nums text-charcoal"><Locked m={m} c={m.low} />–<Locked m={m} c={m.high} /></span>
-            </p>
-            <p
-              className={`mt-auto inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide ${
-                hit ? "bg-forest/10 text-forest" : "bg-brass-pale text-rust"
+          <li key={row.key} className="flex" data-chip={row.key} data-chip-result={row.position}>
+            <Box
+              {...(href ? { href } : {})}
+              className={`flex w-full flex-col gap-2 rounded-2xl bg-white p-5 ${hit ? "border border-forest/25" : "border-2 border-rust"} ${
+                href ? "transition-shadow hover:shadow-md motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-cream" : ""
               }`}
             >
-              <Icon aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={2.75} />
-              {CHIP_LABEL[row.position]}
-            </p>
+              <p className="text-base font-semibold leading-6 text-charcoal">{m.metric}</p>
+              <p className="text-3xl font-black tabular-nums tracking-tight text-charcoal">
+                <Actual k={row.key} v={row.actual} />
+              </p>
+              <p className="text-sm leading-6 text-charcoal-soft">
+                Locked range <span className="whitespace-nowrap tabular-nums text-charcoal"><Locked m={m} c={m.low} />–<Locked m={m} c={m.high} /></span>
+              </p>
+              <p
+                className={`mt-auto inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide ${
+                  hit ? "bg-forest/10 text-forest" : "bg-brass-pale text-rust"
+                }`}
+              >
+                <Icon aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={2.75} />
+                {CHIP_LABEL[row.position]}
+              </p>
+            </Box>
           </li>
         );
       })}
@@ -300,7 +308,7 @@ export default function ResultsSection({ className = "", lock }: { className?: s
         </p>
       )}
 
-      {scored && <ScoreStrip ranges={ranges} r={scored} />}
+      {scored && <ScoreStrip ranges={ranges} r={scored} wrongHref={scored.notes.length > 0 ? `#${WRONG_ID}` : null} />}
 
       {lock}
 
@@ -432,7 +440,7 @@ export default function ResultsSection({ className = "", lock }: { className?: s
 
           {scored.notes.length > 0 && (
             <>
-              <h3 className="mt-10 text-lg font-bold text-charcoal">What I got wrong</h3>
+              <h3 id={WRONG_ID} className="mt-10 scroll-mt-36 text-lg font-bold text-charcoal">What I got wrong</h3>
               <ul className={`mt-3 flex flex-col gap-2 ${MEASURE}`}>
                 {[...scored.notes, FOUNDATION_NOTE].map((n) => (
                   <li key={n} className="text-base leading-7 text-charcoal before:mr-2 before:text-[#7a5a30] before:content-['—']">
