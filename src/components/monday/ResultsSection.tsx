@@ -447,10 +447,7 @@ export default function ResultsSection({ className = "", lock }: { className?: s
           <a href={scored.source.url} target="_blank" rel="noopener noreferrer" className="tap font-semibold text-forest underline-offset-4 hover:underline">
             {scored.source.document} ↗
           </a>
-          , retrieved {utc(scored.source.retrieved_at)}.{" "}
-          <a href={`#${PROOF_ID}`} className="tap font-semibold text-forest underline underline-offset-4 hover:text-forest-dark">
-            Proof the call was locked first ↓
-          </a>
+          , retrieved {utc(scored.source.retrieved_at)}.
         </p>
       ) : (
         <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
