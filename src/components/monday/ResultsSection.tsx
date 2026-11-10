@@ -12,7 +12,9 @@
 //
 // The section also holds the lock facts the page passes in (`lock`: the lock timeline,
 // the two release cards and the locked-call chart), so the locked test and its results
-// read as one section. Scored, a strip of the four scored metrics leads it.
+// read as one section. Pending, they come first. Scored, the results lead (score strip,
+// results chart, table, what I got wrong, how it was scored, trigger readings) and the
+// lock facts close the section as "Proof it was locked first" (#proof-locked-first).
 import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, Check } from "lucide-react";
 import { MEASURE, STACK_BODY, STACK_HEAD, STACK_LABEL, STACK_ROW, STACK_TABLE, STACK_VALUE, STACK_WIDE } from "@/components/project/layout";
@@ -183,6 +185,8 @@ const CHIP_LABEL: Record<ScoredRow["position"], string> = { inside: "In range", 
 
 /** Id of the "What I got wrong" block; a missed chip links to it. */
 const WRONG_ID = "what-i-got-wrong";
+/** Id of the "Proof it was locked first" block (scored state). */
+const PROOF_ID = "proof-locked-first";
 
 function ScoreStrip({ ranges, r, wrongHref }: { ranges: Range[]; r: Scored; wrongHref: string | null }) {
   const chips = r.rows.map((row, i) => ({ row, m: ranges[i] })).filter(({ row }) => row.scored);
@@ -264,60 +268,8 @@ export default function ResultsSection({ className = "", lock }: { className?: s
     return <span className="text-charcoal-soft">Not guided</span>;
   };
 
-  return (
-    <section
-      id="results"
-      aria-labelledby="results-heading"
-      className={className}
-      data-results-state={results.state}
-      data-results-file={scored?.file ?? ""}
-      data-results-sha256={scored?.sha256 ?? ""}
-    >
-      <div>
-        <p className={`text-sm font-semibold uppercase tracking-widest ${LABEL}`}>Results</p>
-        <h2 id="results-heading" className="mt-1 text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">
-          Q3 2026 results against the locked call
-        </h2>
-      </div>
-      {scored ? (
-        <p className="mt-4 inline-flex w-fit rounded-full bg-forest px-3 py-1 text-sm font-bold uppercase tracking-widest text-cream">Status: scored</p>
-      ) : (
-        <p className="mt-4 inline-flex w-fit rounded-full border border-dashed border-charcoal-soft px-3 py-1 text-sm font-bold uppercase tracking-widest text-charcoal">
-          Status: pending
-        </p>
-      )}
-
-      {scored?.fixture && (
-        <p role="note" className="mt-4 rounded-2xl border-2 border-rust bg-white px-5 py-4 text-base font-semibold leading-7 text-rust">
-          Test fixture: invented numbers that check the scored layout. These are not monday.com&apos;s results.
-        </p>
-      )}
-
-      {scored ? (
-        <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
-          The plan and this call were locked before the results (lock facts below). The actuals are taken from the company&apos;s own filing:{" "}
-          <a href={scored.source.url} target="_blank" rel="noopener noreferrer" className="tap font-semibold text-forest underline-offset-4 hover:underline">
-            {scored.source.document} ↗
-          </a>
-          , retrieved {utc(scored.source.retrieved_at)}.
-        </p>
-      ) : (
-        <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
-          The plan and this call were locked before the results (lock facts below). The actuals will be taken from the company&apos;s own Q3 2026 results
-          filing on November 9, 2026, and compared with the locked figures. No result is shown until then.
-        </p>
-      )}
-
-      {scored && <ScoreStrip ranges={ranges} r={scored} wrongHref={scored.notes.length > 0 ? `#${WRONG_ID}` : null} />}
-
-      {lock}
-
-      {scored && (
-        <div className="mt-8 rounded-2xl border border-forest/15 bg-white p-5 sm:p-8">
-          <ResultsChart ranges={ranges} r={scored} />
-        </div>
-      )}
-
+  const table = (
+    <>
       <h3 className="mt-10 text-lg font-bold text-charcoal">The locked call {scored ? "and the actuals" : "and guidance"}</h3>
       <div className="mt-3 overflow-x-auto rounded-2xl border border-forest/15 bg-white max-md:overflow-visible">
         <table className={`w-full ${scored ? "min-w-[64rem]" : "min-w-[52rem]"} border-collapse ${STACK_TABLE}`}>
@@ -394,7 +346,10 @@ export default function ResultsSection({ className = "", lock }: { className?: s
       <p className={`mt-3 text-base leading-7 text-charcoal-soft ${MEASURE}`}>
         Locked low, mid and high from the locked Q3 call workbook ({release.file}); guidance and its midpoints from the same workbook (the company&apos;s August 10, 2026 outlook).
       </p>
-
+    </>
+  );
+  const how = (
+    <>
       <h3 className="mt-10 text-lg font-bold text-charcoal">How it {scored ? "was" : "will be"} scored</h3>
       <p className={`mt-2 text-base leading-7 text-charcoal ${MEASURE}`}>
         Each call is a locked range. A result is inside the range if the company&apos;s reported figure is between the locked low and high, ends included; otherwise it is
@@ -403,53 +358,129 @@ export default function ResultsSection({ className = "", lock }: { className?: s
         guidance-beat trigger (T2) and the net-adds trigger (T3) are recorded; each needs two consecutive quarters, so Q3 alone cannot fire one. Thresholds stay as
         locked, and a miss is published as a miss: the locked files and Releases are never edited.
       </p>
+    </>
+  );
+  const triggers = scored && (
+    <>
+      <h3 className="mt-10 text-lg font-bold text-charcoal">First trigger readings</h3>
+      <ul className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {scored.triggers.map((t) => (
+          <li key={t.key} className="flex flex-col gap-3 rounded-2xl border border-forest/15 bg-white p-6" data-trigger={t.key} data-counts={t.counts ? "true" : "false"}>
+            <p className="text-lg font-bold leading-7 text-charcoal">{t.label}</p>
+            <dl className="grid grid-cols-2 gap-2">
+              <div>
+                <dt className="text-sm text-charcoal-soft">Q3 reading</dt>
+                <dd className="text-2xl font-black tabular-nums text-charcoal">
+                  <Actual k={t.key} v={t.value} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-charcoal-soft">Locked threshold</dt>
+                <dd className="text-2xl font-black tabular-nums text-charcoal">
+                  {t.key === "t3_net_adds_customers_over_50k" ? (
+                    // A customer count: printed as a whole number, though the workbook cell shows "194.0".
+                    <span data-ref={t.threshold.ref} data-wb={t.threshold.wb} data-v={t.threshold.v}>
+                      {formatValue(t.key, t.threshold.v)}
+                    </span>
+                  ) : (
+                    <span {...num(t.threshold)}>{t.threshold.d}</span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+            <p className="text-base leading-7 text-charcoal-soft">{t.rule}</p>
+            <p className={`border-t border-forest/10 pt-3 text-base font-semibold leading-7 ${t.counts ? "text-rust" : "text-forest"}`}>{t.text}</p>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+  const wrong = scored && scored.notes.length > 0 && (
+    <>
+      <h3 id={WRONG_ID} className="mt-10 scroll-mt-36 text-lg font-bold text-charcoal">What I got wrong</h3>
+      <ul className={`mt-3 flex flex-col gap-2 ${MEASURE}`}>
+        {[...scored.notes, FOUNDATION_NOTE].map((n) => (
+          <li key={n} className="text-base leading-7 text-charcoal before:mr-2 before:text-[#7a5a30] before:content-['—']">
+            {n}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
 
-      {scored && (
+  return (
+    <section
+      id="results"
+      aria-labelledby="results-heading"
+      className={className}
+      data-results-state={results.state}
+      data-results-file={scored?.file ?? ""}
+      data-results-sha256={scored?.sha256 ?? ""}
+    >
+      <div>
+        <p className={`text-sm font-semibold uppercase tracking-widest ${LABEL}`}>Results</p>
+        <h2 id="results-heading" className="mt-1 text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">
+          Q3 2026 results against the locked call
+        </h2>
+      </div>
+      {scored ? (
+        <p className="mt-4 inline-flex w-fit rounded-full bg-forest px-3 py-1 text-sm font-bold uppercase tracking-widest text-cream">Status: scored</p>
+      ) : (
+        <p className="mt-4 inline-flex w-fit rounded-full border border-dashed border-charcoal-soft px-3 py-1 text-sm font-bold uppercase tracking-widest text-charcoal">
+          Status: pending
+        </p>
+      )}
+
+      {scored?.fixture && (
+        <p role="note" className="mt-4 rounded-2xl border-2 border-rust bg-white px-5 py-4 text-base font-semibold leading-7 text-rust">
+          Test fixture: invented numbers that check the scored layout. These are not monday.com&apos;s results.
+        </p>
+      )}
+
+      {scored ? (
+        <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
+          The plan and this call were locked before the results (
+          <a href={`#${PROOF_ID}`} className="tap font-semibold text-forest underline underline-offset-4 hover:text-forest-dark">
+            proof of the lock below
+          </a>
+          ). The actuals are taken from the company&apos;s own filing:{" "}
+          <a href={scored.source.url} target="_blank" rel="noopener noreferrer" className="tap font-semibold text-forest underline-offset-4 hover:underline">
+            {scored.source.document} ↗
+          </a>
+          , retrieved {utc(scored.source.retrieved_at)}.
+        </p>
+      ) : (
+        <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
+          The plan and this call were locked before the results (lock facts below). The actuals will be taken from the company&apos;s own Q3 2026 results
+          filing on November 9, 2026, and compared with the locked figures. No result is shown until then.
+        </p>
+      )}
+
+      {scored ? (
+        // Results first: the score, the chart and table, what I got wrong, then the proof of the lock.
         <>
-          <h3 className="mt-10 text-lg font-bold text-charcoal">First trigger readings</h3>
-          <ul className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {scored.triggers.map((t) => (
-              <li key={t.key} className="flex flex-col gap-3 rounded-2xl border border-forest/15 bg-white p-6" data-trigger={t.key} data-counts={t.counts ? "true" : "false"}>
-                <p className="text-lg font-bold leading-7 text-charcoal">{t.label}</p>
-                <dl className="grid grid-cols-2 gap-2">
-                  <div>
-                    <dt className="text-sm text-charcoal-soft">Q3 reading</dt>
-                    <dd className="text-2xl font-black tabular-nums text-charcoal">
-                      <Actual k={t.key} v={t.value} />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-charcoal-soft">Locked threshold</dt>
-                    <dd className="text-2xl font-black tabular-nums text-charcoal">
-                      {t.key === "t3_net_adds_customers_over_50k" ? (
-                        // A customer count: printed as a whole number, though the workbook cell shows "194.0".
-                        <span data-ref={t.threshold.ref} data-wb={t.threshold.wb} data-v={t.threshold.v}>
-                          {formatValue(t.key, t.threshold.v)}
-                        </span>
-                      ) : (
-                        <span {...num(t.threshold)}>{t.threshold.d}</span>
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="text-base leading-7 text-charcoal-soft">{t.rule}</p>
-                <p className={`border-t border-forest/10 pt-3 text-base font-semibold leading-7 ${t.counts ? "text-rust" : "text-forest"}`}>{t.text}</p>
-              </li>
-            ))}
-          </ul>
-
-          {scored.notes.length > 0 && (
-            <>
-              <h3 id={WRONG_ID} className="mt-10 scroll-mt-36 text-lg font-bold text-charcoal">What I got wrong</h3>
-              <ul className={`mt-3 flex flex-col gap-2 ${MEASURE}`}>
-                {[...scored.notes, FOUNDATION_NOTE].map((n) => (
-                  <li key={n} className="text-base leading-7 text-charcoal before:mr-2 before:text-[#7a5a30] before:content-['—']">
-                    {n}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          <ScoreStrip ranges={ranges} r={scored} wrongHref={scored.notes.length > 0 ? `#${WRONG_ID}` : null} />
+          <div className="mt-8 rounded-2xl border border-forest/15 bg-white p-5 sm:p-8">
+            <ResultsChart ranges={ranges} r={scored} />
+          </div>
+          {table}
+          {wrong}
+          {how}
+          {triggers}
+          <div id={PROOF_ID} className="mt-14 scroll-mt-36 border-t border-forest/10 pt-10" data-proof-block="">
+            <h3 className="text-xl font-bold tracking-tight text-charcoal">Proof it was locked first</h3>
+            <p className={`mt-3 text-base leading-7 text-charcoal ${MEASURE}`}>
+              The Q3 call and the operating plan were published as GitHub Releases before the results were reported. Hashes and commits are below.
+            </p>
+            {lock}
+          </div>
+        </>
+      ) : (
+        // Pending: the lock facts first, then the locked call and how it will be scored.
+        <>
+          {lock}
+          {table}
+          {how}
         </>
       )}
     </section>
