@@ -15,6 +15,12 @@ import { C, ChartFigure, DataTable, FONT, linear, mark, money, num, r2 } from "@
 import { REPO_URL, loadMondayCharts, loadMondayPlan, loadResultsInputs, type CellValue, type MondayCharts } from "@/lib/mondayPlan";
 import { METRIC_KEYS, Q3_RELEASE, formatValue, loadMondayResults, type MetricKey, type MondayResults, type ScoredRow, type TriggerKey } from "@/lib/mondayResults";
 
+// Shown after the results file's notes under "What I got wrong". The figures are from the Q3 2026
+// Exhibit 99.1 reconciliation: non-GAAP operating income $89,352K, of which a $18,000K charitable
+// contribution to the foundation is excluded; $89.352M - $18.0M = $71.352M, inside the locked range.
+const FOUNDATION_NOTE =
+  "The company's non-GAAP operating income also leaves out a new $18.0M contribution to the monday.com Foundation, which my locked definition (it named only the 2024 contribution) did not anticipate. Without that exclusion the figure would have been $71.4M, inside the range. I scored the reported figure, so this remains a miss.";
+
 const LABEL = "text-[#7a5a30]";
 const TH = "px-4 py-3 text-right text-[0.8125rem] font-semibold uppercase tracking-wide text-charcoal-soft";
 const TH_LEFT = "px-4 py-3 text-left text-[0.8125rem] font-semibold uppercase tracking-wide text-charcoal-soft";
@@ -349,7 +355,14 @@ export default function ResultsSection({ className = "" }: { className?: string 
                   <div>
                     <dt className="text-sm text-charcoal-soft">Locked threshold</dt>
                     <dd className="text-2xl font-black tabular-nums text-charcoal">
-                      <span {...num(t.threshold)}>{t.threshold.d}</span>
+                      {t.key === "t3_net_adds_customers_over_50k" ? (
+                        // A customer count: printed as a whole number, though the workbook cell shows "194.0".
+                        <span data-ref={t.threshold.ref} data-wb={t.threshold.wb} data-v={t.threshold.v}>
+                          {formatValue(t.key, t.threshold.v)}
+                        </span>
+                      ) : (
+                        <span {...num(t.threshold)}>{t.threshold.d}</span>
+                      )}
                     </dd>
                   </div>
                 </dl>
@@ -363,7 +376,7 @@ export default function ResultsSection({ className = "" }: { className?: string 
             <>
               <h3 className="mt-10 text-lg font-bold text-charcoal">What I got wrong</h3>
               <ul className={`mt-3 flex flex-col gap-2 ${MEASURE}`}>
-                {scored.notes.map((n) => (
+                {[...scored.notes, FOUNDATION_NOTE].map((n) => (
                   <li key={n} className="text-base leading-7 text-charcoal before:mr-2 before:text-[#7a5a30] before:content-['—']">
                     {n}
                   </li>
