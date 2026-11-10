@@ -9,10 +9,15 @@
 // data-wb, data-v, data-d); every actual is tagged data-actual with its JSON key and
 // value, so scripts/test-monday-results.py can check each one against the JSON.
 // All text is static: no dates are computed in the browser.
+//
+// The section also holds the lock facts the page passes in (`lock`: the lock timeline,
+// the two release cards and the locked-call chart), so the locked test and its results
+// read as one section. Scored, a strip of the four scored metrics leads it.
 import type { ReactNode } from "react";
+import { ArrowDown, ArrowUp, Check } from "lucide-react";
 import { MEASURE, STACK_BODY, STACK_HEAD, STACK_LABEL, STACK_ROW, STACK_TABLE, STACK_VALUE, STACK_WIDE } from "@/components/project/layout";
 import { C, ChartFigure, DataTable, FONT, linear, mark, money, num, r2 } from "@/components/monday/MondayCharts";
-import { REPO_URL, loadMondayCharts, loadMondayPlan, loadResultsInputs, type CellValue, type MondayCharts } from "@/lib/mondayPlan";
+import { loadMondayCharts, loadMondayPlan, loadResultsInputs, type CellValue, type MondayCharts } from "@/lib/mondayPlan";
 import { METRIC_KEYS, Q3_RELEASE, formatValue, loadMondayResults, type MetricKey, type MondayResults, type ScoredRow, type TriggerKey } from "@/lib/mondayResults";
 
 // Shown after the results file's notes under "What I got wrong". The figures are from the Q3 2026
@@ -147,23 +152,87 @@ function ResultsChart({ ranges, r }: { ranges: Range[]; r: Scored }) {
   );
 }
 
-// --- Section ----------------------------------------------------------------------------
+// --- Score strip: the four scored metrics (scored state only) ---------------------------
 
-function Fact({ term, children }: { term: string; children: ReactNode }) {
+/** Short names for the one-line summary of the misses. */
+const SHORT_NAME: Record<MetricKey, string> = {
+  revenue_usd_m: "Revenue",
+  non_gaap_operating_income_usd_m: "Operating income",
+  non_gaap_operating_margin: "Operating margin",
+  net_dollar_retention: "Net dollar retention",
+  customers_over_50k_arr: "Customers above $50K ARR",
+};
+
+const COUNT_WORD = ["none", "one", "two", "three", "four", "five"];
+
+/**
+ * The score in one line, from the scored rows: how many of the scored metrics (the derived
+ * margin is not scored) landed inside their locked range, and which did not.
+ */
+export function scoreSummary(r: Scored): { headline: string; line: string } {
+  const rows = r.rows.filter((row) => row.scored);
+  const inside = rows.filter((row) => row.position === "inside").length;
+  const misses = rows.filter((row) => row.position !== "inside");
+  const line = misses.length
+    ? misses.map((m) => `${SHORT_NAME[m.key]} came in ${m.position} the range.`).join(" ")
+    : `All ${COUNT_WORD[rows.length] ?? rows.length} came in inside their ranges.`;
+  return { headline: `${inside} of ${rows.length} in range`, line };
+}
+
+const CHIP_LABEL: Record<ScoredRow["position"], string> = { inside: "In range", above: "Above range", below: "Below range" };
+
+/** Id of the "What I got wrong" block; a missed chip links to it. */
+const WRONG_ID = "what-i-got-wrong";
+
+function ScoreStrip({ ranges, r, wrongHref }: { ranges: Range[]; r: Scored; wrongHref: string | null }) {
+  const chips = r.rows.map((row, i) => ({ row, m: ranges[i] })).filter(({ row }) => row.scored);
   return (
-    <>
-      <dt className="text-charcoal-soft">{term}</dt>
-      <dd className="min-w-0 text-charcoal">{children}</dd>
-    </>
+    <ul aria-label="Score of the four scored metrics" className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" data-score-strip="">
+      {chips.map(({ row, m }) => {
+        const hit = row.position === "inside";
+        const Icon = hit ? Check : row.position === "above" ? ArrowUp : ArrowDown;
+        // A miss links to "What I got wrong", where it is explained.
+        const href = hit ? null : wrongHref;
+        const Box = href ? "a" : "div";
+        return (
+          <li key={row.key} className="flex" data-chip={row.key} data-chip-result={row.position}>
+            <Box
+              {...(href ? { href } : {})}
+              className={`flex w-full flex-col gap-2 rounded-2xl bg-white p-5 ${hit ? "border border-forest/25" : "border-2 border-rust"} ${
+                href ? "transition-shadow hover:shadow-md motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-cream" : ""
+              }`}
+            >
+              <p className="text-base font-semibold leading-6 text-charcoal">{m.metric}</p>
+              <p className="text-3xl font-black tabular-nums tracking-tight text-charcoal">
+                <Actual k={row.key} v={row.actual} />
+              </p>
+              <p className="text-sm leading-6 text-charcoal-soft">
+                Locked range <span className="whitespace-nowrap tabular-nums text-charcoal"><Locked m={m} c={m.low} />–<Locked m={m} c={m.high} /></span>
+              </p>
+              <p
+                className={`mt-auto inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide ${
+                  hit ? "bg-forest/10 text-forest" : "bg-brass-pale text-rust"
+                }`}
+              >
+                <Icon aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={2.75} />
+                {CHIP_LABEL[row.position]}
+              </p>
+            </Box>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
+
+// --- Section ----------------------------------------------------------------------------
 
 function resultClass(row: ScoredRow): string {
   if (!row.scored) return "text-charcoal-soft";
   return row.position === "inside" ? "font-semibold text-forest" : "font-semibold text-rust";
 }
 
-export default function ResultsSection({ className = "" }: { className?: string }) {
+export default function ResultsSection({ className = "", lock }: { className?: string; lock?: ReactNode }) {
   const results = loadMondayResults();
   const { scorecard } = loadMondayPlan();
   const { ranges } = loadMondayCharts();
@@ -239,22 +308,15 @@ export default function ResultsSection({ className = "" }: { className?: string 
         </p>
       )}
 
-      <dl className="mt-6 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 rounded-2xl border border-forest/15 bg-white p-6 text-base sm:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)]">
-        <Fact term="Release">
-          <a href={release.url} target="_blank" rel="noopener noreferrer" className="tap font-semibold text-forest hover:text-forest-dark">
-            {release.tag} ↗
-          </a>
-        </Fact>
-        <Fact term="Published">{utc(release.publishedAt)}</Fact>
-        <Fact term="Commit">
-          <a href={`${REPO_URL}/commit/${release.commit}`} target="_blank" rel="noopener noreferrer" className="tap font-mono text-sm font-semibold text-forest hover:text-forest-dark" title={release.commit}>
-            {release.commit.slice(0, 7)} ↗
-          </a>
-        </Fact>
-        <Fact term="SHA-256">
-          <span className="break-all font-mono text-sm">{release.sha256}</span>
-        </Fact>
-      </dl>
+      {scored && <ScoreStrip ranges={ranges} r={scored} wrongHref={scored.notes.length > 0 ? `#${WRONG_ID}` : null} />}
+
+      {lock}
+
+      {scored && (
+        <div className="mt-8 rounded-2xl border border-forest/15 bg-white p-5 sm:p-8">
+          <ResultsChart ranges={ranges} r={scored} />
+        </div>
+      )}
 
       <h3 className="mt-10 text-lg font-bold text-charcoal">The locked call {scored ? "and the actuals" : "and guidance"}</h3>
       <div className="mt-3 overflow-x-auto rounded-2xl border border-forest/15 bg-white max-md:overflow-visible">
@@ -309,8 +371,16 @@ export default function ResultsSection({ className = "" }: { className?: string 
             {scorecard.noCalls.map((s) => (
               <tr key={s.metric} className={`border-b border-forest/10 align-top last:border-b-0 ${STACK_ROW}`}>
                 <th scope="row" className={`px-4 py-3 text-left text-base font-semibold text-charcoal ${STACK_LABEL}`}>{s.metric}</th>
-                <td colSpan={3} data-label="Locked" className={`px-4 py-3 text-left text-base text-charcoal ${STACK_VALUE} ${STACK_WIDE}`}>
-                  <span className="font-semibold">No call made.</span> <span className="text-charcoal-soft">Workbook reason: &ldquo;{s.reason}&rdquo;</span>
+                <td colSpan={3} data-label="Locked" className={`px-4 py-3 text-left text-base text-charcoal ${STACK_VALUE} ${STACK_WIDE}`} data-no-call="">
+                  {/* One line; the workbook's reason, verbatim, behind "Why" (printed open). */}
+                  <span className="font-semibold">No call made</span>{" "}
+                  <details className="group inline print:hidden">
+                    <summary className="tap inline cursor-pointer rounded-sm font-semibold text-forest underline underline-offset-4 hover:text-forest-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass">
+                      Why
+                    </summary>
+                    <span className="mt-1 block text-charcoal-soft">Workbook reason: &ldquo;{s.reason}&rdquo;</span>
+                  </details>
+                  <span className="hidden text-charcoal-soft print:mt-1 print:block">Workbook reason: &ldquo;{s.reason}&rdquo;</span>
                 </td>
                 <td data-label="Guidance" className={`px-4 py-3 text-base text-charcoal ${STACK_VALUE}`}>{s.guidance}</td>
                 <td data-label="Actual" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Not scored</td>
@@ -336,10 +406,6 @@ export default function ResultsSection({ className = "" }: { className?: string 
 
       {scored && (
         <>
-          <div className="mt-8 rounded-2xl border border-forest/15 bg-white p-5 sm:p-8">
-            <ResultsChart ranges={ranges} r={scored} />
-          </div>
-
           <h3 className="mt-10 text-lg font-bold text-charcoal">First trigger readings</h3>
           <ul className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {scored.triggers.map((t) => (
@@ -374,7 +440,7 @@ export default function ResultsSection({ className = "" }: { className?: string 
 
           {scored.notes.length > 0 && (
             <>
-              <h3 className="mt-10 text-lg font-bold text-charcoal">What I got wrong</h3>
+              <h3 id={WRONG_ID} className="mt-10 scroll-mt-36 text-lg font-bold text-charcoal">What I got wrong</h3>
               <ul className={`mt-3 flex flex-col gap-2 ${MEASURE}`}>
                 {[...scored.notes, FOUNDATION_NOTE].map((n) => (
                   <li key={n} className="text-base leading-7 text-charcoal before:mr-2 before:text-[#7a5a30] before:content-['—']">

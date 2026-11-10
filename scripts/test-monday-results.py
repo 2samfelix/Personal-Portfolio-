@@ -277,7 +277,9 @@ def main() -> int:
             failures.append(f"pending: expected {len(METRICS)} Actual cells reading {PENDING!r}, found {[n['text'].strip() for n in pend]}")
         if page.page_actuals:
             failures.append(f"pending: the page shows {page.page_actuals} actual values")
-        if any("data-result" in n["attrs"] for n in page.nodes) or any(n["tag"] == "svg" for n in page.nodes):
+        # The section also holds the locked-call range chart (an SVG with no actuals); the
+        # results chart (each actual on its range) must not be drawn while pending.
+        if any("data-result" in n["attrs"] for n in page.nodes) or any(n["attrs"].get("id") == "results-chart-title" for n in page.nodes):
             failures.append("pending: the section shows results or a results chart")
         real = ROOT / "public/monday-operating-plan/monday_q3_actuals.json"
         if real.exists() and json.loads(real.read_text()).get("status") != "pending":
