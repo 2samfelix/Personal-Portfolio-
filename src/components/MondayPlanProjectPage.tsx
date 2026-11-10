@@ -500,7 +500,10 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                       ))}
                     </dl>
                   ) : (
-                    <p className="text-3xl font-black tabular-nums text-forest">{t.values[0]}</p>
+                    <p className="text-3xl font-black tabular-nums text-forest">
+                      {/* T3 is a customer count: whole number, though the workbook cell shows "194.0". */}
+                      {t.label.startsWith("T3 threshold") ? t.values[0].replace(/\.0$/, "") : t.values[0]}
+                    </p>
                   )}
                   <p className="text-base leading-7 text-charcoal-soft">{t.rule}</p>
                   <p className="rounded-xl bg-brass-pale px-3 py-2 text-base leading-7 text-charcoal">
