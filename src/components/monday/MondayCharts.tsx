@@ -515,7 +515,7 @@ export function RangeChart({ ranges, results = null }: { ranges: MondayCharts["r
       id="ranges"
       title={
         actuals
-          ? "The locked Q3 call is a range for each metric; each actual is printed at right and scored below in Results."
+          ? "The locked Q3 call is a range for each metric; each actual is printed at right and scored in the results above."
           : "The locked Q3 call is a range for each metric; the actuals are not known yet."
       }
       caption={`Dark bar: locked low to high, with the mid as a tick. Tan band: the company's August 10 guidance, where it gave one. Faint ticks mark the ends of the bar and the band on each metric's own scale. ${

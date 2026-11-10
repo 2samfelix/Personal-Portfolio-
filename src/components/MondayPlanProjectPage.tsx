@@ -61,6 +61,10 @@ const MENU = [
   { href: "#downloads", label: "Downloads" },
 ];
 
+// The Q3 2026 scorecard in the plan's repository, at the commit the results file was copied
+// from: the plan workbook's Scorecard (plan, actual, difference), filled in after the results.
+const SCORECARD_URL = `${REPO_URL}/blob/4c90cc76ab0b31dad5b487baaf38737d6ab85bbc/scoring/q3-2026-scorecard.md`;
+
 // Ids of the sections merged into Results, kept as anchors so old links still land there.
 const RESULTS_ALIASES = ["q3-test", "q3-heading", "locked-test"];
 
@@ -165,7 +169,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
     {
       when: "After the results",
       what: "Scoring",
-      detail: scored ? "Scored below in Results; thresholds unchanged" : "Actuals recorded in the Scorecard; thresholds unchanged",
+      detail: scored ? "Scored above; thresholds unchanged" : "Actuals recorded in the Scorecard; thresholds unchanged",
       done: !!scored,
     },
   ];
@@ -480,7 +484,21 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
         {/* Triggers */}
         <section id="triggers" aria-labelledby="triggers-heading" className={`mt-20 ${SECTION}`}>
           <SectionHeading id="triggers-heading" eyebrow="Triggers">What would change the plan, and what happens then</SectionHeading>
-          <p className={`mt-3 text-base leading-7 text-charcoal ${MEASURE}`}>{plan.fixedNote}</p>
+          <p className={`mt-3 text-base leading-7 text-charcoal ${MEASURE}`}>
+            {/* The workbook's own words, unchanged. Scored, its "Scorecard" (the plan workbook's
+                Scorecard sheet) links to where the actuals were recorded against it. */}
+            {scored && plan.fixedNote.includes(" Scorecard") ? (
+              <>
+                {plan.fixedNote.slice(0, plan.fixedNote.indexOf(" Scorecard") + 1)}
+                <a href={SCORECARD_URL} target="_blank" rel="noopener noreferrer" className="tap font-semibold text-forest underline underline-offset-4 hover:text-forest-dark">
+                  Scorecard ↗
+                </a>
+                {plan.fixedNote.slice(plan.fixedNote.indexOf(" Scorecard") + " Scorecard".length)}
+              </>
+            ) : (
+              plan.fixedNote
+            )}
+          </p>
           <p className={`mt-2 text-base leading-7 text-charcoal-soft ${MEASURE}`}>{plan.tierNote}</p>
           <ul className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {plan.triggers.map((t, i) => {
