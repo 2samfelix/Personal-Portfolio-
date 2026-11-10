@@ -30,7 +30,7 @@ export const ACTUALS_PATH = "/monday-operating-plan/monday_q3_actuals.json";
  * SHA-256 of public/monday-operating-plan/monday_q3_actuals.json. Null until the
  * results are published; once the file exists the build requires this pin.
  */
-export const ACTUALS_SHA256: string | null = null;
+export const ACTUALS_SHA256: string | null = "f187899893978ada73bca681d9be98baab439c2902e61678d2560de07f559991";
 
 /** The scored-layout test fixture: invented numbers, never shipped. */
 export const FIXTURE_FILE = "monday-operating-plan/fixtures/q3-actuals.scored.fixture.json";
