@@ -35,8 +35,8 @@ import { BreakevenChart, BridgeChart, GrowthChart, QuarterlyCharts, RangeChart, 
 import InPageMenu from "@/components/monday/InPageMenu";
 import { AccentBand } from "@/components/project/AccentBand";
 import ResultsCountdown from "@/components/monday/ResultsCountdown";
-import ResultsSection from "@/components/monday/ResultsSection";
-import { formatValue, loadMondayResults } from "@/lib/mondayResults";
+import ResultsSection, { scoreSummary } from "@/components/monday/ResultsSection";
+import { loadMondayResults } from "@/lib/mondayResults";
 
 // Whole sheets at 100% zoom; the desktop grid is sized to each tab at build time.
 const PREVIEW_ZOOM = 1;
@@ -53,14 +53,16 @@ const TAGS = ["Strategic FP&A", "Scenario analysis", "Cash / FCF"];
 const LABEL = "text-[#7a5a30]";
 
 const MENU = [
-  { href: "#downloads", label: "Downloads" },
   { href: "#plan", label: "The plan" },
+  { href: "#results", label: "Results" },
   { href: "#scenarios", label: "Scenarios" },
   { href: "#triggers", label: "Triggers" },
-  { href: "#q3-test", label: "Locked test" },
-  { href: "#results", label: "Results" },
   { href: "#inside-the-model", label: "Inside the model" },
+  { href: "#downloads", label: "Downloads" },
 ];
+
+// Ids of the sections merged into Results, kept as anchors so old links still land there.
+const RESULTS_ALIASES = ["q3-test", "q3-heading", "locked-test"];
 
 // Sections clear the site header (69-77px) and the in-page menu when jumped to.
 const SECTION = "scroll-mt-36";
@@ -134,7 +136,8 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
   // pending while there is none, scored once it is published and pinned.
   const results = loadMondayResults();
   const scored = results.state === "scored" ? results : null;
-  const scoredRow = (metric: string) => scored?.rows.find((r) => r.metric === metric) ?? null;
+  // The hero's result card: the real results only (the fixture keeps the plain "Reported" card).
+  const score = scored && !scored.fixture ? scoreSummary(scored) : null;
 
   const summary = [
     <>
@@ -211,6 +214,15 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                   </>
                 )}
               </div>
+              <p className="mt-5">
+                <a
+                  href={PLAN_DOWNLOAD_PATH}
+                  download="monday_plan.xlsx"
+                  className="tap inline-flex min-h-11 items-center rounded-full border border-cream/70 px-5 text-base font-semibold text-cream hover:border-brass-light hover:text-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"
+                >
+                  Download workbook ↓
+                </a>
+              </p>
             </div>
             <GrowthChart g={charts.growth} />
           </div>
@@ -240,6 +252,15 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
               of Base: <strong className="text-charcoal"><N c={strip.gapX} /></strong> a normal 4-quarter forecast miss
             </p>
           </div>
+          {score ? (
+            // Scored: the result itself, from the validated results file; links to Results.
+            <a href="#results" className="group rounded-2xl border border-forest/30 bg-forest/5 p-6 hover:border-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest" data-score-card="">
+              <p className={`text-sm font-semibold uppercase tracking-widest ${LABEL}`}>Q3 results</p>
+              <p className="mt-2 text-4xl font-black tracking-tight text-forest">{score.headline}</p>
+              <p className="mt-2 text-base text-charcoal">{score.line}</p>
+              <p className="mt-2 text-base font-semibold text-forest underline-offset-4 group-hover:underline">See the results ↓</p>
+            </a>
+          ) : (
           <div className="rounded-2xl border border-forest/30 bg-forest/5 p-6">
             <p className={`text-sm font-semibold uppercase tracking-widest ${LABEL}`}>Q3 results</p>
             {scored ? (
@@ -259,84 +280,9 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
               </>
             )}
           </div>
+          )}
         </section>
 
-        {/* Downloads, repository: right after the key numbers, on the project's accent band. */}
-        <AccentBand slug="monday-operating-plan" className="mt-12">
-          <section id="downloads" aria-labelledby="downloads-heading" className={SECTION}>
-            <SectionHeading id="downloads-heading" eyebrow="Downloads">Files and sources</SectionHeading>
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                {
-                  title: "Operating plan workbook",
-                  format: "XLSX",
-                  description: `monday_plan.xlsx, 18 sheets, live formulas: a copy of the locked file hosted on this site. SHA-256 ${PLAN_SHA256.slice(0, 12)}…`,
-                  href: PLAN_DOWNLOAD_PATH,
-                  cta: "Download workbook ↓",
-                  download: "monday_plan.xlsx",
-                },
-                {
-                  title: "Management memo (PDF)",
-                  format: "PDF",
-                  description: "One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.",
-                  sha256: MEMO_SHA256,
-                  href: MEMO_DOWNLOAD_PATH,
-                  cta: "Download memo ↓",
-                  download: "monday-operating-plan-memo.pdf",
-                },
-                {
-                  title: `GitHub Release ${planRelease.tag}`,
-                  format: "AUTHORITATIVE",
-                  description: "The authoritative copy of the operating plan, with its SHA-256 and the commit it points to.",
-                  href: planRelease.url,
-                  cta: "Open Release ↗",
-                },
-                {
-                  title: `GitHub Release ${q3Release.tag}`,
-                  format: "AUTHORITATIVE",
-                  description: scored
-                    ? "The authoritative copy of the Q3 2026 forecast, scored on November 9 (see Results above)."
-                    : "The authoritative copy of the Q3 2026 forecast to be scored on November 9.",
-                  href: q3Release.url,
-                  cta: "Open Release ↗",
-                },
-                {
-                  title: "Repository",
-                  format: "REPOSITORY",
-                  description: "All five workbooks, the design brief and the method change log.",
-                  href: REPO_URL,
-                  cta: "View GitHub ↗",
-                },
-                {
-                  title: "README",
-                  format: "README",
-                  description: "How the pre-registration and locks work, the scoring plan, labels, limits and data sources.",
-                  href: README_URL,
-                  cta: "Read README ↗",
-                },
-              ].map((item) => (
-                <a
-                  key={item.title}
-                  href={item.href}
-                  {...(item.download ? { download: item.download } : { target: "_blank", rel: "noopener noreferrer" })}
-                  className={`group flex flex-col p-6 ${CARD_LIFT}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="min-w-0 break-words text-lg font-bold text-charcoal">{item.title}</p>
-                    <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
-                      {item.format}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-base leading-7 text-charcoal-soft">{item.description}</p>
-                  {item.sha256 && (
-                    <p className="mt-2 break-all font-mono text-xs leading-5 text-charcoal-soft">SHA-256 {item.sha256}</p>
-                  )}
-                  <span className={`mt-auto pt-4 ${CARD_CTA}`}>{item.cta}</span>
-                </a>
-              ))}
-            </div>
-          </section>
-        </AccentBand>
 
         {/* Plan: 60-second summary and the management question */}
         <section id="plan" aria-labelledby="summary-heading" className={`mt-16 ${SECTION}`}>
@@ -370,6 +316,65 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
             </blockquote>
           </figure>
         </section>
+
+        {/* Results: the locked test and its scoring in one section, pending until the results
+            file exists (src/lib/mondayResults.ts). The old section ids stay as anchors. */}
+        <div className="mt-20">
+          {RESULTS_ALIASES.map((id) => (
+            <span key={id} id={id} aria-hidden="true" className={`block ${SECTION}`} />
+          ))}
+          <ResultsSection
+            className={SECTION}
+            lock={
+              <>
+              <h3 className="mt-10 text-lg font-bold text-charcoal">Lock timeline</h3>
+              <ol className="mt-4 grid grid-cols-1 gap-0 md:grid-cols-4 md:gap-4">
+                {timeline.map((s, i) => (
+                  <li key={s.what} className="relative flex gap-4 pb-6 md:flex-col md:gap-3 md:pb-0">
+                    {/* Connector: vertical on phones, horizontal from md. */}
+                    {i < timeline.length - 1 && (
+                      <span aria-hidden="true" className="absolute left-[0.6875rem] top-7 bottom-0 w-0.5 bg-forest/20 md:left-7 md:right-[-1rem] md:top-[0.6875rem] md:bottom-auto md:h-0.5 md:w-auto" />
+                    )}
+                    <span
+                      aria-hidden="true"
+                      className={`relative z-10 mt-0.5 h-6 w-6 shrink-0 rounded-full border-2 ${s.done ? "border-forest bg-forest" : "border-dashed border-charcoal-soft bg-cream"}`}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-charcoal-soft">{s.when}</p>
+                      <p className="text-lg font-bold text-charcoal">{s.what}</p>
+                      {s.href ? (
+                        <a href={s.href} target="_blank" rel="noopener noreferrer" className="tap break-all text-base font-semibold text-forest hover:text-forest-dark">
+                          {s.detail} ↗
+                        </a>
+                      ) : (
+                        <p className={`text-base ${s.done ? "text-charcoal" : "italic text-charcoal-soft"}`}>{s.detail}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {RELEASES.map((r) => (
+                  <ReleaseCard key={r.tag} release={r} />
+                ))}
+              </div>
+
+              <div className="mt-8 rounded-2xl border border-forest/15 bg-white p-5 sm:p-8">
+                <RangeChart ranges={charts.ranges} results={scored ? scored.rows : null} />
+                <ul className="mt-6 flex flex-col gap-3 border-t border-forest/10 pt-5">
+                  {scorecard.noCalls.map((s) => (
+                    <li key={s.metric} className="text-base leading-7 text-charcoal">
+                      <span className="font-bold">{s.metric}: No call made.</span>{" "}
+                      <span className="text-charcoal-soft">Workbook reason: &ldquo;{s.reason}&rdquo;</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              </>
+            }
+          />
+        </div>
 
         {/* Scenarios: charts, bridge, then the tables */}
         <section id="scenarios" aria-labelledby="cases-heading" className={`mt-20 ${SECTION}`}>
@@ -543,152 +548,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
           </div>
         </section>
 
-        {/* Pre-Registered Q3 Test */}
-        <section id="q3-test" aria-labelledby="q3-heading" className={`mt-20 ${SECTION}`}>
-          <SectionHeading id="q3-heading" eyebrow="Locked test">Pre-Registered Q3 Test</SectionHeading>
-          {scored ? (
-            <p className="mt-4 inline-flex w-fit rounded-full bg-forest px-3 py-1 text-sm font-bold uppercase tracking-widest text-cream">Status: scored</p>
-          ) : (
-            <p className="mt-4 inline-flex w-fit rounded-full border border-dashed border-charcoal-soft px-3 py-1 text-sm font-bold uppercase tracking-widest text-charcoal">
-              Status: pending
-            </p>
-          )}
-          <p className={`mt-4 text-base leading-7 text-charcoal ${MEASURE}`}>
-            {scored
-              ? "The Q3 forecast and operating plan were locked before results were released. The actuals were scored against the frozen files; the results are below."
-              : "The Q3 forecast and operating plan were locked before results were released. Actuals will be scored against the frozen files on November 9, 2026."}
-          </p>
 
-          <h3 className="mt-10 text-lg font-bold text-charcoal">Lock timeline</h3>
-          <ol className="mt-4 grid grid-cols-1 gap-0 md:grid-cols-4 md:gap-4">
-            {timeline.map((s, i) => (
-              <li key={s.what} className="relative flex gap-4 pb-6 md:flex-col md:gap-3 md:pb-0">
-                {/* Connector: vertical on phones, horizontal from md. */}
-                {i < timeline.length - 1 && (
-                  <span aria-hidden="true" className="absolute left-[0.6875rem] top-7 bottom-0 w-0.5 bg-forest/20 md:left-7 md:right-[-1rem] md:top-[0.6875rem] md:bottom-auto md:h-0.5 md:w-auto" />
-                )}
-                <span
-                  aria-hidden="true"
-                  className={`relative z-10 mt-0.5 h-6 w-6 shrink-0 rounded-full border-2 ${s.done ? "border-forest bg-forest" : "border-dashed border-charcoal-soft bg-cream"}`}
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-charcoal-soft">{s.when}</p>
-                  <p className="text-lg font-bold text-charcoal">{s.what}</p>
-                  {s.href ? (
-                    <a href={s.href} target="_blank" rel="noopener noreferrer" className="tap break-all text-base font-semibold text-forest hover:text-forest-dark">
-                      {s.detail} ↗
-                    </a>
-                  ) : (
-                    <p className={`text-base ${s.done ? "text-charcoal" : "italic text-charcoal-soft"}`}>{s.detail}</p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-
-          <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {RELEASES.map((r) => (
-              <ReleaseCard key={r.tag} release={r} />
-            ))}
-          </div>
-
-          <div className="mt-8 rounded-2xl border border-forest/15 bg-white p-5 sm:p-8">
-            <RangeChart ranges={charts.ranges} results={scored ? scored.rows : null} />
-            <ul className="mt-6 flex flex-col gap-3 border-t border-forest/10 pt-5">
-              {scorecard.noCalls.map((s) => (
-                <li key={s.metric} className="text-base leading-7 text-charcoal">
-                  <span className="font-bold">{s.metric}: No call made.</span>{" "}
-                  <span className="text-charcoal-soft">Workbook reason: &ldquo;{s.reason}&rdquo;</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <h3 className="mt-10 text-lg font-bold text-charcoal">Scorecard</h3>
-          <p className={`mt-2 text-base leading-7 text-charcoal-soft ${MEASURE}`}>
-            Locked values from the locked Q3 call workbook ({q3Release.file}); guidance from the company&apos;s August 10, 2026 outlook.{" "}
-            {scored ? "Actual from the published results file; result and comparison with guidance as scored in Results below." : "Actual, variance and interpretation stay empty until the results."}
-          </p>
-          <div className="mt-3 overflow-x-auto rounded-2xl border border-forest/15 bg-white max-md:overflow-visible">
-            <table className={`w-full min-w-[64rem] border-collapse ${STACK_TABLE}`}>
-              <thead className={STACK_HEAD}>
-                <tr className="border-b border-forest/10 bg-cream">
-                  <th scope="col" className={TH_LEFT}>Metric</th>
-                  <th scope="col" className={TH_LEFT}>Guidance</th>
-                  <th scope="col" className={TH}>Locked Low</th>
-                  <th scope="col" className={TH}>Locked Mid</th>
-                  <th scope="col" className={TH}>Locked High</th>
-                  <th scope="col" className={TH_LEFT}>Actual</th>
-                  <th scope="col" className={TH_LEFT}>{scored ? "Result" : "Variance"}</th>
-                  <th scope="col" className={TH_LEFT}>{scored ? "Versus guidance" : "Interpretation"}</th>
-                </tr>
-              </thead>
-              <tbody className={STACK_BODY}>
-                {scorecard.rows.map((s) => {
-                  const r = scoredRow(s.metric);
-                  return (
-                  <tr key={s.metric} className={`border-b border-forest/10 align-top ${STACK_ROW}`}>
-                    <th scope="row" className={`min-w-[11rem] px-4 py-3 text-left text-base font-semibold text-charcoal ${STACK_LABEL}`}>
-                      {s.metric}
-                      <span className="mt-1 block"><Tag tag={s.tag} /></span>
-                    </th>
-                    <td data-label="Guidance" className={`min-w-[13rem] px-4 py-3 text-base text-charcoal ${STACK_VALUE} ${STACK_WIDE}`}>
-                      {s.guidance.text}
-                      {s.guidance.label && <span className="mt-1 block text-sm leading-6 text-charcoal-soft">{s.guidance.label}</span>}
-                    </td>
-                    {s.values.map((v, i) => (
-                      <td key={i} data-label={`Locked ${["Low", "Mid", "High"][i]}`} className={`${TD} ${STACK_VALUE}`}>{v}</td>
-                    ))}
-                    {r ? (
-                      <>
-                        <td data-label="Actual" className={`px-4 py-3 text-base font-semibold tabular-nums text-charcoal ${STACK_VALUE}`}>
-                          <span data-actual={r.key} data-v={r.actual} data-d={formatValue(r.key, r.actual)}>{formatValue(r.key, r.actual)}</span>
-                        </td>
-                        <td data-label="Result" className={`px-4 py-3 text-base ${!r.scored ? "text-charcoal-soft" : r.position === "inside" ? "font-semibold text-forest" : "font-semibold text-rust"} ${STACK_VALUE}`}>
-                          {r.result}
-                        </td>
-                        <td data-label="Versus guidance" className={`px-4 py-3 text-base text-charcoal ${STACK_VALUE}`}>{r.versusGuide ? r.versusGuide.text : "Not guided"}</td>
-                      </>
-                    ) : (
-                      <>
-                        <td data-label="Actual" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending: Nov. 9</td>
-                        <td data-label="Variance" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
-                        <td data-label="Interpretation" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
-                      </>
-                    )}
-                  </tr>
-                  );
-                })}
-                {scorecard.noCalls.map((s) => (
-                  <tr key={s.metric} className={`border-b border-forest/10 align-top last:border-b-0 ${STACK_ROW}`}>
-                    <th scope="row" className={`px-4 py-3 text-left text-base font-semibold text-charcoal ${STACK_LABEL}`}>{s.metric}</th>
-                    <td data-label="Guidance" className={`px-4 py-3 text-base text-charcoal ${STACK_VALUE} ${STACK_WIDE}`}>{s.guidance}</td>
-                    <td colSpan={3} data-label="Locked" className={`px-4 py-3 text-left text-base text-charcoal ${STACK_VALUE} ${STACK_WIDE}`}>
-                      <span className="font-semibold">No call made.</span>{" "}
-                      <span className="text-charcoal-soft">Workbook reason: &ldquo;{s.reason}&rdquo;</span>
-                    </td>
-                    {scored ? (
-                      <>
-                        <td data-label="Actual" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Not scored</td>
-                        <td data-label="Result" className={`px-4 py-3 text-base text-charcoal-soft ${STACK_VALUE}`}>No call</td>
-                        <td data-label="Versus guidance" className={`px-4 py-3 text-base text-charcoal-soft ${STACK_VALUE}`}>Not scored</td>
-                      </>
-                    ) : (
-                      <>
-                        <td data-label="Actual" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending: Nov. 9</td>
-                        <td data-label="Variance" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
-                        <td data-label="Interpretation" className={`px-4 py-3 text-base italic text-charcoal-soft ${STACK_VALUE}`}>Pending</td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Q3 results: pending until the results file exists (src/lib/mondayResults.ts) */}
-        <ResultsSection className={`mt-20 ${SECTION}`} />
 
         {/* Model Preview */}
         <section id="inside-the-model" aria-labelledby="inside-model-heading" className={`mt-20 ${SECTION}`}>
@@ -725,6 +585,83 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
             ))}
           </ul>
         </section>
+
+        {/* Files and sources: last, on the project's accent band (the hero keeps a workbook link). */}
+        <AccentBand slug="monday-operating-plan" className="mt-16">
+          <section id="downloads" aria-labelledby="downloads-heading" className={SECTION}>
+            <SectionHeading id="downloads-heading" eyebrow="Downloads">Files and sources</SectionHeading>
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  title: "Operating plan workbook",
+                  format: "XLSX",
+                  description: `monday_plan.xlsx, 18 sheets, live formulas: a copy of the locked file hosted on this site. SHA-256 ${PLAN_SHA256.slice(0, 12)}…`,
+                  href: PLAN_DOWNLOAD_PATH,
+                  cta: "Download workbook ↓",
+                  download: "monday_plan.xlsx",
+                },
+                {
+                  title: "Management memo (PDF)",
+                  format: "PDF",
+                  description: "One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.",
+                  sha256: MEMO_SHA256,
+                  href: MEMO_DOWNLOAD_PATH,
+                  cta: "Download memo ↓",
+                  download: "monday-operating-plan-memo.pdf",
+                },
+                {
+                  title: `GitHub Release ${planRelease.tag}`,
+                  format: "AUTHORITATIVE",
+                  description: "The authoritative copy of the operating plan, with its SHA-256 and the commit it points to.",
+                  href: planRelease.url,
+                  cta: "Open Release ↗",
+                },
+                {
+                  title: `GitHub Release ${q3Release.tag}`,
+                  format: "AUTHORITATIVE",
+                  description: scored
+                    ? "The authoritative copy of the Q3 2026 forecast, scored on November 9 (see Results above)."
+                    : "The authoritative copy of the Q3 2026 forecast to be scored on November 9.",
+                  href: q3Release.url,
+                  cta: "Open Release ↗",
+                },
+                {
+                  title: "Repository",
+                  format: "REPOSITORY",
+                  description: "All five workbooks, the design brief and the method change log.",
+                  href: REPO_URL,
+                  cta: "View GitHub ↗",
+                },
+                {
+                  title: "README",
+                  format: "README",
+                  description: "How the pre-registration and locks work, the scoring plan, labels, limits and data sources.",
+                  href: README_URL,
+                  cta: "Read README ↗",
+                },
+              ].map((item) => (
+                <a
+                  key={item.title}
+                  href={item.href}
+                  {...(item.download ? { download: item.download } : { target: "_blank", rel: "noopener noreferrer" })}
+                  className={`group flex flex-col p-6 ${CARD_LIFT}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 break-words text-lg font-bold text-charcoal">{item.title}</p>
+                    <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
+                      {item.format}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-base leading-7 text-charcoal-soft">{item.description}</p>
+                  {item.sha256 && (
+                    <p className="mt-2 break-all font-mono text-xs leading-5 text-charcoal-soft">SHA-256 {item.sha256}</p>
+                  )}
+                  <span className={`mt-auto pt-4 ${CARD_CTA}`}>{item.cta}</span>
+                </a>
+              ))}
+            </div>
+          </section>
+        </AccentBand>
 
         {/* Prev / Next */}
         <nav aria-label="Projects" className="mt-16 flex items-center justify-between border-t border-forest/10 pt-8">
