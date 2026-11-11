@@ -622,7 +622,9 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                 {
                   title: "Management memo (PDF)",
                   format: "PDF",
-                  description: "One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.",
+                  // The memo predates the results and is not edited (its SHA-256 is pinned), so the
+                  // card says so once the call is scored.
+                  description: `One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.${scored ? " Written before the Q3 results; see Results for the scoring." : ""}`,
                   sha256: MEMO_SHA256,
                   href: MEMO_DOWNLOAD_PATH,
                   cta: "Download memo ↓",
@@ -639,7 +641,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                   title: `GitHub Release ${q3Release.tag}`,
                   format: "AUTHORITATIVE",
                   description: scored
-                    ? "The authoritative copy of the Q3 2026 forecast, scored on November 9 (see Results above)."
+                    ? "The authoritative copy of the Q3 2026 forecast, scored against the November 9 results (see Results above)."
                     : "The authoritative copy of the Q3 2026 forecast to be scored on November 9.",
                   href: q3Release.url,
                   cta: "Open Release ↗",
