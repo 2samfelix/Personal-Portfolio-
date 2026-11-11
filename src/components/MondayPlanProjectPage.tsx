@@ -152,7 +152,8 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
       <N c={strip.downMargin} />.
     </>,
     <>
-      <strong>Why the cases cannot be told apart in advance.</strong> The FY27 revenue gap (<N c={strip.gapPct} /> of Base) is <N c={strip.gapX} /> the average 4-quarter-ahead backtest miss.
+      <strong>Why the cases cannot be told apart in advance.</strong> The two cases are only <N c={strip.gapPct} /> apart in FY27 revenue, about the size of a typical
+      4-quarter-ahead forecast miss (<N c={strip.gapX} /> the average backtest miss). That is why the plan uses triggers instead of a forecast.
     </>,
     <>
       <strong>The triggers.</strong> A revenue trigger in two tiers (Watch is review only; Action pulls Lever 1), a guidance-beat trigger and a net-adds trigger for customers above $50K ARR; Lever 2 only if net adds also fall.
@@ -621,7 +622,9 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                 {
                   title: "Management memo (PDF)",
                   format: "PDF",
-                  description: "One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.",
+                  // The memo predates the results and is not edited (its SHA-256 is pinned), so the
+                  // card says so once the call is scored.
+                  description: `One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.${scored ? " Written before the Q3 results; see Results for the scoring." : ""}`,
                   sha256: MEMO_SHA256,
                   href: MEMO_DOWNLOAD_PATH,
                   cta: "Download memo ↓",
@@ -638,7 +641,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                   title: `GitHub Release ${q3Release.tag}`,
                   format: "AUTHORITATIVE",
                   description: scored
-                    ? "The authoritative copy of the Q3 2026 forecast, scored on November 9 (see Results above)."
+                    ? "The authoritative copy of the Q3 2026 forecast, scored against the November 9 results (see Results above)."
                     : "The authoritative copy of the Q3 2026 forecast to be scored on November 9.",
                   href: q3Release.url,
                   cta: "Open Release ↗",

@@ -93,7 +93,7 @@ function thumb(scored) {
   body += `<rect x="${W - PAD - 196}" y="${H - PAD - 38}" width="196" height="44" rx="8" fill="${C.cream}"/>`;
   body += `<text x="${W - PAD - 98}" y="${H - PAD - 7}" font-size="24" font-weight="900" fill="${C.forest}" text-anchor="middle">${label(status, "status")}</text>`;
   body += `<text x="${PAD}" y="${H - PAD - 7}" font-size="24" font-weight="700" fill="${C.sage}">${label(`${first.quarter} to ${bEnd.quarter}`, "period")}</text>`;
-  const alt = `monday.com operating plan: revenue growth slowed from ${first.value.d} in ${first.quarter} to ${lastActual.value.d} in ${lastActual.quarter}; the plan's Base case reaches ${bEnd.value.d} and the Downside ${dEnd.value.d} by ${bEnd.quarter}. ${scored ? "Q3 2026 results scored." : "Q3 2026 results pending."}`;
+  const alt = `monday.com operating plan: revenue growth slowed from ${first.value.d} in ${first.quarter} to ${lastActual.value.d} in ${lastActual.quarter}; the plan's Base case reaches ${bEnd.value.d} and the Downside ${dEnd.value.d} by ${bEnd.quarter}. ${scored ? "Q3 2026 results scored against the locked call." : "Q3 2026 results pending."}`;
   return { svg: svgDoc(W, H, C.forest, body, alt), alt };
 }
 
