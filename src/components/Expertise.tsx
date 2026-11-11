@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { ChartColumn, Database, Sparkles, Table } from "lucide-react";
 import { siPython } from "simple-icons";
 import thumbAlts from "@/lib/projectVisualAlts.generated.json";
+import { SCORED_VISUAL, loadMondayResults } from "@/lib/mondayResults";
 
 function PythonMark({ size }: { size: number }) {
   return (
@@ -119,6 +120,19 @@ const THUMB_HREF: Record<string, string> = {
   msft: "/projects/microsoft-activision",
 };
 
+// The monday thumbnail prints its Q3 status, so the reel follows the results file, as the
+// home grid's card does (src/components/WorkGrid.tsx).
+const MONDAY_RESULTS = loadMondayResults();
+const MONDAY_SCORED = MONDAY_RESULTS.state === "scored";
+const MONDAY_FIXTURE = MONDAY_RESULTS.state === "scored" && MONDAY_RESULTS.fixture;
+function thumbSrc(slug: keyof typeof thumbAlts) {
+  return slug === "monday-operating-plan" && MONDAY_SCORED ? SCORED_VISUAL : `/project-visuals/${slug}.webp`;
+}
+function thumbAlt(slug: keyof typeof thumbAlts) {
+  if (slug !== "monday-operating-plan" || !MONDAY_SCORED) return thumbAlts[slug];
+  return thumbAlts["monday-operating-plan-scored"] + (MONDAY_FIXTURE ? " Test fixture, not real results." : "");
+}
+
 const SHELL =
   "reel-card mb-2 block h-[7.5rem] overflow-hidden rounded-md border border-forest/15 bg-white shadow-[0_1px_3px_rgba(42,40,32,0.08)]";
 const LINK =
@@ -156,8 +170,8 @@ function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
       <Link href={THUMB_HREF[card.slug]} tabIndex={tab} className={`${SHELL} ${LINK}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/project-visuals/${card.slug}.webp`}
-          alt={hidden ? "" : thumbAlts[card.slug]}
+          src={thumbSrc(card.slug)}
+          alt={hidden ? "" : thumbAlt(card.slug)}
           width={card.width}
           height={800}
           loading="lazy"

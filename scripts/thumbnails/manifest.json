@@ -25,7 +25,7 @@
   },
   "monday-operating-plan-scored": {
     "svg": "scripts/thumbnails/monday-operating-plan-scored.svg",
-    "svg_sha256": "d8799f2a7272f5eba0984d406f1b0e7081a08d92857eb0bec5f92f961aa92ac4",
+    "svg_sha256": "9e6e16def8c94e4bb829268964629c52364278a2b5969dba025728e1ccea7d32",
     "image": "public/project-visuals/monday-operating-plan-scored.webp",
     "image_sha256": "5dfc1f3adebd879d795b6932e787efdfdd761718fe411116500c894f46b3742e"
   },

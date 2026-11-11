@@ -152,7 +152,8 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
       <N c={strip.downMargin} />.
     </>,
     <>
-      <strong>Why the cases cannot be told apart in advance.</strong> The FY27 revenue gap (<N c={strip.gapPct} /> of Base) is <N c={strip.gapX} /> the average 4-quarter-ahead backtest miss.
+      <strong>Why the cases cannot be told apart in advance.</strong> The two cases are only <N c={strip.gapPct} /> apart in FY27 revenue, about the size of a typical
+      4-quarter-ahead forecast miss (<N c={strip.gapX} /> the average backtest miss). That is why the plan uses triggers instead of a forecast.
     </>,
     <>
       <strong>The triggers.</strong> A revenue trigger in two tiers (Watch is review only; Action pulls Lever 1), a guidance-beat trigger and a net-adds trigger for customers above $50K ARR; Lever 2 only if net adds also fall.
