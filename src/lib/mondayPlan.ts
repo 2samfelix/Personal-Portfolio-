@@ -36,6 +36,12 @@ export const PLAN_DOWNLOAD_PATH = "/monday-operating-plan/monday_plan.xlsx";
 export const MEMO_SHA256 = "b8ad69f8352279c2f0cd14a4d671edab801e7005327e499303dd36f667e03449";
 export const MEMO_DOWNLOAD_PATH = "/downloads/monday-operating-plan-memo.pdf";
 
+/** The original memo, exactly as published before the Q3 results (site commit 9f413a5, October 30,
+ * 2026; the version on main until 8639bed). Kept byte for byte, because it shows what was said before
+ * the results; the build fails if it ever changes. It is in no GitHub Release. */
+export const MEMO_ORIGINAL_SHA256 = "de6a60312749fac4f96365cfa2767e4451faf8701bee846a7adc6e8bc6ab8363";
+export const MEMO_ORIGINAL_DOWNLOAD_PATH = "/downloads/monday-operating-plan-memo-pre-results.pdf";
+
 export type LockRelease = {
   tag: string;
   title: string;
@@ -96,6 +102,7 @@ const PLAN_FILE = join(process.cwd(), "monday-operating-plan", "model", "monday_
 const Q3_CALL_FILE = join(process.cwd(), "monday-operating-plan", "model", "monday_q3_call.xlsx");
 const DOWNLOAD_FILE = join(process.cwd(), "public", "monday-operating-plan", "monday_plan.xlsx");
 const MEMO_FILE = join(process.cwd(), "public", "downloads", "monday-operating-plan-memo.pdf");
+const MEMO_ORIGINAL_FILE = join(process.cwd(), "public", "downloads", "monday-operating-plan-memo-pre-results.pdf");
 
 /** Checks every locked file against its pin; throws (failing the build) on any mismatch. */
 export function verifyPins(): void {
@@ -105,10 +112,11 @@ export function verifyPins(): void {
     ["monday-operating-plan/model/monday_plan.xlsx", PLAN_FILE, PLAN_DATA_DOC, PLAN_SHA256],
     [`public${PLAN_DOWNLOAD_PATH}`, DOWNLOAD_FILE, null, PLAN_SHA256],
     [`public${MEMO_DOWNLOAD_PATH}`, MEMO_FILE, null, MEMO_SHA256],
+    [`public${MEMO_ORIGINAL_DOWNLOAD_PATH}`, MEMO_ORIGINAL_FILE, null, MEMO_ORIGINAL_SHA256],
   ];
   for (const [file, path, doc, pin] of checks) {
     const actual = sha256(path);
-    const pinnedBy = pin === MEMO_SHA256 ? "the build pins" : "the locked release pins";
+    const pinnedBy = pin === MEMO_SHA256 || pin === MEMO_ORIGINAL_SHA256 ? "the build pins" : "the locked release pins";
     if (actual !== pin) fail(`${file} has SHA-256 ${actual}, but ${pinnedBy} ${pin}`);
     if (doc && doc.workbook.file !== file) fail(`the preview JSON was exported from ${doc.workbook.file}, not ${file}`);
     if (doc && doc.workbook.sha256 !== pin) fail(`${file}: the preview JSON records ${doc.workbook.sha256}, not the pinned ${pin}`);
