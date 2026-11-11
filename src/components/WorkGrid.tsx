@@ -6,6 +6,7 @@ import { PROJECT_ORDER, flagshipProjects, type Project } from "@/lib/projects";
 import { loadMondayPlan } from "@/lib/mondayPlan";
 import { SCORED_VISUAL, loadMondayResults } from "@/lib/mondayResults";
 import thumbAlts from "@/lib/projectVisualAlts.generated.json";
+import { CompanyLogo } from "@/components/project/CompanyLogo";
 
 // The monday card's results line follows the validated results file (src/lib/mondayResults.ts).
 const MONDAY_RESULTS = loadMondayResults();
@@ -182,7 +183,14 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
         ) : (
           <p className="mt-1.5 text-sm leading-5 text-charcoal-soft">{project.description ?? project.summary}</p>
         )}
-        <span className={`mt-auto pt-3 ${CARD_CTA}`}>View project &rarr;</span>
+        {/* CTA row: the company logo (if any) bottom-right. The row is 22 px tall either way,
+            so cards with and without a logo stay the same height. */}
+        <div className="mt-auto pt-3">
+          <div className="flex h-[1.375rem] items-center justify-between gap-3">
+            <span className={`whitespace-nowrap ${CARD_CTA}`}>View project &rarr;</span>
+            <CompanyLogo slug={project.slug} size="card" />
+          </div>
+        </div>
       </div>
     </Link>
   );

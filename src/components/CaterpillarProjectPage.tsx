@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Project } from "@/lib/projects";
 import { ProjectHeaderBand } from "@/components/project/ProjectHeaderBand";
 import { ProjectHero } from "@/components/project/ProjectHero";
+import { CompanyAnalyzed, CompanyDisclaimer } from "@/components/project/CompanyLogo";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
 import WorkbookPreview from "@/components/model-preview/WorkbookPreview";
@@ -217,6 +218,7 @@ export default function CaterpillarProjectPage({
           </Link>
 
           <ProjectHero
+            company={<CompanyAnalyzed slug="caterpillar-demand-quality" className="mb-5" />}
             title="Caterpillar Demand Quality"
             question="Was Caterpillar's 2026 Construction Industries growth driven by real end-user demand or dealer restocking?"
             description="An eight-quarter operating analysis using Caterpillar filings, dealer-inventory disclosures, retail sales statistics, and segment bridges to test whether reported growth was becoming more durable."
@@ -742,6 +744,9 @@ export default function CaterpillarProjectPage({
             <span />
           )}
         </nav>
+
+        {/* Trademark note: only on pages that show a company logo. */}
+        <CompanyDisclaimer slug="caterpillar-demand-quality" className="mt-8" />
       </div>
     </main>
   );

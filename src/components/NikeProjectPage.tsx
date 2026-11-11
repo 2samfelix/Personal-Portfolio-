@@ -28,6 +28,7 @@ import {
 } from "@/components/nike/NikeCharts";
 import { ProjectHeaderBand } from "@/components/project/ProjectHeaderBand";
 import { ProjectHero } from "@/components/project/ProjectHero";
+import { CompanyAnalyzed, CompanyDisclaimer } from "@/components/project/CompanyLogo";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
 import { BESIDE, MEASURE } from "@/components/project/layout";
@@ -173,6 +174,7 @@ export default function NikeProjectPage({
           </Link>
 
           <ProjectHero
+            company={<CompanyAnalyzed slug="nike" className="mb-5" />}
             title="Nike North America Recovery"
             question="How quickly must North America recover to offset continued weakness in Greater China?"
             description="A driver-based three-statement model and forecast for Nike, stress-tested across bull, base, and bear scenarios."
@@ -441,6 +443,9 @@ export default function NikeProjectPage({
             <span />
           )}
         </nav>
+
+        {/* Trademark note: only on pages that show a company logo. */}
+        <CompanyDisclaimer slug="nike" className="mt-8" />
       </div>
     </main>
   );

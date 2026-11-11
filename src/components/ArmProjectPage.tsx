@@ -42,6 +42,7 @@ import {
 } from "@/components/arm/ArmCharts";
 import { ProjectHeaderBand } from "@/components/project/ProjectHeaderBand";
 import { ProjectHero } from "@/components/project/ProjectHero";
+import { CompanyAnalyzed, CompanyDisclaimer } from "@/components/project/CompanyLogo";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
 import { BESIDE, MEASURE } from "@/components/project/layout";
@@ -148,6 +149,7 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
           </Link>
 
           <ProjectHero
+            company={<CompanyAnalyzed slug="arm" className="mb-5" />}
             title="Arm Valuation Gap"
             question="Do Arm's fundamentals justify a stock price of $272 — more than 5x where three valuation methods land?"
             description="An IPO valuation for Arm Holdings combining comparable company analysis, a DCF, and strategic positioning research."
@@ -425,6 +427,9 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
             <span />
           )}
         </nav>
+
+        {/* Trademark note: only on pages that show a company logo. */}
+        <CompanyDisclaimer slug="arm" className="mt-8" />
       </div>
     </main>
   );

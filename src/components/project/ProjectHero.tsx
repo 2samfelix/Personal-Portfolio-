@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type HeroMetric = {
   value: string;
   label: string;
@@ -31,6 +33,7 @@ export function ProjectHero({
   metrics,
   ctas,
   wideText = false,
+  company,
 }: {
   title: string;
   question: string;
@@ -38,6 +41,8 @@ export function ProjectHero({
   metrics: HeroMetric[];
   ctas: HeroCta[];
   wideText?: boolean;
+  /** Optional "Company analyzed" row above the title (CompanyAnalyzed). */
+  company?: ReactNode;
 }) {
   return (
     <div
@@ -49,6 +54,7 @@ export function ProjectHero({
         .join(" ")}
     >
       <div>
+        {company}
         <h1 className="text-4xl font-black tracking-tight text-charcoal sm:text-5xl">{title}</h1>
         <p className="mt-6 max-w-2xl text-xl leading-8 text-charcoal-soft">{question}</p>
         <p className="mt-4 max-w-2xl text-base leading-7 text-charcoal-soft">{description}</p>
