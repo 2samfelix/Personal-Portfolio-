@@ -2,10 +2,10 @@
  * Company logos, as supplied by the site owner (public/logos/; never recoloured, redrawn or
  * resampled). A project with no entry here shows no logo and no trademark note.
  *
- * Files: the single-logo files are byte for byte as supplied. activision.webp is a lossless crop
- * of public/logos/originals/activision-original.webp to the mark's bounding box plus 8 px of the
- * file's own transparent margin (integer crop, saved as lossless WebP; pixel-identical to that
- * region of the original). The supplied originals are kept in public/logos/originals/.
+ * Files: caterpillar.webp, arm.png and monday.png are byte for byte as supplied. microsoft.webp
+ * and activision.webp are lossless crops of public/logos/originals/*-original.webp to the mark's
+ * bounding box plus 8 px of the file's own transparent margin (integer crop, saved as lossless
+ * WebP; pixel-identical to that region of the original). The originals are kept as supplied.
  *
  * Each image is drawn at a fixed height with its own proportions (the width and height
  * attributes reserve the box, so nothing shifts as it loads). Plain <img>, not next/image,
@@ -14,11 +14,8 @@
  * Not shown, on purpose:
  * - FP&A Intelligence Engine: not a company analysis.
  * - Nike: no logo file was supplied.
- * - Microsoft × Activision: the pair is ready (MICROSOFT_ACTIVISION below) but stays off until a
- *   usable Microsoft file is supplied. The supplied PNG (originals/microsoft-original.png) is
- *   opaque, with a grey-and-white "transparency" checkerboard baked into the pixels, including
- *   between the four squares and around the letters, so it cannot be trimmed clean without
- *   altering the artwork. (microsoft.avif, supplied earlier, is too small inside its frame.)
+ *
+ * Microsoft × Activision Blizzard shows a pair, Microsoft then Activision.
  */
 import type React from "react";
 
@@ -37,14 +34,6 @@ type Entry = {
   marks: Mark[];
 };
 
-const ACTIVISION: Mark = { company: "Activision", src: "/logos/activision.webp", width: 1979, height: 492 };
-
-/** Microsoft then Activision. Enabled only once a clean Microsoft file is in public/logos/. */
-export const MICROSOFT_ACTIVISION: { name: string; activision: Mark } = {
-  name: "Microsoft or Activision Blizzard",
-  activision: ACTIVISION,
-};
-
 const LOGOS: Record<string, Entry> = {
   "caterpillar-demand-quality": {
     name: "Caterpillar",
@@ -55,20 +44,17 @@ const LOGOS: Record<string, Entry> = {
     name: "monday.com",
     marks: [{ company: "monday.com", src: "/logos/monday.png", width: 740, height: 121 }],
   },
+  "microsoft-activision": {
+    name: "Microsoft or Activision Blizzard",
+    marks: [
+      { company: "Microsoft", src: "/logos/microsoft.webp", width: 1584, height: 352 },
+      { company: "Activision", src: "/logos/activision.webp", width: 1979, height: 492 },
+    ],
+  },
 };
 
-/** Preview only (never set in production): LOGO_PREVIEW_MSFT=<path under /logos/>,<w>,<h>
- * turns the Microsoft × Activision pair on with that Microsoft file, for a scratch build. */
-const PREVIEW = process.env.LOGO_PREVIEW_MSFT?.split(",");
-if (PREVIEW?.length === 3 && process.env.VERCEL_ENV !== "production") {
-  LOGOS["microsoft-activision"] = {
-    name: MICROSOFT_ACTIVISION.name,
-    marks: [{ company: "Microsoft", src: PREVIEW[0], width: +PREVIEW[1], height: +PREVIEW[2] }, ACTIVISION],
-  };
-}
-
 /** Logo heights in CSS px. A pair is drawn shorter than a single logo so it stays on one line;
- * below 360 px wide (320-352 px phones) it steps down once more so it still fits. */
+ * below 368 px wide (320-360 px phones) it steps down once more so it still fits. */
 const SIZES = {
   card: { single: 22, pair: 16, pairNarrow: 12 },
   page: { single: 30, pair: 24, pairNarrow: 18 },
@@ -107,7 +93,7 @@ export function CompanyLogo({ slug, size }: { slug: string; size: keyof typeof S
     // One line, never wrapping. The "×" is the title's own separator, muted and hidden from
     // screen readers (each logo has its own alt text); a space's width either side, as in the title.
     <span
-      className="flex shrink-0 flex-nowrap items-center gap-[calc(var(--logo-h)*0.28)] whitespace-nowrap [--logo-h:var(--logo-h-wide)] max-[359px]:[--logo-h:var(--logo-h-narrow)]"
+      className="flex shrink-0 flex-nowrap items-center gap-[calc(var(--logo-h)*0.28)] whitespace-nowrap [--logo-h:var(--logo-h-wide)] max-[368px]:[--logo-h:var(--logo-h-narrow)]"
       style={{ "--logo-h-wide": `${pair}px`, "--logo-h-narrow": `${pairNarrow}px` } as React.CSSProperties}
     >
       {entry.marks.map((mark, i) => (
