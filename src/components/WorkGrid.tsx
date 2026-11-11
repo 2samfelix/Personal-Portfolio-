@@ -187,8 +187,8 @@ function ProjectCard({ project, eager }: { project: Project; eager: boolean }) {
             so cards with and without a logo stay the same height. */}
         <div className="mt-auto pt-3">
           <div className="flex h-[1.375rem] items-center justify-between gap-3">
-            <span className={CARD_CTA}>View project &rarr;</span>
-            <CompanyLogo slug={project.slug} height={22} />
+            <span className={`whitespace-nowrap ${CARD_CTA}`}>View project &rarr;</span>
+            <CompanyLogo slug={project.slug} size="card" />
           </div>
         </div>
       </div>
