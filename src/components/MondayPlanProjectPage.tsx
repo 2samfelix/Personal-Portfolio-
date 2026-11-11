@@ -37,6 +37,7 @@ import { BreakevenChart, BridgeChart, GrowthChart, QuarterlyCharts, RangeChart, 
 import InPageMenu from "@/components/monday/InPageMenu";
 import { AccentBand } from "@/components/project/AccentBand";
 import ResultsCountdown from "@/components/monday/ResultsCountdown";
+import { CompanyAnalyzed, CompanyDisclaimer } from "@/components/project/CompanyLogo";
 import ResultsSection, { scoreSummary } from "@/components/monday/ResultsSection";
 import { loadMondayResults } from "@/lib/mondayResults";
 
@@ -251,6 +252,10 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
       <InPageMenu items={MENU} />
 
       <div className="mx-auto w-full max-w-6xl px-6 pb-16 sm:pb-24">
+        {/* Company analyzed: on the cream page, not the dark hero, where the black wordmark
+            would not read. */}
+        <CompanyAnalyzed slug="monday-operating-plan" className="mt-8" />
+
         {/* Number strip */}
         <section aria-label="Key numbers" className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-forest/15 bg-white p-6">
@@ -755,6 +760,9 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
             <span />
           )}
         </nav>
+
+        {/* Trademark note: only on pages that show a company logo. */}
+        <CompanyDisclaimer slug="monday-operating-plan" className="mt-8" />
       </div>
     </main>
   );

@@ -33,6 +33,7 @@ import {
 } from "@/components/msft-atvi/MsftAtviCharts";
 import { ProjectHeaderBand } from "@/components/project/ProjectHeaderBand";
 import { ProjectHero } from "@/components/project/ProjectHero";
+import { CompanyAnalyzed, CompanyDisclaimer } from "@/components/project/CompanyLogo";
 import { QuestionApproachFinding } from "@/components/project/QuestionApproachFinding";
 import { WhatIBuiltGrid } from "@/components/project/WhatIBuiltGrid";
 import { BESIDE, MEASURE, STACK_BODY, STACK_LABEL, STACK_ROW, STACK_TABLE, STACK_VALUE, STACK_WIDE } from "@/components/project/layout";
@@ -139,6 +140,7 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
           </Link>
 
           <ProjectHero
+            company={<CompanyAnalyzed slug="microsoft-activision" className="mb-5" />}
             title="Microsoft × Activision Deal Economics"
             question="Was the deal financially justified, and how much in annual synergies did it take to break even?"
             description="An accretion/dilution model and strategic analysis of Microsoft's acquisition of Activision Blizzard."
@@ -437,6 +439,9 @@ export default function MicrosoftActivisionProjectPage({ project, prev, next }: 
             <span />
           )}
         </nav>
+
+        {/* Trademark note: only on pages that show a company logo. */}
+        <CompanyDisclaimer slug="microsoft-activision" className="mt-8" />
       </div>
     </main>
   );
