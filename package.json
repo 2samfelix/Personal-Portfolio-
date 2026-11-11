@@ -14,6 +14,7 @@
     "verify:caterpillar-exhibits": "node scripts/verify-caterpillar-exhibit-text.mjs",
     "export:model-preview": "python3 scripts/export-model-preview.py",
     "check:model-preview": "node scripts/check-model-preview.mjs",
+    "render:monday-memo": "python3 scripts/render-monday-memo.py",
     "caterpillar:exhibits": "node caterpillar-demand-quality/build/render-svg-exhibits.mjs",
     "caterpillar:exhibit5": "node caterpillar-demand-quality/build/render-exhibit5.mjs",
     "caterpillar:pdf": "node caterpillar-demand-quality/build/render-pdf.mjs",

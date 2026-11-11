@@ -7,6 +7,8 @@ import {
   LIMITS,
   PLAN_DOC,
   MEMO_DOWNLOAD_PATH,
+  MEMO_ORIGINAL_DOWNLOAD_PATH,
+  MEMO_ORIGINAL_SHA256,
   MEMO_SHA256,
   PLAN_DOWNLOAD_PATH,
   PLAN_SHA256,
@@ -126,6 +128,18 @@ function ReleaseCard({ release }: { release: LockRelease }) {
     </div>
   );
 }
+
+/** A Downloads card; `original` adds the pre-results memo as a secondary link. */
+type DownloadItem = {
+  title: string;
+  format: string;
+  description: string;
+  href: string;
+  cta: string;
+  download?: string;
+  sha256?: string;
+  original?: { label: string; href: string; download: string; sha256: string };
+};
 
 export default function MondayPlanProjectPage({ prev, next }: { project: Project; prev?: Project; next?: Project }) {
   const { plan, scorecard } = loadMondayPlan();
@@ -610,7 +624,7 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
           <section id="downloads" aria-labelledby="downloads-heading" className={SECTION}>
             <SectionHeading id="downloads-heading" eyebrow="Downloads">Files and sources</SectionHeading>
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[
+              {([
                 {
                   title: "Operating plan workbook",
                   format: "XLSX",
@@ -622,13 +636,19 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                 {
                   title: "Management memo (PDF)",
                   format: "PDF",
-                  // The memo predates the results and is not edited (its SHA-256 is pinned), so the
-                  // card says so once the call is scored.
-                  description: `One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.${scored ? " Written before the Q3 results; see Results for the scoring." : ""}`,
+                  // The memo (scripts/render-monday-memo.py) carries the Q3 2026 result, added after scoring.
+                  description: `One page. Derived from the locked plan workbook; the GitHub Releases remain the authoritative copies.${scored ? " Updated after scoring with the Q3 2026 result; the plan content is unchanged." : ""}`,
                   sha256: MEMO_SHA256,
                   href: MEMO_DOWNLOAD_PATH,
                   cta: "Download memo ↓",
                   download: "monday-operating-plan-memo.pdf",
+                  // The pre-results original stays available, byte for byte (pinned in verifyPins).
+                  original: {
+                    label: "Original memo, as published before the Q3 results",
+                    href: MEMO_ORIGINAL_DOWNLOAD_PATH,
+                    download: "monday-operating-plan-memo-pre-results.pdf",
+                    sha256: MEMO_ORIGINAL_SHA256,
+                  },
                 },
                 {
                   title: `GitHub Release ${planRelease.tag}`,
@@ -660,7 +680,40 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                   href: README_URL,
                   cta: "Read README ↗",
                 },
-              ].map((item) => (
+              ] as DownloadItem[]).map((item) =>
+                item.original ? (
+                  // Two links in one card: the card is a div, the main link stretches over it
+                  // (after:inset-0) and the secondary link sits above that overlay.
+                  <div key={item.title} className={`group relative flex flex-col p-6 ${CARD_LIFT} has-[a:focus-visible]:-translate-y-1 has-[a:focus-visible]:border-forest/35`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 break-words text-lg font-bold text-charcoal">{item.title}</p>
+                      <span className="shrink-0 rounded-full bg-forest/10 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-forest">
+                        {item.format}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-base leading-7 text-charcoal-soft">{item.description}</p>
+                    <p className="mt-2 break-all font-mono text-xs leading-5 text-charcoal-soft">SHA-256 {item.sha256}</p>
+                    <a
+                      href={item.href}
+                      download={item.download}
+                      // No transform on the link itself: it would make the link, not the card, the
+                      // overlay's containing block. The hover nudge is on the inner span.
+                      className="mt-auto pt-4 after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brass focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-cream"
+                    >
+                      <span className={`inline-block ${CARD_CTA}`}>{item.cta}</span>
+                    </a>
+                    <div className="relative z-10 mt-4 border-t border-forest/10 pt-3">
+                      <a
+                        href={item.original.href}
+                        download={item.original.download}
+                        className="tap inline-block text-sm font-semibold text-forest underline underline-offset-4 hover:text-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
+                      >
+                        {item.original.label} ↓
+                      </a>
+                      <p className="mt-1 break-all font-mono text-xs leading-5 text-charcoal-soft">SHA-256 {item.original.sha256}</p>
+                    </div>
+                  </div>
+                ) : (
                 <a
                   key={item.title}
                   href={item.href}
@@ -679,7 +732,8 @@ export default function MondayPlanProjectPage({ prev, next }: { project: Project
                   )}
                   <span className={`mt-auto pt-4 ${CARD_CTA}`}>{item.cta}</span>
                 </a>
-              ))}
+                ),
+              )}
             </div>
           </section>
         </AccentBand>

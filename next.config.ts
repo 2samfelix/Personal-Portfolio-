@@ -26,6 +26,14 @@ const nextConfig: NextConfig = {
           { key: "Content-Disposition", value: 'attachment; filename="monday-operating-plan-memo.pdf"' },
         ],
       },
+      {
+        // The original memo, as published before the Q3 results (pinned too).
+        source: "/downloads/monday-operating-plan-memo-pre-results.pdf",
+        headers: [
+          { key: "Content-Type", value: "application/pdf" },
+          { key: "Content-Disposition", value: 'attachment; filename="monday-operating-plan-memo-pre-results.pdf"' },
+        ],
+      },
     ];
   },
 };
