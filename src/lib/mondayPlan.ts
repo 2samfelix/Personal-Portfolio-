@@ -30,9 +30,10 @@ export const Q3_CALL_SHA256 = "49463d1fbb678fd26b59c3c81e70cb52613a4a73906b846bc
 /** Site path of the hosted copy of the locked plan workbook (public/). */
 export const PLAN_DOWNLOAD_PATH = "/monday-operating-plan/monday_plan.xlsx";
 
-/** The one-page management memo (PDF), derived from the locked plan workbook. Not a
- * locked file: the pin only makes the build fail if the hosted copy changes. */
-export const MEMO_SHA256 = "de6a60312749fac4f96365cfa2767e4451faf8701bee846a7adc6e8bc6ab8363";
+/** The one-page management memo (PDF), derived from the locked plan workbook, with the Q3
+ * 2026 result added after scoring (scripts/render-monday-memo.py). Not a locked file: the pin
+ * only makes the build fail if the hosted copy changes. */
+export const MEMO_SHA256 = "b8ad69f8352279c2f0cd14a4d671edab801e7005327e499303dd36f667e03449";
 export const MEMO_DOWNLOAD_PATH = "/downloads/monday-operating-plan-memo.pdf";
 
 export type LockRelease = {
