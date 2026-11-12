@@ -36,8 +36,8 @@ const ICON: Record<string, (size: number) => ReactNode> = {
 const SKILLS = [
   { id: "excel", name: "Excel", line: "Financial modeling, valuation and scenario analysis" },
   { id: "python", name: "Python", line: "Automation, testing and finance workflows" },
-  { id: "sql", name: "SQL", line: "Querying SEC disclosures and relational financial datasets", inProgress: true },
-  { id: "powerbi", name: "Power BI", line: "Visualizing variance bridges and operational KPIs", inProgress: true },
+  { id: "sql", name: "SQL", line: "Querying SEC disclosures and relational financial datasets", planned: true },
+  { id: "powerbi", name: "Power BI", line: "Visualizing variance bridges and operational KPIs", planned: true },
   { id: "ai", name: "AI / LLM tools", line: "Prototyping and analysis support, with outputs checked by code" },
 ];
 
@@ -55,7 +55,7 @@ type Card =
   | { kind: "sheet"; id: string; src: string; width: number; height: number; alt: string; caption: string; href: string }
   | { kind: "thumb"; id: string; slug: keyof typeof thumbAlts; width: number; caption: string; position: string }
   | { kind: "code"; id: string }
-  | { kind: "tool"; id: string; icon: string; name: string; inProgress?: boolean };
+  | { kind: "tool"; id: string; icon: string; name: string; planned?: boolean };
 
 // Thumbnails are cropped to a wide band through the chart (object-position picks it).
 // Mixed so that no two cards of a kind sit next to each other, the loop's seam included.
@@ -106,9 +106,9 @@ const CARDS: Card[] = [
     caption: "FP&A Engine · a sourced fact",
     href: "/projects/fpa-intelligence-engine",
   },
-  { kind: "tool", id: "sql", icon: "sql", name: "SQL", inProgress: true },
+  { kind: "tool", id: "sql", icon: "sql", name: "SQL", planned: true },
   { kind: "thumb", id: "t-nike", slug: "nike", width: 1280, caption: "Nike · North America scenarios", position: "50% 55%" },
-  { kind: "tool", id: "powerbi", icon: "powerbi", name: "Power BI", inProgress: true },
+  { kind: "tool", id: "powerbi", icon: "powerbi", name: "Power BI", planned: true },
   { kind: "thumb", id: "t-msft", slug: "msft", width: 1280, caption: "Microsoft × Activision · diluted EPS", position: "50% 35%" },
 ];
 
@@ -146,9 +146,9 @@ function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
       <div className={`${SHELL} flex items-center gap-3 px-5`}>
         <span className="text-forest">{ICON[card.icon](28)}</span>
         <span className="text-lg font-bold tracking-tight text-charcoal">{card.name}</span>
-        {card.inProgress && (
+        {card.planned && (
           <span className="ml-auto rounded-full bg-brass-pale px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-brass-ink">
-            In progress
+            Planned
           </span>
         )}
       </div>
@@ -240,9 +240,10 @@ export default function Expertise() {
                 <span className="shrink-0 text-forest">{ICON[s.id](24)}</span>
                 <h3 className="flex shrink-0 items-center gap-2 text-base font-semibold text-charcoal">
                   {s.name}
-                  {"inProgress" in s && s.inProgress && (
+                  {"planned" in s && s.planned && (
+                    // Not yet a skill shown in any project on this site.
                     <span className="rounded-full bg-brass-pale px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-brass-ink">
-                      In progress
+                      Planned
                     </span>
                   )}
                 </h3>
