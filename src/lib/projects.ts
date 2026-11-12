@@ -149,7 +149,7 @@ export const flagshipProjects: Project[] = [
         {
           label: "Valuation Model",
           format: "XLSX",
-          url: "https://raw.githubusercontent.com/2samfelix/arm-ipo-valuation-strategy-analysis/d1aacab6255c9aa78afb7b13666cb3ddd70e2c93/Sam_Felix_Arm_IPO_Valuation_Strategy_Analysis%20%287%29.xlsx",
+          url: "https://raw.githubusercontent.com/2samfelix/arm-ipo-valuation-strategy-analysis/a8b06b020ac6f640647c688f0c9e2380197170b6/Sam_Felix_Arm_IPO_Valuation_Strategy_Analysis%20%287%29.xlsx",
         },
         {
           label: "Full Report",
