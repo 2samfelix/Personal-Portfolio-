@@ -1,7 +1,7 @@
 {
   "arm": "Arm: on one price scale, my DCF implies $51.54 a share (sensitivity range $36.46 to $94.39) against a $272.21 market price on Aug 10, 2026.",
   "caterpillar": "Caterpillar: Construction Industries sales bridge from 6,190 ($M) in Q2 2025 to 8,346 in Q2 2026: volume +1,755, price +309, currency +74, inter-segment +18.",
-  "fpa-intelligence-engine": "FP&A Intelligence Engine validation lab: 50 fault-injected cases across 10 kinds of fault; 21 caught, 10 caught only under a condition, 19 not caught.",
+  "fpa-intelligence-engine": "FP&A Intelligence Engine validation lab: 55 cases (46 faulty statements, 4 correct roundings or conversions, 5 valid controls). The detection map shows the 50 that are not controls, across 10 kinds of fault: 21 caught, 10 conditional, 19 missed.",
   "monday-operating-plan": "monday.com operating plan: revenue growth slowed from 84.0% in Q1 2022 to 21.9% in Q2 2026; the plan's Base case reaches 12.5% and the Downside 5.6% by Q4 2027. Q3 2026 results pending.",
   "monday-operating-plan-scored": "monday.com operating plan: revenue growth slowed from 84.0% in Q1 2022 to 21.9% in Q2 2026; the plan's Base case reaches 12.5% and the Downside 5.6% by Q4 2027. Q3 2026 results scored against the locked call.",
   "msft": "Microsoft and Activision: diluted EPS falls from $9.68 standalone to $9.29 pro forma with no synergies; about $3.64B a year of pre-tax synergies brings it back to EPS-neutral.",

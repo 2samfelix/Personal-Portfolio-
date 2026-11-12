@@ -40,7 +40,7 @@ export const RETURN_DECOMPOSITION = {
   epsGrowth: 1.66666666666667, // Post-IPO Performance!B61
   peExpansion: 3.20247058823529, // Post-IPO Performance!B62
   checkProduct: 5.33745098039216, // Post-IPO Performance!B63 (epsGrowth x peExpansion)
-  evRevenueExpansion: 3.10803131242766, // Post-IPO Performance!D55 — independent corroboration
+  evRevenueExpansion: 3.10803131242766, // Post-IPO Performance!D55 — corroboration from a second multiple (built on the same share price, so not independent)
 };
 
 // --- (c) Revenue mix since IPO ---

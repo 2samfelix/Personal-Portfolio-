@@ -386,7 +386,7 @@ export function ReturnDecompositionChart({
   return (
     <div className="mt-2">
       <ChartScroll minWidth={DECOMP_WIDTH}>
-        <svg viewBox={`0 0 ${DECOMP_WIDTH} ${DECOMP_HEIGHT}`} className="w-full" role="img" aria-label={`Return decomposition: total return ${totalReturn.toFixed(2)}x equals ${epsGrowth.toFixed(2)}x from EPS growth times ${peExpansion.toFixed(2)}x from P/E expansion; independently, EV/Revenue expanded ${evRevenueCheck.toFixed(2)}x`}>
+        <svg viewBox={`0 0 ${DECOMP_WIDTH} ${DECOMP_HEIGHT}`} className="w-full" role="img" aria-label={`Return decomposition: total return ${totalReturn.toFixed(2)}x equals ${epsGrowth.toFixed(2)}x from EPS growth times ${peExpansion.toFixed(2)}x from P/E expansion; EV/Revenue, a second multiple built on the same share price, expanded ${evRevenueCheck.toFixed(2)}x`}>
           <line x1={DECOMP_PAD_LEFT} x2={DECOMP_WIDTH - DECOMP_PAD_RIGHT} y1={y(0)} y2={y(0)} stroke="#2a2820" strokeOpacity={0.2} />
           {bars.map((b, i) => {
             const x = DECOMP_PAD_LEFT + colWidth * i + (colWidth - barWidth) / 2;
