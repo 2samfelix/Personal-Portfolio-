@@ -350,7 +350,7 @@ export default function ArmProjectPage({ project, prev, next }: { project: Proje
                 badgeLabel="Re-rating led"
                 badgeTone="neutral"
                 alertLead="Multiple expansion did more work than earnings growth."
-                alertText={`Price = EPS × P/E is an exact identity, not an approximation: ${RETURN_DECOMPOSITION.epsGrowth.toFixed(2)}x from EPS growth times ${RETURN_DECOMPOSITION.peExpansion.toFixed(2)}x from P/E expansion multiplies to ${RETURN_DECOMPOSITION.checkProduct.toFixed(2)}x (Post-IPO Performance!B60:B63) — matching the total return exactly. EV/Revenue expanded an independent, closely matching ${RETURN_DECOMPOSITION.evRevenueExpansion.toFixed(2)}x (Post-IPO Performance!D55), corroborating the P/E-based read with a second multiple.`}
+                alertText={`Price = EPS × P/E is an exact identity, not an approximation: ${RETURN_DECOMPOSITION.epsGrowth.toFixed(2)}x from EPS growth times ${RETURN_DECOMPOSITION.peExpansion.toFixed(2)}x from P/E expansion multiplies to ${RETURN_DECOMPOSITION.checkProduct.toFixed(2)}x (Post-IPO Performance!B60:B63) — matching the total return exactly. EV/Revenue, a second multiple built on the same share price, expanded a closely matching ${RETURN_DECOMPOSITION.evRevenueExpansion.toFixed(2)}x (Post-IPO Performance!D55), pointing to the same re-rating.`}
                 explainer="Rendered as three plain bars rather than a waterfall, since the two factors multiply rather than sum — summing 1.67x and 3.20x would land on 4.87x, not the actual 5.34x total return."
               />
             </ChartSection>

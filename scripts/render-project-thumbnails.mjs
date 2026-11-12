@@ -237,7 +237,13 @@ function engine() {
     body += glyph(k, lx[i], ly);
     body += `<text x="${lx[i] + 42}" y="${ly + 25}" font-size="24" font-weight="700" fill="${C.charcoal}">${tQuery(SRC, `count:detection=${k}`, totals[k]).tag} ${word}</text>`;
   });
-  const alt = `FP&A Intelligence Engine validation lab: ${mapped} fault-injected cases across ${rows.length} kinds of fault; ${totals.caught} caught, ${totals.conditional} caught only under a condition, ${totals.missed} not caught.`;
+  // Alt text: the whole lab (as the page's stat tile states it), then what the map shows. Not every
+  // mapped case is faulty: the conditional group includes correct roundings or conversions.
+  const controls = lab.cases.filter((c) => c.group === "control").length;
+  const faulty = lab.cases.filter((c) => c.faulty).length;
+  const tolerated = lab.cases.filter((c) => !c.faulty && c.group !== "control").length;
+  if (faulty + tolerated + controls !== lab.cases.length || faulty + tolerated !== mapped) throw new Error("engine thumbnail: case counts do not add up");
+  const alt = `FP&A Intelligence Engine validation lab: ${lab.cases.length} cases (${faulty} faulty statements, ${tolerated} correct roundings or conversions, ${controls} valid controls). The detection map shows the ${mapped} that are not controls, across ${rows.length} kinds of fault: ${totals.caught} caught, ${totals.conditional} conditional, ${totals.missed} missed.`;
   return { slug: "fpa-intelligence-engine", svg: svgDoc(W, H, C.white, body, alt), alt };
 }
 

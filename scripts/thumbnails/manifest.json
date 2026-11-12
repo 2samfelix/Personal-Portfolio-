@@ -13,7 +13,7 @@
   },
   "fpa-intelligence-engine": {
     "svg": "scripts/thumbnails/fpa-intelligence-engine.svg",
-    "svg_sha256": "1f405eed0a8726086524eceedc9c4aaf8f4a2f7af5a0828f20369871439c8f5a",
+    "svg_sha256": "10ba06d6c3caeec3f7cc06e8465cc062b49096959722859db9499d55c36780d1",
     "image": "public/project-visuals/fpa-intelligence-engine.webp",
     "image_sha256": "7ef79fd51dc4c04da0e88323005c8469228c13bf3d9bf34027c461ff99f86cbb"
   },
