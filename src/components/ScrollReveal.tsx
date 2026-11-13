@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 // Cards on the home page, each revealed on its own: the "Why" card track, the
 // "How I work" steps and the Interactive Tools cards.
-const TARGETS = ["#why .snap-mandatory", "#how-i-work [data-step]", "#interactive-tools a"];
+const TARGETS = ["#why .snap-mandatory", "#interactive-tools a"];
 
 // Groups reveal their items one after another, in DOM (reading) order, when
 // the group itself comes into view. WorkGrid marks its grid with
