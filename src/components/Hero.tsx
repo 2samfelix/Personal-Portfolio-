@@ -27,15 +27,9 @@ export default function Hero() {
     <section id="home" className="bg-cream text-charcoal">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-6 pb-4 pt-10 sm:pb-6 sm:pt-14 lg:grid-cols-[1.3fr_0.85fr] lg:items-stretch">
         <div className="flex flex-col justify-center gap-4">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold leading-6 text-charcoal">
-              Sam Felix &middot; Syracuse University Whitman, Finance and Management (degree expected Winter 2026) &middot;{" "}
-              <span className="whitespace-nowrap">Chicago area</span>
-            </p>
-            <p className="max-w-xl text-sm leading-6 text-charcoal-soft">
-              I&apos;m looking for junior FP&amp;A and analyst roles, and logistics account management roles, where I can turn company data into decisions.
-            </p>
-          </div>
+          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-charcoal-soft">
+            Sam Felix &mdash; Finance &amp; Analytics
+          </span>
           <h1 className="text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl sm:leading-[1.05]">
             {words(HEADLINE_LEAD)}{" "}
             <span className="text-brass">{words(HEADLINE_BRASS, HEADLINE_LEAD.split(" ").length)}</span>
@@ -46,6 +40,10 @@ export default function Hero() {
             trade-offs, and risk. From forecasting and valuation to capital
             allocation and M&amp;A, the goal is the same: structure the
             decision and find the number that matters.
+          </p>
+          <p className="text-sm font-semibold text-charcoal">
+            Open to finance, analytics and client-facing operations roles &middot;{" "}
+            <span className="whitespace-nowrap">Chicago area</span>
           </p>
 
           <div className="flex flex-wrap gap-1.5 pt-1 sm:gap-2">
