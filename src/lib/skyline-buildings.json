@@ -1,0 +1,143 @@
+{
+  "about": "Chicago skyline from Lake Michigan looking due west. Heights in metres. architectural_m is the CTBUH 'height: architectural' (it includes spires, not antennas); tip_m is the height to the tip of an antenna. Widths (w0/w1) and setback heights are simplified drawing geometry: widths are approximate unless a building's note says otherwise, and they are not part of the height test. Coordinates are Wikipedia values given to 1 arc-second (about 30 m). Sources were read through search-result quotations, because this environment could not open skyscrapercenter.com or wikipedia.org directly.",
+  "reference": { "lat": 41.885, "lon": -87.62 },
+  "buildings": [
+    {
+      "id": "willis-tower",
+      "name": "Willis Tower",
+      "floors": 108,
+      "lat": 41.87889,
+      "lon": -87.63583,
+      "height": { "architectural_m": 442.1, "tip_m": 527.0, "roof_m": 442.1 },
+      "silhouette": "Bundled tube: nine 22.9 m tubes (68.6 m square base); two tubes end at floor 50, two at 66, three at 90, two rise to the roof. Two antennas, west to 527 m, east to about 521 m.",
+      "note": "Setback heights are floor counts times the average storey height (412.7 m top occupied / 108 floors = 3.82 m): floor 50 = 191 m, 66 = 252 m, 90 = 344 m. Widths seen from the east are simplified (68.6 / 68.6 / 45.7 / 22.9 m). The east antenna's height (1,710 ft, SkyscraperPage) is not from a primary source.",
+      "tiers": [
+        { "y0": 0, "y1": 191, "w0": 68.6 },
+        { "y0": 191, "y1": 252, "w0": 68.6 },
+        { "y0": 252, "y1": 344, "w0": 45.7 },
+        { "y0": 344, "y1": 442.1, "w0": 22.9 }
+      ],
+      "masts": [
+        { "dx": -6, "y0": 442.1, "y1": 527.0 },
+        { "dx": 6, "y0": 442.1, "y1": 521.2 }
+      ],
+      "sources": [
+        "https://en.wikipedia.org/wiki/Willis_Tower",
+        "https://www.britannica.com/topic/Willis-Tower",
+        "https://structurae.net/en/structures/willis-tower",
+        "https://skyscraperpage.com/b5"
+      ]
+    },
+    {
+      "id": "one-prudential-plaza",
+      "name": "One Prudential Plaza",
+      "floors": 41,
+      "lat": 41.8849,
+      "lon": -87.6233,
+      "height": { "architectural_m": 183.2, "tip_m": 278.0 },
+      "silhouette": "Flat-topped slab with a single antenna.",
+      "note": "Width approximate. Coordinates given to 4 decimals only.",
+      "tiers": [{ "y0": 0, "y1": 183.2, "w0": 52 }],
+      "masts": [{ "dx": 0, "y0": 183.2, "y1": 278.0 }],
+      "sources": ["https://awards-api.skyscrapercenter.com/building/one-prudential-plaza/2190", "https://en.wikipedia.org/wiki/One_Prudential_Plaza"]
+    },
+    {
+      "id": "aon-center",
+      "name": "Aon Center",
+      "floors": 83,
+      "lat": 41.88528,
+      "lon": -87.62139,
+      "height": { "architectural_m": 346.3, "roof_m": 346.3 },
+      "silhouette": "Plain square shaft with a flat top.",
+      "note": "Width approximate (59 m is commonly quoted, not confirmed). Wikipedia's 362.5 m 'tip' conflicts with the flat top and is not drawn.",
+      "tiers": [{ "y0": 0, "y1": 346.3, "w0": 59 }],
+      "sources": ["https://www.skyscrapercenter.com/building/aon-center/339", "https://en.wikipedia.org/wiki/Aon_Center_(Chicago)"]
+    },
+    {
+      "id": "two-prudential-plaza",
+      "name": "Two Prudential Plaza",
+      "floors": 64,
+      "lat": 41.88556,
+      "lon": -87.62278,
+      "height": { "architectural_m": 303.3 },
+      "silhouette": "Shaft with stacked chevron setbacks to a pyramidal peak, topped by a spire (part of the architectural height).",
+      "note": "Top floor about 250 m (Wikipedia mirror); the 24 m (80 ft) spire is from a single source, so the pyramid runs from 250 m to the spire base at 279.3 m. Width approximate.",
+      "tiers": [{ "y0": 0, "y1": 250, "w0": 44 }],
+      "roof": { "type": "pyramid", "y0": 250, "y1": 279.3, "w": 44 },
+      "spire": { "y0": 279.3, "y1": 303.3, "w": 2.5 },
+      "sources": ["https://en.wikipedia.org/wiki/Two_Prudential_Plaza"]
+    },
+    {
+      "id": "st-regis-chicago",
+      "name": "St. Regis Chicago (Vista Tower)",
+      "floors": 101,
+      "lat": 41.88722,
+      "lon": -87.61722,
+      "height": { "architectural_m": 362.9 },
+      "silhouette": "Three connected stacks of frustums of 47, 71 and 93 stories (101 floors counted in the tallest mass), lowest to the east; from the lake they stand one behind another.",
+      "note": "The lower stacks' heights are stories times 362.9 m / 101 floors: 47 = 168.9 m, 71 = 255.1 m. Widths approximate.",
+      "tiers": [
+        { "y0": 0, "y1": 362.9, "w0": 38, "w1": 30 },
+        { "y0": 0, "y1": 255.1, "w0": 42, "w1": 34 },
+        { "y0": 0, "y1": 168.9, "w0": 46, "w1": 38 }
+      ],
+      "sources": ["https://www.skyscrapercenter.com/building/the-st-regis-chicago/17137", "https://en.wikipedia.org/wiki/St._Regis_Chicago"]
+    },
+    {
+      "id": "marina-city",
+      "name": "Marina City (two towers)",
+      "floors": 65,
+      "lat": 41.88806,
+      "lon": -87.62889,
+      "height": { "architectural_m": 179.0 },
+      "silhouette": "Two identical cylindrical 'corncob' towers with scalloped balconies. They stand east and west of each other along the river, so from the lake one hides the other: drawn as one silhouette.",
+      "note": "The coordinate is the complex's. Outer diameter approximate (about 32 m is often quoted, not confirmed).",
+      "tiers": [{ "y0": 0, "y1": 179.0, "w0": 32 }],
+      "corncob": true,
+      "sources": ["https://en.wikipedia.org/wiki/Marina_City", "https://www.skyscrapercenter.com/complex/533"]
+    },
+    {
+      "id": "trump-tower",
+      "name": "Trump International Hotel & Tower",
+      "floors": 98,
+      "lat": 41.88889,
+      "lon": -87.62639,
+      "height": { "architectural_m": 423.2 },
+      "silhouette": "Three setbacks (at floors 16, 29 and 51, aligned with the Wrigley Building cornice, River Plaza / Marina City and 330 N. Wabash) and a spire, which is part of the architectural height.",
+      "note": "Setback heights are estimates (about 61, 115 and 200 m); the roof below the spire is drawn at 340 m (sources give 340.1 m and 356 m, which differ by 4.6%). Widths approximate.",
+      "tiers": [
+        { "y0": 0, "y1": 61, "w0": 56 },
+        { "y0": 61, "y1": 115, "w0": 48 },
+        { "y0": 115, "y1": 200, "w0": 40 },
+        { "y0": 200, "y1": 340, "w0": 32, "w1": 28 }
+      ],
+      "spire": { "y0": 340, "y1": 423.2, "w": 3 },
+      "sources": [
+        "https://www.skyscrapercenter.com/building/trump-international-hotel-tower/203",
+        "https://en.wikipedia.org/wiki/Trump_International_Hotel_and_Tower_(Chicago)",
+        "https://www.architecture.org/online-resources/buildings-of-chicago/trump-tower",
+        "https://www.guinnessworldrecords.com/world-records/92869-tallest-concrete-structure"
+      ]
+    },
+    {
+      "id": "875-north-michigan",
+      "name": "875 North Michigan Avenue (John Hancock Center)",
+      "floors": 100,
+      "lat": 41.89889,
+      "lon": -87.62306,
+      "height": { "architectural_m": 343.7, "tip_m": 456.9, "roof_m": 343.7 },
+      "silhouette": "Tapered box (top about 0.6 of the base) with twin antennas.",
+      "note": "Base and top widths approximate (about 50 m to 30 m on the narrow side). The second antenna is drawn at 449.9 m (1,476 ft, SkyscraperPage citing CTBUH); which mast is shorter is not confirmed.",
+      "tiers": [{ "y0": 0, "y1": 343.7, "w0": 50, "w1": 30 }],
+      "masts": [
+        { "dx": -7, "y0": 343.7, "y1": 456.9 },
+        { "dx": 7, "y0": 343.7, "y1": 449.9 }
+      ],
+      "sources": [
+        "https://www.skyscrapercenter.com/building/875-north-michigan-avenue/345",
+        "https://en.wikipedia.org/wiki/875_North_Michigan_Avenue",
+        "https://skyscraperpage.com/b17"
+      ]
+    }
+  ]
+}
