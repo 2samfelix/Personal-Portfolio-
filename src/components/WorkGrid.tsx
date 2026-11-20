@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CARD_CTA, CARD_LIFT } from "@/components/project/cardLift";
 import ProjectCarousel from "@/components/ProjectCarousel";
+import BuildsInProgress from "@/components/BuildsInProgress";
 import { PROJECT_ORDER, flagshipProjects, type Project } from "@/lib/projects";
 import { loadMondayPlan } from "@/lib/mondayPlan";
 import { SCORED_VISUAL, loadMondayResults } from "@/lib/mondayResults";
@@ -217,6 +218,9 @@ export default function WorkGrid() {
             <ProjectCard key={project.slug} project={project} eager={i === 0} />
           ))}
         </ProjectCarousel>
+
+        {/* Not shipped projects, so kept out of the grid above. */}
+        <BuildsInProgress />
       </div>
     </section>
   );
