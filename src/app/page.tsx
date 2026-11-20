@@ -5,6 +5,7 @@ import WhyAnalyticsStrategy from "@/components/WhyAnalyticsStrategy";
 import WorkGrid from "@/components/WorkGrid";
 import Builds from "@/components/Builds";
 import SkylineBanner from "@/components/SkylineBanner";
+import BuildsInProgress from "@/components/BuildsInProgress";
 import Experience from "@/components/Experience";
 import Expertise from "@/components/Expertise";
 import HowIWork from "@/components/HowIWork";
@@ -23,6 +24,8 @@ export default function Home() {
         <WhyAnalyticsStrategy />
         <HowIWork />
         <WorkGrid />
+        {/* Not shipped projects, so kept out of the grid above. */}
+        <BuildsInProgress />
         <SkylineBanner />
         <Builds />
         <Expertise />

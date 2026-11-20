@@ -2,7 +2,7 @@
  * Company logos, as supplied by the site owner (public/logos/; never recoloured, redrawn or
  * resampled). A project with no entry here shows no logo and no trademark note.
  *
- * Files: caterpillar.webp, arm.png and monday.png are byte for byte as supplied. microsoft.webp
+ * Files: caterpillar.webp, arm.png, monday.png and gxo.webp are byte for byte as supplied. microsoft.webp
  * and activision.webp are lossless crops of public/logos/originals/*-original.webp to the mark's
  * bounding box plus 8 px of the file's own transparent margin (integer crop, saved as lossless
  * WebP; pixel-identical to that region of the original). The originals are kept as supplied.
@@ -16,6 +16,9 @@
  * - Nike: no logo file was supplied.
  *
  * Microsoft × Activision Blizzard shows a pair, Microsoft then Activision.
+ *
+ * "gxo-guidance-tracker" is not a project page: it is the GXO card in the home page's
+ * "Project builds in progress" section (BuildsInProgress.tsx), keyed by that card's id.
  */
 import type React from "react";
 
@@ -51,6 +54,7 @@ const LOGOS: Record<string, Entry> = {
       { company: "Activision", src: "/logos/activision.webp", width: 1979, height: 492 },
     ],
   },
+  "gxo-guidance-tracker": { name: "GXO", marks: [{ company: "GXO", src: "/logos/gxo.webp", width: 2000, height: 1003 }] },
 };
 
 /** Logo heights in CSS px. A pair is drawn shorter than a single logo so it stays on one line;

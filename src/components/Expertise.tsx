@@ -148,7 +148,7 @@ function ReelCard({ card, hidden = false }: { card: Card; hidden?: boolean }) {
         <span className="text-lg font-bold tracking-tight text-charcoal">{card.name}</span>
         {card.planned && (
           <span className="ml-auto rounded-full bg-brass-pale px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-brass-ink">
-            Planned
+            In progress
           </span>
         )}
       </div>
@@ -241,9 +241,9 @@ export default function Expertise() {
                 <h3 className="flex shrink-0 items-center gap-2 text-base font-semibold text-charcoal">
                   {s.name}
                   {"planned" in s && s.planned && (
-                    // Not yet a skill shown in any project on this site.
+                    // Not yet a skill shown in a finished project on this site (in progress in a build).
                     <span className="rounded-full bg-brass-pale px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-brass-ink">
-                      Planned
+                      In progress
                     </span>
                   )}
                 </h3>
